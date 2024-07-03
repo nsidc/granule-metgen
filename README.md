@@ -9,9 +9,9 @@ files conforming to NSIDC's UMM-G guidelines.
 
 ## Level of Support
 
-* This repository is fully supported by NSIDC. If you discover any problems or bugs,
-  please submit an Issue. If you would like to contribute to this repository, you may fork
-  the repository and submit a pull request. 
+This repository is fully supported by NSIDC. If you discover any problems or bugs,
+please submit an Issue. If you would like to contribute to this repository, you may fork
+the repository and submit a pull request.
 
 See the [LICENSE](LICENSE) for details on permissions and warranties. Please contact
 nsidc@nsidc.org for more information.
