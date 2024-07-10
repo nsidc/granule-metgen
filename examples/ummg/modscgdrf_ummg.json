@@ -1,0 +1,48 @@
+{
+  "CollectionReference": {
+    "ShortName": "MODSCGDRF",
+    "Version": "001"
+  },
+  "MetadataSpecification": {
+    "URL": "https://cdn.earthdata.nasa.gov/umm/granule/v1.6.5",
+    "Name": "UMM-G",
+    "Version": "1.6.5"
+  },
+  "SpatialExtent": {
+    "HorizontalSpatialDomain": { // Use Gpolygon here for MODSCAG? See MOD10A
+      "Geometry": {
+        "BoundingRectangles": [
+          {
+            "WestBoundingCoordinate": -180,
+            "NorthBoundingCoordinate": 85.04450225830078,
+            "EastBoundingCoordinate": 180,
+            "SouthBoundingCoordinate": -85.04450225830078
+          }
+        ]
+      }
+    }
+  },
+  "TemporalExtent": {
+    "RangeDateTime": {
+      "BeginningDateTime": "2023-09-30T00:00:00.000Z",
+      "EndingDateTime": "2023-09-30T23:59:59.999Z"
+    }
+  },
+  "DataGranule": {
+    "DayNightFlag": "Unspecified",
+    "Identifiers": [
+      {
+        "Identifier": "h07v03_Terra_20220415.v2023.1.nc",
+        "IdentifierType": "ProducerGranuleId"
+      }
+    ],
+    "ProductionDateTime": "when the file was created example 2024-02-26T21:04:29.000Z",
+    "ArchiveAndDistributionInformation": [
+      {
+        "Name": "Not provided",
+        "Size": 0.0641041,
+        "SizeUnit": "MB"
+      }
+    ]
+  }
+}
