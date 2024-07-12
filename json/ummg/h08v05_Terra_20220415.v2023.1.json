@@ -1,0 +1,68 @@
+{
+  "CollectionReference": {
+    "ShortName": "MODSCGDRF",
+    "Version": "001"
+  },
+  "MetadataSpecification": {
+    "URL": "https://cdn.earthdata.nasa.gov/umm/granule/v1.6.5",
+    "Name": "UMM-G",
+    "Version": "1.6.5"
+  },
+  "SpatialExtent": {
+    "HorizontalSpatialDomain": {
+      "Geometry": {
+        "GPolygons": [
+          {
+            "Boundary": {
+              "Points": [
+                {
+                  "Longitude": -115.3696,
+                  "Latitude": 29.8308
+                },
+                {
+                  "Longitude": -103.6998,
+                  "Latitude": 29.9063
+                },
+                {
+                  "Longitude": -117.3606,
+                  "Latitude": 40.0852
+                },
+                {
+                  "Longitude": -130.5407,
+                  "Latitude": 40.0000
+                },
+                {
+                  "Longitude": -115.3696,
+                  "Latitude": 29.8308
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "TemporalExtent": {
+    "RangeDateTime": {
+      "BeginningDateTime": "2022-04-15T00:00:00.000Z",
+      "EndingDateTime": "2022-04-16T00:00:00.000Z"
+    }
+  },
+  "DataGranule": {
+    "DayNightFlag": "Unspecified",
+    "Identifiers": [
+      {
+        "Identifier": "h08v05_Terra_20220415.v2023.1.nc",
+        "IdentifierType": "ProducerGranuleId"
+      }
+    ],
+    "ProductionDateTime": "023-10-21T17:47:98.000Z",
+    "ArchiveAndDistributionInformation": [
+      {
+        "Name": "Not provided",
+        "Size": 0.0641041,
+        "SizeUnit": "MB"
+      }
+    ]
+  }
+}
