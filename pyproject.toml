@@ -19,9 +19,6 @@ pytest = "^8.3.2"
 ruff = "^0.5.5"
 mypy = "^1.11.1"
 
-[tool.poetry.scripts]
-granule_metgen = 'nsidc.metadata.granule_metgen:greeting'
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
@@ -34,3 +31,6 @@ pythonpath = ["src"]
 addopts = [
     "--import-mode=importlib",
 ]
+
+[tool.poetry.scripts]
+gm-hello = 'nsidc.granule_metgen:hello'
