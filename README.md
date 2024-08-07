@@ -32,6 +32,32 @@ TBD
 
 TBD
 
+## Contributing
+
+### Requirements
+
+* [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
+
+### Installing Dependencies
+
+Use Poetry to create and activate a virtual environment
+
+        $ poetry shell
+
+* Install dependencies
+
+        $ poetry install
+
+### Running `granule-metgen`:
+
+        $ gm-hello Elmo
+
+        Hello, Elmo
+
+### Running tests:
+
+        $ poetry run pytest
+
 ## Credit
 
 This content was developed by the National Snow and Ice Data Center with funding from
