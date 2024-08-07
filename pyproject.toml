@@ -12,6 +12,7 @@ python = "^3.12"
 
 
 click = "^8.1.7"
+pyfiglet = "^1.0.2"
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.2"
 
@@ -35,4 +36,4 @@ addopts = [
 
 [tool.poetry.scripts]
 gm-hello = 'nsidc.granule_metgen:hello'
-instagram = 'nsidc.cli:cli'
+instameta = 'nsidc.cli:cli'
