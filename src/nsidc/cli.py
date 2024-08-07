@@ -24,6 +24,8 @@ def info(config):
 @click.option('--config', help='Instameta configuration file')
 def process(config):
     instameta.show_banner()
+    configuration = instameta.configuration(config)
+    instameta.process(configuration)
     click.echo(f'Processed granules using the configuration file {config}')
 
 
