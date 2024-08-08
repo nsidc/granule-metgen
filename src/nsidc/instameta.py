@@ -4,7 +4,7 @@ from pyfiglet import Figlet
 
 
 def show_banner():
-    f = Figlet(font='fraktur', width=160)
+    f = Figlet(font='slant', width=160)
     print(f.renderText('Instameta'))
 
 
