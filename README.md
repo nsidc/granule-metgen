@@ -18,15 +18,44 @@ nsidc@nsidc.org for more information.
 
 ## Requirements
 
-TBD
+To use the `granule-metgen` command-line tool, `instameta`, you must first have Python version 3.12 installed. To determine the version of Python you have, run this at the command-line:
+
+    $ python --version
+
+or
+
+    $ python3 --version
+
+Next, install [Poetry](https://python-poetry.org/) by using the [official installer](https://python-poetry.org/docs/#installing-with-the-official-installer). When successfully installed, you should be able to run:
+
+    $ poetry --version
 
 ## Installation
 
-TBD
+Clone the `granule-metgen` repository into a local directory:
+
+    $ mkdir -p ~/my-projects; cd ~/my-projects
+    $ git clone git@github.com:nsidc/granule-metgen.git
+    $ cd granule-metgen
+
+Run Poetry and have it install the `granule-metgen` dependencies. Then start a new shell in which you can run the tool:
+
+    $ poetry install
+    $ poetry shell
+
+Finally, run the `instameta` command-line tool and verify that it is available:
+
+    $ instameta --help
 
 ## Usage
 
-TBD
+* Show the help text:
+
+        $ instameta --help
+
+* Show summary information about an `instameta` configuration file. Here we use the example configuration file provided in the repo:
+
+        $ instameta info --config example/modscg.ini
 
 ## Troubleshooting
 
@@ -36,23 +65,18 @@ TBD
 
 ### Requirements
 
+* [Python](https://www.python.org/) v3.12+
 * [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
 
 ### Installing Dependencies
 
-Use Poetry to create and activate a virtual environment
+* Use Poetry to create and activate a virtual environment
 
         $ poetry shell
 
 * Install dependencies
 
         $ poetry install
-
-### Running `granule-metgen`:
-
-        $ gm-hello Elmo
-
-        Hello, Elmo
 
 ### Running tests:
 
