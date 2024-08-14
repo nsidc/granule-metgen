@@ -35,5 +35,4 @@ addopts = [
 ]
 
 [tool.poetry.scripts]
-gm-hello = 'nsidc.granule_metgen:hello'
 instameta = 'nsidc.cli:cli'
