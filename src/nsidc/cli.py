@@ -10,21 +10,21 @@ def cli():
 @cli.command()
 @click.option('--config', help='Instameta configuration file')
 def init(config):
-    instameta.show_banner()
+    click.echo(instameta.banner())
     click.echo(f'Initialized the instameta configuration file {config}')
 
 @cli.command()
 @click.option('--config', help='Instameta configuration file')
 def info(config):
-    instameta.show_banner()
-    configuration = instameta.configuration(config)
+    click.echo(instameta.banner())
+    configuration = instameta.configuration(instameta.config_parser(config))
     instameta.show_config(configuration)
 
 @cli.command()
 @click.option('--config', help='Instameta configuration file')
 def process(config):
-    instameta.show_banner()
-    configuration = instameta.configuration(config)
+    click.echo(instameta.banner())
+    configuration = instameta.configuration(instameta.config_parser(config))
     instameta.process(configuration)
     click.echo(f'Processed granules using the configuration file {config}')
 
