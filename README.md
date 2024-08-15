@@ -70,6 +70,10 @@ With the Poetry shell running, start the instameta tool and verify that it’s w
 
         $ instameta info --config example/modscg.ini
 
+* Exit the Poetry shell:
+
+        $ exit
+
 ## Troubleshooting
 
 TBD
