@@ -33,11 +33,12 @@ Next, install [Poetry](https://python-poetry.org/) by using the [official instal
 
 ## Installation
 
-Make a local directory (i.e., on your computer), and then `cd` into that directory. Clone the `granule-metgen` repository using ssh (if you have [added ssh keys to your GitHub account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)) or https (if you have not):
+Make a local directory (i.e., on your computer), and then `cd` into that directory. Clone the `granule-metgen` repository using ssh if you have [added ssh keys to your GitHub account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) or https if you have not:
 
     $ mkdir -p ~/my-projects; cd ~/my-projects
+    # Install using ssh:
     $ git clone git@github.com:nsidc/granule-metgen.git
-or
+    # Install using https:
     $ git clone https://github.com/nsidc/granule-metgen.git
 
 Enter the `granule-metgen` directory and run Poetry to have it install the `granule-metgen` dependencies. Then start a new shell in which you can run the tool:
