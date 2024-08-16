@@ -33,4 +33,4 @@ addopts = [
 ]
 
 [tool.poetry.scripts]
-instameta = 'nsidc.metgen.cli:main'
+instameta = 'nsidc.metgen.cli:cli'
