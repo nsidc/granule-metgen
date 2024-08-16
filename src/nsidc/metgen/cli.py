@@ -27,3 +27,6 @@ def process(config):
     configuration = metgen.configuration(metgen.config_parser(config))
     metgen.process(configuration)
     click.echo(f'Processed granules using the configuration file {config}')
+
+if __name__ == "__main__":
+    main()
