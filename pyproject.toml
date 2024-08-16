@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "granule-metgen"
+name = "nsidc-metgen"
 version = "0.1.0"
-description = "The granule-metgen package enables data producers as well as Operations staff managing the data ingest workflow to create metadata files conforming to NSIDC's UMM-G guidelines."
+description = "The nsidc-metgen package enables data producers as well as Operations staff managing the data ingest workflow to create metadata files conforming to NASA's Common Metadata Repository UMM-G specification."
 authors = ["National Snow and Ice Data Center (NSIDC) <nsidc@nsidc.org>"]
 readme = "README.md"
 package-mode = true
@@ -9,13 +9,11 @@ packages = [{include = "nsidc", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-
-
 click = "^8.1.7"
 pyfiglet = "^1.0.2"
+
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.2"
-
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.5.5"
@@ -35,4 +33,4 @@ addopts = [
 ]
 
 [tool.poetry.scripts]
-instameta = 'nsidc.cli:cli'
+instameta = 'nsidc.metgen.cli:main'
