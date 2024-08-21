@@ -43,12 +43,18 @@ def init_config(configuration_file):
             print('Not overwriting existing file. Exiting.')
             exit(1)
 
-    print("Source Data Parameters")
-    print('--------------------------------------------------')
     cfg_parser = configparser.ConfigParser()
 
+    print("Source Data Parameters")
+    print('--------------------------------------------------')
     cfg_parser.add_section("Source")
     cfg_parser.set("Source", "data_dir", Prompt.ask("Data directory"))
+
+    print("Destination Data Parameters")
+    print('--------------------------------------------------')
+    cfg_parser.add_section("Destination")
+    cfg_parser.set("Destination", "kinesis_arn", Prompt.ask("Kinesis Stream ARN"))
+    cfg_parser.set("Destination", "s3_url", Prompt.ask("S3 Bucket URL"))
 
     print()
     print(f'Saving new configuration: {configuration_file}')
