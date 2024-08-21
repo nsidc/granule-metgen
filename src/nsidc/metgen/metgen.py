@@ -15,12 +15,11 @@ def banner():
     return f.renderText('Instameta')
 
 def config_parser(configuration_file):
-    try:
-        cfg_parser = configparser.ConfigParser()
-        cfg_parser.read(configuration_file)
-        return cfg_parser
-    except Exception as e:
-        raise ValueError(f'Unable to read configuration file {configuration_file}')
+    if not os.path.exists(configuration_file):
+        raise ValueError(f'Unable to find configuration file {configuration_file}')
+    cfg_parser = configparser.ConfigParser()
+    cfg_parser.read(configuration_file)
+    return cfg_parser
 
 def configuration(config_parser):
     try:
@@ -45,11 +44,14 @@ def init_config(configuration_file):
 
     cfg_parser = configparser.ConfigParser()
 
+    print()
     print("Source Data Parameters")
     print('--------------------------------------------------')
     cfg_parser.add_section("Source")
     cfg_parser.set("Source", "data_dir", Prompt.ask("Data directory"))
+    print()
 
+    print()
     print("Destination Data Parameters")
     print('--------------------------------------------------')
     cfg_parser.add_section("Destination")
