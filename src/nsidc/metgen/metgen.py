@@ -1,8 +1,9 @@
 import configparser
 from dataclasses import dataclass
+import os.path
 from pathlib import Path
 from pyfiglet import Figlet
-from rich.prompt import Prompt
+from rich.prompt import Confirm, Prompt
 
 
 @dataclass
@@ -34,6 +35,14 @@ def init_config(configuration_file):
     print()
     print(f'Creating configuration file {configuration_file}')
     print()
+
+    if (os.path.exists(configuration_file)):
+        print(f'WARNING: The {configuration_file} already exists.')
+        overwrite = Confirm.ask("Overwrite?")
+        if not overwrite:
+            print('Not overwriting existing file. Exiting.')
+            exit(1)
+
     print("Source Data Parameters")
     print('--------------------------------------------------')
     cfg_parser = configparser.ConfigParser()
