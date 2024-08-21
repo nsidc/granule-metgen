@@ -1,8 +1,8 @@
 import configparser
 from dataclasses import dataclass
 from pathlib import Path
-
 from pyfiglet import Figlet
+from rich.prompt import Prompt
 
 
 @dataclass
@@ -27,6 +27,26 @@ def configuration(config_parser):
         return Config(source_data_dir)
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
+
+def init_config(configuration_file):
+    print("""This utility will create a granule metadata configuration file by prompting """
+          """you for values for each of the configuration parameters.""")
+    print()
+    print(f'Creating configuration file {configuration_file}')
+    print()
+    print("Source Data Parameters")
+    print('--------------------------------------------------')
+    cfg_parser = configparser.ConfigParser()
+
+    cfg_parser.add_section("Source")
+    cfg_parser.set("Source", "data_dir", Prompt.ask("Data directory"))
+
+    print()
+    print(f'Saving new configuration: {configuration_file}')
+    with open(configuration_file, "tw") as file:
+        cfg_parser.write(file)
+
+    return cfg_parser
 
 def show_config(configuration):
     print()
