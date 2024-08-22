@@ -1,7 +1,7 @@
-from os import getcwd
 from click.testing import CliRunner
 
-from nsidc.metgen.cli import cli, info
+from nsidc.metgen.cli import cli
+
 
 def test_without_subcommand():
     runner = CliRunner()
