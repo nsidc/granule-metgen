@@ -11,6 +11,7 @@ def cli():
 @click.option('--config', help='metgen configuration file')
 def init(config):
     click.echo(metgen.banner())
+    metgen.init_config(config)
     click.echo(f'Initialized the metgen configuration file {config}')
 
 @cli.command()

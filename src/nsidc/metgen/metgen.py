@@ -1,8 +1,9 @@
 import configparser
 from dataclasses import dataclass
+import os.path
 from pathlib import Path
-
 from pyfiglet import Figlet
+from rich.prompt import Confirm, Prompt
 
 
 @dataclass
@@ -14,12 +15,11 @@ def banner():
     return f.renderText('Instameta')
 
 def config_parser(configuration_file):
-    try:
-        cfg_parser = configparser.ConfigParser()
-        cfg_parser.read(configuration_file)
-        return cfg_parser
-    except Exception as e:
-        raise ValueError(f'Unable to read configuration file {configuration_file}')
+    if not os.path.exists(configuration_file):
+        raise ValueError(f'Unable to find configuration file {configuration_file}')
+    cfg_parser = configparser.ConfigParser()
+    cfg_parser.read(configuration_file)
+    return cfg_parser
 
 def configuration(config_parser):
     try:
@@ -27,6 +27,43 @@ def configuration(config_parser):
         return Config(source_data_dir)
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
+
+def init_config(configuration_file):
+    print("""This utility will create a granule metadata configuration file by prompting """
+          """you for values for each of the configuration parameters.""")
+    print()
+    print(f'Creating configuration file {configuration_file}')
+    print()
+
+    if (os.path.exists(configuration_file)):
+        print(f'WARNING: The {configuration_file} already exists.')
+        overwrite = Confirm.ask("Overwrite?")
+        if not overwrite:
+            print('Not overwriting existing file. Exiting.')
+            exit(1)
+
+    cfg_parser = configparser.ConfigParser()
+
+    print()
+    print("Source Data Parameters")
+    print('--------------------------------------------------')
+    cfg_parser.add_section("Source")
+    cfg_parser.set("Source", "data_dir", Prompt.ask("Data directory"))
+    print()
+
+    print()
+    print("Destination Data Parameters")
+    print('--------------------------------------------------')
+    cfg_parser.add_section("Destination")
+    cfg_parser.set("Destination", "kinesis_arn", Prompt.ask("Kinesis Stream ARN"))
+    cfg_parser.set("Destination", "s3_url", Prompt.ask("S3 Bucket URL"))
+
+    print()
+    print(f'Saving new configuration: {configuration_file}')
+    with open(configuration_file, "tw") as file:
+        cfg_parser.write(file)
+
+    return cfg_parser
 
 def show_config(configuration):
     print()
