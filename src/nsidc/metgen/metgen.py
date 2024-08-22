@@ -32,8 +32,13 @@ def init_config(configuration_file):
     print("""This utility will create a granule metadata configuration file by prompting """
           """you for values for each of the configuration parameters.""")
     print()
-    print(f'Creating configuration file {configuration_file}')
-    print()
+    # if config file name is not blank
+    if not configuration_file:
+        configuration_file = Prompt.ask("configuration file name", default="example.ini")
+        # TODO check file name is safe
+    else:
+        print(f'Creating configuration file {configuration_file}')
+        print()
 
     if (os.path.exists(configuration_file)):
         print(f'WARNING: The {configuration_file} already exists.')
@@ -54,7 +59,10 @@ def init_config(configuration_file):
     print()
     print("Destination Data Parameters")
     print('--------------------------------------------------')
+    # local dir
+    # local subdir for ummg
     cfg_parser.add_section("Destination")
+    cfg_parser.set("Destination", "local_staging_dir", Prompt.ask("Local output directory"))
     cfg_parser.set("Destination", "kinesis_arn", Prompt.ask("Kinesis Stream ARN"))
     cfg_parser.set("Destination", "s3_url", Prompt.ask("S3 Bucket URL"))
 
