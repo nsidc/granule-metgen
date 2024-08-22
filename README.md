@@ -2,10 +2,11 @@
   <img alt="NSIDC logo" src="https://nsidc.org/themes/custom/nsidc/logo.svg" width="150" />
 </p>
 
-# granule-metgen
+# nsidc-metgen
 
-`granule-metgen` enables data producers as well as Operations staff managing the data ingest workflow to create metadata
-files conforming to NSIDC's UMM-G guidelines.
+`nsidc-metgen` enables data producers as well as Operations staff managing the
+data ingest workflow to create metadata files conforming to
+NASA's Common Metadata Repository UMM-G specification."
 
 ## Level of Support
 
@@ -18,7 +19,7 @@ nsidc@nsidc.org for more information.
 
 ## Requirements
 
-To use the `granule-metgen` command-line tool, `instameta`, you must first have Python version 3.12 installed. To determine the version of Python you have, run this at the command-line:
+To use the `nsidc-metgen` command-line tool, `instameta`, you must first have Python version 3.12 installed. To determine the version of Python you have, run this at the command-line:
 
     $ python --version
 
