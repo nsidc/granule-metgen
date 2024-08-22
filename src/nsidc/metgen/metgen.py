@@ -9,13 +9,15 @@ from rich.prompt import Confirm, Prompt
 @dataclass
 class Config:
     source_data_dir: str
+    destination_kinesis_arn: str
+    destination_s3_url: str
 
 def banner():
     f = Figlet(font='slant')
     return f.renderText('Instameta')
 
 def config_parser(configuration_file):
-    if not os.path.exists(configuration_file):
+    if configuration_file is None or not os.path.exists(configuration_file):
         raise ValueError(f'Unable to find configuration file {configuration_file}')
     cfg_parser = configparser.ConfigParser()
     cfg_parser.read(configuration_file)
@@ -24,7 +26,9 @@ def config_parser(configuration_file):
 def configuration(config_parser):
     try:
         source_data_dir = config_parser.get('Source', 'data_dir')
-        return Config(source_data_dir)
+        destination_kinesis_arn = config_parser.get('Destination', 'kinesis_arn')
+        destination_s3_url = config_parser.get('Destination', 's3_url')
+        return Config(source_data_dir, destination_kinesis_arn, destination_s3_url)
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
 
@@ -77,6 +81,10 @@ def show_config(configuration):
     print()
     print(f'* Source')
     print(f'  + Data directory: {configuration.source_data_dir}')
+    print()
+    print(f'* Destination')
+    print(f'  + Kinesis ARN: {configuration.destination_kinesis_arn}')
+    print(f'  + S3 URL: {configuration.destination_s3_url}')
 
 def process(configuration):
     # For each input file pair in `data_dir` and `ummg_dir`:

@@ -27,26 +27,39 @@ or
 
     $ python3 --version
 
-Next, install [Poetry](https://python-poetry.org/) by using the [official installer](https://python-poetry.org/docs/#installing-with-the-official-installer). When successfully installed, you should be able to run:
+Next, install [Poetry](https://python-poetry.org/) by using the [official installer](https://python-poetry.org/docs/#installing-with-the-official-installer) if you’re comfortable with the instructions, or by installing it using a package manager (like Homebrew) if this is more familiar to you. When successfully installed, you should be able to run:
 
     $ poetry --version
+    Poetry (version 1.8.3)
 
 ## Installation
 
-Clone the `granule-metgen` repository into a local directory:
+Make a local directory (i.e., on your computer), and then `cd` into that directory. Clone the `granule-metgen` repository using ssh if you have [added ssh keys to your GitHub account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) or https if you have not:
 
     $ mkdir -p ~/my-projects; cd ~/my-projects
+    # Install using ssh:
     $ git clone git@github.com:nsidc/granule-metgen.git
+    # Install using https:
+    $ git clone https://github.com/nsidc/granule-metgen.git
+
+Enter the `granule-metgen` directory and run Poetry to have it install the `granule-metgen` dependencies. Then start a new shell in which you can run the tool:
+
     $ cd granule-metgen
-
-Run Poetry and have it install the `granule-metgen` dependencies. Then start a new shell in which you can run the tool:
-
     $ poetry install
     $ poetry shell
 
-Finally, run the `instameta` command-line tool and verify that it is available:
+With the Poetry shell running, start the instameta tool and verify that it’s working by requesting its usage options and having them returned:
 
     $ instameta --help
+    Usage: instameta [OPTIONS] COMMAND [ARGS]...
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      info
+      init
+      process
 
 ## Usage
 
@@ -57,6 +70,10 @@ Finally, run the `instameta` command-line tool and verify that it is available:
 * Show summary information about an `instameta` configuration file. Here we use the example configuration file provided in the repo:
 
         $ instameta info --config example/modscg.ini
+
+* Exit the Poetry shell:
+
+        $ exit
 
 ## Troubleshooting
 
