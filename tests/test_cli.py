@@ -1,7 +1,7 @@
 from os import getcwd
 from click.testing import CliRunner
 
-from nsidc.cli import cli, info
+from nsidc.metgen.cli import cli, info
 
 def test_without_subcommand():
     runner = CliRunner()
@@ -30,7 +30,7 @@ def test_info_with_config():
 def test_info_with_config_summarizes():
     runner = CliRunner()
     result = runner.invoke(cli, ['info', '--config', './example/modscg.ini'])
-    
+
     for section in ['Source']:
         assert section in result.output
 
