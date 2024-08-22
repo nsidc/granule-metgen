@@ -43,3 +43,4 @@ def test_config_with_values():
 
     assert config.source_data_dir == '/data/example'
     assert config.destination_kinesis_arn == 'abcd-1234'
+    assert config.destination_s3_url == 's3://example/xyzzy'

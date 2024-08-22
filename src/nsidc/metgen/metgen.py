@@ -10,6 +10,7 @@ from rich.prompt import Confirm, Prompt
 class Config:
     source_data_dir: str
     destination_kinesis_arn: str
+    destination_s3_url: str
 
 def banner():
     f = Figlet(font='slant')
@@ -26,7 +27,8 @@ def configuration(config_parser):
     try:
         source_data_dir = config_parser.get('Source', 'data_dir')
         destination_kinesis_arn = config_parser.get('Destination', 'kinesis_arn')
-        return Config(source_data_dir, destination_kinesis_arn)
+        destination_s3_url = config_parser.get('Destination', 's3_url')
+        return Config(source_data_dir, destination_kinesis_arn, destination_s3_url)
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
 
@@ -71,6 +73,10 @@ def show_config(configuration):
     print()
     print(f'* Source')
     print(f'  + Data directory: {configuration.source_data_dir}')
+    print()
+    print(f'* Destination')
+    print(f'  + Kinesis ARN: {configuration.destination_kinesis_arn}')
+    print(f'  + S3 URL: {configuration.destination_s3_url}')
 
 def process(configuration):
     # For each input file pair in `data_dir` and `ummg_dir`:

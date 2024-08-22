@@ -31,8 +31,8 @@ def test_info_with_config_summarizes():
     runner = CliRunner()
     result = runner.invoke(cli, ['info', '--config', './example/modscg.ini'])
 
-    for section in ['Source']:
+    for section in ['Source', 'Destination']:
         assert section in result.output
 
-    for key in ['Data directory']:
+    for key in ['Data directory', 'Kinesis ARN', 'S3 URL']:
         assert key in result.output
