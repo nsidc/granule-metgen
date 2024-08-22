@@ -11,6 +11,7 @@ class Config:
     source_data_dir: str
     destination_kinesis_arn: str
     destination_s3_url: str
+    auth_id: str
 
 def banner():
     f = Figlet(font='slant')
@@ -26,9 +27,10 @@ def config_parser(configuration_file):
 def configuration(config_parser):
     try:
         source_data_dir = config_parser.get('Source', 'data_dir')
+        auth_id = config_parser.get('Collection', 'auth_id')
         destination_kinesis_arn = config_parser.get('Destination', 'kinesis_arn')
         destination_s3_url = config_parser.get('Destination', 's3_url')
-        return Config(source_data_dir, destination_kinesis_arn, destination_s3_url)
+        return Config(source_data_dir, auth_id, destination_kinesis_arn, destination_s3_url)
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
 
@@ -79,16 +81,14 @@ def init_config(configuration_file):
 
 def show_config(configuration):
     print()
-    print(f'* Source')
-    print(f'  + Data directory: {configuration.source_data_dir}')
-    print()
-    print(f'* Destination')
-    print(f'  + Kinesis ARN: {configuration.destination_kinesis_arn}')
-    print(f'  + S3 URL: {configuration.destination_s3_url}')
+    # TODO add section headings
+    for k,v in configuration.__dict__.items():
+        print(f'  + {k}: {v}')
 
 def process(configuration):
-    # For each input file pair in `data_dir` and `ummg_dir`:
-    #   * stage data & ummg files
+    # For each input file in `data_dir`:
+    #   * create or find ummg file
+    #   * stage data & ummg file
     #   * compose CNM-S
     #   * publish CNM-S
     #   * create audit entry
@@ -107,16 +107,23 @@ def process(configuration):
 
     for file in source_data:
         print('--------------------------------------------------')
-        stage(configuration, file)
-        cnm = cnms_message(configuration, file)
+        ummg_file = find_or_create_ummg(configuration, file)
+        stage(configuration, file, ummg_file)
+        cnm = cnms_message(configuration, file, ummg_file)
         publish_cnm(configuration, cnm)
         print()
 
-def stage(configuration, source_file):
-    print(f'Staged file: {source_file}')
+def find_or_create_ummg(configuration, science_file):
+    # look for ummg with same base name
+    return 'generated ummg'
 
-def cnms_message(configuration, source_file):
+def stage(configuration, science_file, ummg_file):
+    print(f'Staged file: {science_file}')
+    print(f'Staged file: {ummg_file}')
+
+def cnms_message(configuration, science_file, ummg_file):
     return '{ "CollectionReference": { "ShortName": "MODSCGDRF", "Version": "001" }}'
 
 def publish_cnm(configuration, cnm_message):
     print(f'Published CNM message: {cnm_message}')
+    # TODO write file for now, rather than post to Kinesis
