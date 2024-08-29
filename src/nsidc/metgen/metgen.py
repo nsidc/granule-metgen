@@ -208,8 +208,8 @@ def stage(mapping, granule_files=[], metadata_file=''):
 def cnms_message(mapping, body_template='', granule_files=[], metadata_file=''):
     mapping['submission_time'] = datetime.now(timezone.utc).isoformat()
 
-    # Decode the JSON into its components so information about multiple files is easier
-    # to manipulate.
+    # Break up the JSON string into its components so information about multiple files is
+    # easier to add.
     body_content = body_template.safe_substitute(mapping)
     body_json = json.loads(body_content)
 
@@ -240,7 +240,7 @@ def cnms_message(mapping, body_template='', granule_files=[], metadata_file=''):
     new_content = file_template.safe_substitute(sub_mapping)
     body_json['product']['files'].append(json.loads(new_content))
 
-    # Serialize the populated template back to JSON
+    # Serialize the populated values back to JSON
     return json.dumps(body_json)
 
 def publish_cnm(mapping, cnm_message):

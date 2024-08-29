@@ -9,7 +9,7 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--config', help='configuration file name to write')
+@click.option('--config', help='Name of configuration file to create or replace')
 def init(config):
     """Creates a new metgen config file based on user input."""
     click.echo(metgen.banner())
