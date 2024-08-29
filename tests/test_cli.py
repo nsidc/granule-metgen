@@ -34,5 +34,5 @@ def test_info_with_config_summarizes(cli_runner):
     for section in ['Source', 'Destination']:
         assert section in result.output
 
-    for key in ['Data directory', 'Kinesis ARN', 'S3 URL']:
+    for key in ['data_dir', 'kinesis_arn', 's3_url']:
         assert key in result.output

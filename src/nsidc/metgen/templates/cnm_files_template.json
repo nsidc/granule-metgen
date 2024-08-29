@@ -1,0 +1,8 @@
+{
+    "name": "$file_name",
+    "type": "$file_type",
+    "uri": "$staging_uri",
+    "checksumType": "$checksum_type",
+    "checksum": "$checksum",
+    "size": $file_size
+}
