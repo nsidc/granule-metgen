@@ -44,7 +44,7 @@ def producer_granule_id(ummg_file):
         id_str = pgid[0]['Identifier'] if pgid else ''
     return id_str
 
-def configuration(config_parser, environment):
+def configuration(config_parser, environment='int'):
     try:
         # Look here for science files (and any ancillary files)
         data_dir = config_parser.get('Source', 'data_dir')
@@ -76,7 +76,7 @@ def init_config(configuration_file):
     print("""This utility will create a granule metadata configuration file by prompting """
           """you for values for each of the configuration parameters.""")
     print()
-    # prompt for config file name if it doesn't exist
+    # prompt for config file name if it's not provided
     if not configuration_file:
         configuration_file = Prompt.ask("configuration file name", default="example.ini")
         # TODO check file name is safe
@@ -149,19 +149,20 @@ def process(configuration):
     print()
     print('--------------------------------------------------')
 
-    source_data_path = Path(configuration.data_dir)
-    source_data = list(source_data_path.glob('*.nc'))
+    data_dir = Path(configuration.data_dir)
+    data_files = list(data_dir.glob('*.nc'))
     ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
     existing_ummg = {os.path.basename(i) for i in ummg_path.glob('*.json')}
 
-    print(f'Found {len(source_data)} source files to process')
+    print(f'Found {len(data_files)} source files to process')
     print()
 
     # initialize template content common to all files
     template = body_template()
     mapping = read_config(configuration)
+    processed_count = 0
 
-    for file in source_data:
+    for file in data_files:
         print()
         print('--------------------------------------------------')
         print()
@@ -170,6 +171,7 @@ def process(configuration):
             print(f'No UMM-G file for {file}, skipping.')
             continue
 
+        processed_count += 1
         ummg_file = os.path.join(ummg_path, ummg_file)
 
         # generate uuid value (needed to generate path to S3 staging location)
@@ -177,14 +179,17 @@ def process(configuration):
 
         mapping['producer_granule_id'] = producer_granule_id(ummg_file)
 
+        # Pass along science files in an array here, because we'll eventually need to deal with
+        # datasets having more than one file in a "granule," or having ancillary files (e.g.
+        # browse files) associated with a science file.
         stage(mapping, granule_files=[file], metadata_file=ummg_file)
-        cnm = cnms_message(mapping, body_template=template, granule_files=[file], metadata_file=ummg_file)
-        publish_cnm(mapping, cnm)
+        cnm_content = cnms_message(mapping, body_template=template, granule_files=[file], metadata_file=ummg_file)
+        publish_cnm(mapping, cnm_content)
 
     print()
     print('--------------------------------------------------')
     print()
-    print(f'Processed {len(source_data)} source files')
+    print(f'Processed {processed_count} source files')
 
 def find_or_create_ummg(science_file, existing_ummg):
     #
@@ -215,33 +220,26 @@ def cnms_message(mapping, body_template='', granule_files=[], metadata_file=''):
 
     file_template = files_template()
 
-    # Clunky first attempt at implementing a loop so we can eventually handle multiple
-    # science/ancillary files in a sane way. Note! This gives all granule files the
-    # identical type of "data".
     for file in granule_files:
-        sub_mapping = dict(mapping)
-        sub_mapping['file_size'] = os.path.getsize(file)
-        sub_mapping['file_type'] = 'data'
-        sub_mapping['checksum'] = generate_hash(file)
-        sub_mapping['file_name'] = os.path.basename(file)
-        sub_mapping['staging_uri'] = s3_url(mapping, sub_mapping['file_name'])
-
-        new_content = file_template.safe_substitute(sub_mapping)
-        body_json['product']['files'].append(json.loads(new_content))
+        file_json = file_template.safe_substitute(file_json_parts(mapping, file, 'data'))
+        body_json['product']['files'].append(json.loads(file_json))
 
     # Tack on the metadata file information
-    sub_mapping = dict(mapping)
-    sub_mapping['file_size'] = os.path.getsize(metadata_file)
-    sub_mapping['file_type'] = 'metadata'
-    sub_mapping['checksum'] = generate_hash(metadata_file)
-    sub_mapping['file_name'] = os.path.basename(metadata_file)
-    sub_mapping['staging_uri'] = s3_url(mapping, sub_mapping['file_name'])
-
-    new_content = file_template.safe_substitute(sub_mapping)
-    body_json['product']['files'].append(json.loads(new_content))
+    file_json = file_template.safe_substitute(file_json_parts(mapping, metadata_file, 'metadata'))
+    body_json['product']['files'].append(json.loads(file_json))
 
     # Serialize the populated values back to JSON
     return json.dumps(body_json)
+
+def file_json_parts(mapping, file, file_type):
+    file_mapping = dict(mapping)
+    file_name = os.path.basename(file)
+    file_mapping['file_size'] = os.path.getsize(file)
+    file_mapping['file_type'] = file_type
+    file_mapping['checksum'] = generate_hash(file)
+    file_mapping['file_name'] = file_name
+    file_mapping['staging_uri'] = s3_url(mapping, file_name)
+    return file_mapping
 
 def publish_cnm(mapping, cnm_message):
     # TODO write file to a hard-coded location for now, rather than post to Kinesis
