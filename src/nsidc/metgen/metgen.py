@@ -34,16 +34,6 @@ def config_parser(configuration_file):
     cfg_parser.read(configuration_file)
     return cfg_parser
 
-def producer_granule_id(ummg_file):
-    """Extract ProducerGranuleId value from an existing UMM-G file.
-    """
-    with open(ummg_file) as f:
-        d = json.load(f)
-        ids = d['DataGranule']['Identifiers']
-        pgid = [d for d in ids if d['IdentifierType'] == 'ProducerGranuleId']
-        id_str = pgid[0]['Identifier'] if pgid else ''
-    return id_str
-
 def configuration(config_parser, environment='int'):
     try:
         # Look here for science files (and any ancillary files)
@@ -137,7 +127,7 @@ def show_config(configuration):
         print(f'  + {k}: {v}')
 
 def process(configuration):
-    # For each input file in `data_dir`:
+    # For each granule in `data_dir`:
     #   * create or find ummg file
     #   * stage data & ummg files
     #   * compose CNM-S
@@ -149,41 +139,45 @@ def process(configuration):
     print()
     print('--------------------------------------------------')
 
-    data_dir = Path(configuration.data_dir)
-    data_files = list(data_dir.glob('*.nc'))
-    ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
-    existing_ummg = {os.path.basename(i) for i in ummg_path.glob('*.json')}
-
-    print(f'Found {len(data_files)} source files to process')
+    # Right now we assume one file per granule, so the length of the granule_ids
+    # list is the same as the total file count.
+    granules = granule_paths(configuration)
+    print(f'Found {len(granules)} granules to process')
     print()
+
+    ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
+    existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
 
     # initialize template content common to all files
     template = body_template()
     mapping = read_config(configuration)
     processed_count = 0
 
-    for file in data_files:
+    for granule in granules:
         print()
         print('--------------------------------------------------')
         print()
-        ummg_file = find_or_create_ummg(file, existing_ummg)
+        ummg_file = find_or_create_ummg(granule, existing_ummg)
         if not ummg_file:
-            print(f'No UMM-G file for {file}, skipping.')
+            print(f'No UMM-G file for {granule}, skipping.')
             continue
 
         processed_count += 1
         ummg_file = os.path.join(ummg_path, ummg_file)
 
-        # generate uuid value (needed to generate path to S3 staging location)
+        # generate uuid value (will be used to generate path to S3 staging location)
         mapping['uuid'] = str(uuid.uuid4())
 
-        mapping['producer_granule_id'] = producer_granule_id(ummg_file)
+        mapping['producer_granule_id'] = os.path.basename(granule)
 
         # Pass along science files in an array here, because we'll eventually need to deal with
         # datasets having more than one file in a "granule," or having ancillary files (e.g.
-        # browse files) associated with a science file.
-        stage(mapping, granule_files=[file], metadata_file=ummg_file)
-        cnm_content = cnms_message(mapping, body_template=template, granule_files=[file], metadata_file=ummg_file)
+        # browse files) associated with a granule.
+        stage(mapping, granule_files=[granule], metadata_file=ummg_file)
+        cnm_content = cnms_message(mapping,
+                                   body_template=template,
+                                   granule_files=[granule],
+                                   metadata_file=ummg_file)
         publish_cnm(mapping, cnm_content)
 
     print()
@@ -191,11 +185,19 @@ def process(configuration):
     print()
     print(f'Processed {processed_count} source files')
 
-def find_or_create_ummg(science_file, existing_ummg):
+def granule_paths(configuration):
+    data_dir = Path(configuration.data_dir)
+
+    # Currently only dealing with one file per granule.
+    # TODO: Refactor this function to detect unique basenames rather than
+    # assume one file per granule
+    return list(data_dir.glob('*.nc'))
+
+def find_or_create_ummg(granule_id, existing_ummg):
     #
     # TODO: create ummg if one doesn't exist, saving it to ummg_path
-    # For now: look for umm-g with same name as science file plus a '.json' suffix
-    ummg_file = os.path.basename(science_file) + '.json'
+    # For now: look for umm-g with same name as granule id plus a '.json' suffix
+    ummg_file = os.path.basename(granule_id) + '.json'
     if ummg_file in existing_ummg:
         return ummg_file
     else:
@@ -236,19 +238,19 @@ def file_json_parts(mapping, file, file_type):
     file_name = os.path.basename(file)
     file_mapping['file_size'] = os.path.getsize(file)
     file_mapping['file_type'] = file_type
-    file_mapping['checksum'] = generate_hash(file)
+    file_mapping['checksum'] = checksum(file)
     file_mapping['file_name'] = file_name
     file_mapping['staging_uri'] = s3_url(mapping, file_name)
     return file_mapping
 
 def publish_cnm(mapping, cnm_message):
-    # TODO write file to a hard-coded location for now, rather than post to Kinesis
+    # TODO: add option to post to Kinesis rather than write an actual file
     cnm_file = os.path.join(mapping['local_output_dir'], 'cnm', mapping['producer_granule_id'] + '.cnm.json')
     with open(cnm_file, "tw") as f:
         print(cnm_message, file=f)
     print(f'Saved CNM message {cnm_message} to {cnm_file}')
 
-def generate_hash(file):
+def checksum(file):
     BUF_SIZE = 65536
     sha256 = hashlib.sha256()
     with open(file, 'rb') as f:
@@ -261,13 +263,13 @@ def generate_hash(file):
     return sha256.hexdigest()
 
 def s3_url(mapping, name):
-    s3_template = 's3://nsidc-cumulus-${environment}-ingest-staging/external/${auth_id}/${version}/${uuid}/${s3_name}'
-    template = Template(s3_template)
+    template = Template('s3://nsidc-cumulus-${environment}-ingest-staging/external/${auth_id}/${version}/${uuid}/${s3_name}')
 
     mapping['s3_name'] = name
     return(template.safe_substitute(mapping))
 
 def body_template():
+    # TODO: Move all this hard-coded information to a configuration somewhere!
     return initialize_template('src/nsidc/metgen/templates/cnm_body_template.json')
 
 def files_template():
