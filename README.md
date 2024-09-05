@@ -19,7 +19,9 @@ nsidc@nsidc.org for more information.
 
 ## Requirements
 
-To use the `nsidc-metgen` command-line tool, `instameta`, you must first have Python version 3.12 installed. To determine the version of Python you have, run this at the command-line:
+To use the `nsidc-metgen` command-line tool, `instameta`, you must first have
+Python version 3.12 installed. To determine the version of Python you have, run
+this at the command-line:
 
     $ python --version
 
@@ -27,14 +29,22 @@ or
 
     $ python3 --version
 
-Next, install [Poetry](https://python-poetry.org/) by using the [official installer](https://python-poetry.org/docs/#installing-with-the-official-installer) if you’re comfortable with the instructions, or by installing it using a package manager (like Homebrew) if this is more familiar to you. When successfully installed, you should be able to run:
+Next, install [Poetry](https://python-poetry.org/) by using the [official
+installer](https://python-poetry.org/docs/#installing-with-the-official-installer)
+if you’re comfortable with the instructions, or by installing it using a package
+manager (like Homebrew) if this is more familiar to you. When successfully
+installed, you should be able to run:
 
     $ poetry --version
     Poetry (version 1.8.3)
 
 ## Installation
 
-Make a local directory (i.e., on your computer), and then `cd` into that directory. Clone the `granule-metgen` repository using ssh if you have [added ssh keys to your GitHub account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) or https if you have not:
+Make a local directory (i.e., on your computer), and then `cd` into that
+directory. Clone the `granule-metgen` repository using ssh if you have [added
+ssh keys to your GitHub
+account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+or https if you have not:
 
     $ mkdir -p ~/my-projects; cd ~/my-projects
     # Install using ssh:
@@ -66,6 +76,10 @@ With the Poetry shell running, start the instameta tool and verify that it’s w
 * Show the help text:
 
         $ instameta --help
+
+* Show the help text for an individual command:
+
+        $ instameta init --help
 
 * Show summary information about an `instameta` configuration file. Here we use the example configuration file provided in the repo:
 
