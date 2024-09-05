@@ -14,7 +14,7 @@ def cfg_parser():
     }
     cp['Collection'] = {
          'auth_id': 'DATA-0001',
-         'version': 1,
+         'version': 42,
          'provider': 'FOO'
     }
     cp['Destination'] = {
@@ -39,12 +39,29 @@ def test_config_parser_return_type(mock):
 
 def test_config_from_config_parser(cfg_parser):
     config = metgen.configuration(cfg_parser)
-
     assert isinstance(config, metgen.Config)
 
 def test_config_with_values(cfg_parser):
+    expected_keys = set(['environment',
+                         'data_dir',
+                         'auth_id',
+                         'version',
+                         'provider',
+                         'local_output_dir',
+                         'ummg_dir',
+                         'kinesis_arn'])
     config = metgen.configuration(cfg_parser)
+    config_keys = set(config.__dict__)
+    assert len(config_keys - expected_keys) == 0
 
     assert config.data_dir == '/data/example'
     assert config.auth_id == 'DATA-0001'
     assert config.kinesis_arn == 'abcd-1234'
+    assert config.environment == 'int'
+
+def test_read_config(cfg_parser):
+    mapping = metgen.read_config(metgen.configuration(cfg_parser))
+
+    assert mapping['checksum_type'] == 'SHA256'
+    assert mapping['environment'] == 'int'
+    assert mapping['data_dir'] == '/data/example'

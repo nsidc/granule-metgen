@@ -5,7 +5,9 @@ from nsidc.metgen import metgen
 
 @click.group(epilog="For detailed help on each command, run: instameta COMMAND --help")
 def cli():
-    """The instameta utility allows users to create granule-level metadata."""
+    """The instameta utility allows users to create granule-level
+    metadata, stage granule files and their associated metadata to
+    Cumulus, and post CNM messages."""
     pass
 
 @cli.command()
