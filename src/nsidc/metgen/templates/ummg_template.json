@@ -11,13 +11,7 @@
   "SpatialExtent": {
     "HorizontalSpatialDomain": {}
   },
-  "TemporalExtent": {
-    "RangeDateTime": {
-      "BeginningDateTime": "$begin_date_time",
-      "EndingDateTime": "$end_date_time"
-    },
-    "SingleDateTime": "$date_time"
-  },
+  "TemporalExtent": {},
   "DataGranule": {
     "DayNightFlag": "Unspecified",
     "Identifiers": [

@@ -1,0 +1,9 @@
+{
+    "Orbit": {
+        "AscendingCrossing": $ascending_crossing,
+        "StartLatitude": $start_lat,
+        "StartDirection": "$start_dir",
+        "EndLatitude": $end_lat,
+        "EndDirection": "$end_dir"
+    }
+}

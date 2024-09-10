@@ -1,0 +1,10 @@
+{
+    "Geometry": {
+        "BoundingRectangles": [{
+            "WestBoundingCoordinate": $west,
+            "NorthBoundingCoordinate": $north,
+            "EastBoundingCoordinate": $east,
+            "SouthBoundingCoordinate": $south
+        }]
+    }
+}
