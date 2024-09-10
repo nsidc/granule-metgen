@@ -1,0 +1,41 @@
+{
+  "CollectionReference": {
+    "ShortName": "$shortname",
+    "Version": "$version"
+  },
+  "MetadataSpecification": {
+    "URL": "https://cdn.earthdata.nasa.gov/umm/granule/v1.6.6",
+    "Name": "UMM-G",
+    "Version": "1.6.6"
+  },
+  "SpatialExtent": {
+    "HorizontalSpatialDomain": {}
+  },
+  "TemporalExtent": {
+    "RangeDateTime": {
+      "BeginningDateTime": "$begin_date_time",
+      "EndingDateTime": "$end_date_time"
+    },
+    "SingleDateTime": "$date_time"
+  },
+  "DataGranule": {
+    "DayNightFlag": "Unspecified",
+    "Identifiers": [
+      {
+        "Identifier": "$producer_granule_id",
+        "IdentifierType": "ProducerGranuleId"
+      }
+    ],
+    "ProductionDateTime": "$production_date_time",
+    "ArchiveAndDistributionInformation": [
+      {
+        "Name": "Not provided",
+        "SizeInBytes": $size,
+        "Checksum": {
+          "Value": "$checksum",
+          "Algorithm": "SHA256"
+      }
+    ]
+  }
+  "AdditionalAttributes": []
+}
