@@ -42,7 +42,7 @@ def test_process_with_config(cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
     assert result.exit_code == 0
 
-def test_process_with_config(cli_runner):
+def test_process_output(cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
     assert result.exit_code == 0
     assert 'Saved CNM message' in result.output

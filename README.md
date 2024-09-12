@@ -38,6 +38,10 @@ installed, you should be able to run:
     $ poetry --version
     Poetry (version 1.8.3)
 
+## Assumptions
+
+- Checksums are all SHA256
+
 ## Installation
 
 Make a local directory (i.e., on your computer), and then `cd` into that

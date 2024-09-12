@@ -57,11 +57,5 @@ def test_config_with_values(cfg_parser):
     assert config.data_dir == '/data/example'
     assert config.auth_id == 'DATA-0001'
     assert config.kinesis_arn == 'abcd-1234'
-    assert config.environment == 'int'
+    assert config.environment == 'uat'
 
-def test_read_config(cfg_parser):
-    mapping = metgen.read_config(metgen.configuration(cfg_parser))
-
-    assert mapping['checksum_type'] == 'SHA256'
-    assert mapping['environment'] == 'int'
-    assert mapping['data_dir'] == '/data/example'
