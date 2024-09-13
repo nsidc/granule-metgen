@@ -25,11 +25,8 @@
       {
         "Name": "Not provided",
         "SizeInBytes": $size,
-        "Checksum": {
-          "Value": "$checksum",
-          "Algorithm": "SHA256"
       }
     ]
-  }
+  },
   "AdditionalAttributes": []
 }
