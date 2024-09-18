@@ -1,18 +1,22 @@
 import configparser
 from dataclasses import dataclass
-import os.path
-from pathlib import Path
-from pyfiglet import Figlet
-from rich.prompt import Confirm, Prompt
 from datetime import datetime, timezone
-import uuid
 import hashlib
 import json
+import os.path
+from pathlib import Path
 from string import Template
+import uuid
+
+from cftime import num2date
+from netCDF4 import Dataset
+from pyfiglet import Figlet
+from rich.prompt import Confirm, Prompt
+
+from nsidc.metgen import aws
 from nsidc.metgen import constants
 from nsidc.metgen import netcdf_to_ummg
-from netCDF4 import Dataset
-from cftime import num2date
+
 
 SOURCE_SECTION_NAME = 'Source'
 COLLECTION_SECTION_NAME = 'Collection'
@@ -33,6 +37,8 @@ class Config:
     local_output_dir: str
     ummg_dir: str
     kinesis_arn: str
+    write_cnm_file: bool
+    checksum_type: str
 
     def show(self):
         # TODO add section headings in the right spot (if we think we need them in the output)
@@ -62,7 +68,6 @@ class Config:
             'auth_id': mapping['auth_id'],
             'version': mapping['version']
         }
-
 
 def banner():
     f = Figlet(font='slant')
@@ -97,7 +102,9 @@ def configuration(config_parser, environment=constants.DEFAULT_CUMULUS_ENVIRONME
             provider,
             local_output_dir,
             ummg_dir,
-            kinesis_arn)
+            kinesis_arn,
+            True,                   # TODO
+            'SHA256')               # TODO
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
 
@@ -155,6 +162,16 @@ def init_config(configuration_file):
 
     return configuration_file
 
+def read_config(configuration):
+    mapping = dict(configuration.__dict__)
+    return mapping
+
+def show_config(configuration):
+    # TODO add section headings in the right spot (if we think we need them in the output)
+    print()
+    print('Using configuration:')
+    for k,v in configuration.__dict__.items():
+        print(f'  + {k}: {v}')
 
 def process(configuration):
     # For each granule in `data_dir`:
@@ -203,7 +220,7 @@ def process(configuration):
         cnm_content = cnms_message(mapping,
                                    body_template=cnms_template,
                                    granule_files=granule_files)
-        publish_cnm(mapping, cnm_content)
+        publish_cnm(configuration, mapping, cnm_content)
 
     print()
     print('--------------------------------------------------')
@@ -327,12 +344,13 @@ def cnms_file_json_parts(mapping, file, file_type):
     file_mapping['staging_uri'] = s3_url(mapping, file_name)
     return file_mapping
 
-def publish_cnm(mapping, cnm_message):
-    # TODO: add option to post to Kinesis rather than write an actual file
-    cnm_file = os.path.join(mapping['local_output_dir'], 'cnm', mapping['producer_granule_id'] + '.cnm.json')
-    with open(cnm_file, "tw") as f:
-        print(cnm_message, file=f)
-    print(f'Saved CNM message {cnm_message} to {cnm_file}')
+def publish_cnm(configuration, mapping, cnm_message):
+    if configuration.write_cnm_file:
+        cnm_file = os.path.join(mapping['local_output_dir'], 'cnm', mapping['producer_granule_id'] + '.cnm.json')
+        with open(cnm_file, "tw") as f:
+            print(cnm_message, file=f)
+        print(f'Saved CNM message {cnm_message} to {cnm_file}')
+    aws.post_to_kinesis(configuration.kinesis_arn, cnm_message)
 
 def checksum(file):
     BUF_SIZE = 65536

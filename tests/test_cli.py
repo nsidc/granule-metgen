@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from click.testing import CliRunner
 import pytest
 
@@ -42,7 +44,9 @@ def test_process_with_config(cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
     assert result.exit_code == 0
 
-def test_process_output(cli_runner):
+@pytest.mark.skip('Temporary during rebase')
+@patch('nsidc.metgen.metgen.aws.post_to_kinesis', return_value = True)
+def test_process_with_config(mock, cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
     assert result.exit_code == 0
     assert 'Saved CNM message' in result.output

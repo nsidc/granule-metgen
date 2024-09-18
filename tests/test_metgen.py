@@ -49,7 +49,9 @@ def test_config_with_values(cfg_parser):
                          'provider',
                          'local_output_dir',
                          'ummg_dir',
-                         'kinesis_arn'])
+                         'kinesis_arn',
+                         'write_cnm_file',
+                         'checksum_type'])
     config = metgen.configuration(cfg_parser)
     config_keys = set(config.__dict__)
     assert len(config_keys - expected_keys) == 0
@@ -61,7 +63,7 @@ def test_config_with_values(cfg_parser):
 
 def test_enhanced_config():
     myconfig = metgen.Config('env', 'data_dir', 'auth_id', 'version',
-                  'provider', 'output_dir', 'ummg_dir', 'arn')
+                  'provider', 'output_dir', 'ummg_dir', 'arn', 'write_cnm_file', 'checksum_type')
     enhanced_config = myconfig.enhance('pgid')
     assert set(['auth_id', 'version', 'producer_granule_id',
                 'submission_time', 'uuid']) <= set(enhanced_config.keys())
