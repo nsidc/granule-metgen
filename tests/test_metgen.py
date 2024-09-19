@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
+from nsidc.metgen import constants
 from nsidc.metgen import metgen
 
 
@@ -38,7 +39,7 @@ def test_config_parser_return_type(mock):
     assert isinstance(result, ConfigParser)
 
 def test_config_from_config_parser(cfg_parser):
-    config = metgen.configuration(cfg_parser)
+    config = metgen.configuration(cfg_parser, {}, constants.DEFAULT_CUMULUS_ENVIRONMENT)
     assert isinstance(config, metgen.Config)
 
 def test_config_with_values(cfg_parser):
@@ -52,7 +53,7 @@ def test_config_with_values(cfg_parser):
                          'kinesis_arn',
                          'write_cnm_file',
                          'checksum_type'])
-    config = metgen.configuration(cfg_parser)
+    config = metgen.configuration(cfg_parser, {})
     config_keys = set(config.__dict__)
     assert len(config_keys - expected_keys) == 0
 
@@ -67,6 +68,8 @@ def test_enhanced_config():
     enhanced_config = myconfig.enhance('pgid')
     assert set(['auth_id', 'version', 'producer_granule_id',
                 'submission_time', 'uuid']) <= set(enhanced_config.keys())
+def test_read_config(cfg_parser):
+    mapping = metgen.read_config(metgen.configuration(cfg_parser, {}))
 
 def test_sums_file_sizes():
     details = {
@@ -88,3 +91,23 @@ def test_sums_file_sizes():
     assert summary['production_date_time'] == 'then'
     assert summary['date_time'] == 'now'
     assert summary['geometry'] == 'big'
+
+def test_get_configuration_value(cfg_parser):
+    result = metgen._get_configuration_value("Source", "data_dir", cfg_parser, {})
+    assert result == cfg_parser.get("Source", "data_dir")
+
+def test_get_configuration_value_with_override(cfg_parser):
+    overrides = { 'data_dir': 'foobar' }
+    result = metgen._get_configuration_value("Source", "data_dir", cfg_parser, overrides)
+    assert result == overrides['data_dir']
+
+def test_get_configuration_value_with_default(cfg_parser):
+    default_value = '/etc/foobar'
+    result = metgen._get_configuration_value("Source", "foobar_dir", cfg_parser, {}, default_value)
+    assert result == default_value
+
+def test_get_configuration_value_with_default_and_override(cfg_parser):
+    overrides = { 'data_dir': 'foobar' }
+    default_value = '/etc/foobar'
+    result = metgen._get_configuration_value("Source", "data_dir", cfg_parser, overrides, default_value)
+    assert result == overrides['data_dir']

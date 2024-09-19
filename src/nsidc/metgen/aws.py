@@ -3,6 +3,15 @@ import boto3
 
 KINESIS_PARTITION_KEY = "metgenc-duck"
 
+def kinesis_stream_exists(kinesis_stream_arn):
+    client = boto3.client("kinesis", region_name="us-west-2")
+    try:
+        summary = client.describe_stream_summary(StreamARN=kinesis_stream_arn)
+        return True
+    except Exception as e:
+        return False
+
+
 def post_to_kinesis(kinesis_stream_arn, cnm_message):
     """Posts a message to a Kinesis stream."""
     client = boto3.client("kinesis", region_name="us-west-2")

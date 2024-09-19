@@ -44,7 +44,7 @@ def test_process_with_config(cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
     assert result.exit_code == 0
 
-@pytest.mark.skip('Temporary during rebase')
+@pytest.mark.skip("Need to patch the validation")
 @patch('nsidc.metgen.metgen.aws.post_to_kinesis', return_value = True)
 def test_process_with_config(mock, cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])

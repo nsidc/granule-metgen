@@ -80,33 +80,40 @@ def config_parser(configuration_file):
     cfg_parser.read(configuration_file)
     return cfg_parser
 
-def configuration(config_parser, environment=constants.DEFAULT_CUMULUS_ENVIRONMENT):
+
+def _get_configuration_value(section, name, config_parser, overrides, default=None):
+    if overrides.get(name) is None:
+        return config_parser.get(section, name, fallback=default)
+    else:
+        return overrides.get(name)
+
+def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULUS_ENVIRONMENT):
     try:
-        # Look here for science files
-        data_dir = config_parser.get('Source', 'data_dir')
-
-        # Collection (dataset) information
-        auth_id = config_parser.get(COLLECTION_SECTION_NAME, 'auth_id')
-        version = config_parser.get(COLLECTION_SECTION_NAME, 'version')
-        provider = config_parser.get(COLLECTION_SECTION_NAME, 'provider')
-
-        local_output_dir = config_parser.get(DESTINATION_SECTION_NAME, 'local_output_dir')
-        ummg_dir = config_parser.get(DESTINATION_SECTION_NAME, 'ummg_dir')
-        kinesis_arn = config_parser.get(DESTINATION_SECTION_NAME, 'kinesis_arn')
-
         return Config(
             environment,
-            data_dir,
-            auth_id,
-            version,
-            provider,
-            local_output_dir,
-            ummg_dir,
-            kinesis_arn,
-            True,                   # TODO
-            'SHA256')               # TODO
+            _get_configuration_value('Source', 'data_dir', config_parser, overrides),
+            _get_configuration_value('Collection', 'auth_id', config_parser, overrides),
+            _get_configuration_value('Collection', 'version', config_parser, overrides),
+            _get_configuration_value('Collection', 'provider', config_parser, overrides),
+            _get_configuration_value('Destination', 'local_output_dir', config_parser, overrides),
+            _get_configuration_value('Destination', 'ummg_dir', config_parser, overrides),
+            _get_configuration_value('Destination', 'kinesis_arn', config_parser, overrides),
+            _get_configuration_value('Destination', 'write_cnm_file', config_parser, overrides, False),
+            _get_configuration_value('Settings', 'checksum_type', config_parser, overrides, 'SHA256'),
+        )
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
+
+def validate(configuration):
+    """Validates each value in the configuration."""
+    validations = [
+        ['data_dir', lambda dir: os.path.exists(dir), 'The data_dir does not exist.'],
+        ['local_output_dir', lambda dir: os.path.exists(dir), 'The local_output_dir does not exist.'],
+        # ['ummg_dir', lambda dir: os.path.exists(dir), 'The ummg_dir does not exist.'],                 ## Not sure what validation to do
+        ['kinesis_arn', lambda arn: aws.kinesis_stream_exists(arn), 'The kinesis_arn does not exist.'],
+    ]
+    errors = [msg for name, fn, msg in validations if not fn(getattr(configuration, name))]
+    return len(errors) == 0, errors
 
 #
 # TODO require a non-blank input for elements that have no default value
@@ -154,6 +161,13 @@ def init_config(configuration_file):
     cfg_parser.set(DESTINATION_SECTION_NAME, "local_output_dir", Prompt.ask("Local output directory", default="output"))
     cfg_parser.set(DESTINATION_SECTION_NAME, "ummg_dir", Prompt.ask("Local UMM-G output directory (relative to local output directory)", default="ummg"))
     cfg_parser.set(DESTINATION_SECTION_NAME, "kinesis_arn", Prompt.ask("Kinesis Stream ARN"))
+    cfg_parser.set("Destination", "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
+
+    print()
+    print("Settings Parameters")
+    print('--------------------------------------------------')
+    cfg_parser.add_section("Settings")
+    cfg_parser.set("Settings", "checksum_type", Prompt.ask("Checksum type", default="SHA256"))
 
     print()
     print(f'Saving new configuration: {configuration_file}')
@@ -185,6 +199,12 @@ def process(configuration):
     configuration.show()
     print()
     print('--------------------------------------------------')
+    valid, errors = validate(configuration)
+    if not valid:
+        print("The configuration is invalid:")
+        for msg in errors:
+            print(" * " + msg)
+        raise Exception('Invalid configuration')
 
     granules = granule_paths(Path(configuration.data_dir))
     print(f'Found {len(granules.items())} granules to process')
