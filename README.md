@@ -143,6 +143,8 @@ for the details.
 
 * Process science data and stage it for Cumulus:
 
+        # Source the AWS profile (once) before running 'process'-- use 'default' or a named profile
+        $ source scripts/env.sh default
         $ instameta process --config example/modscg.ini
 
 * Exit the Poetry shell:
