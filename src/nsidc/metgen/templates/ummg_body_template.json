@@ -1,6 +1,6 @@
 {
   "CollectionReference": {
-    "ShortName": "$shortname",
+    "ShortName": "$auth_id",
     "Version": "$version"
   },
   "MetadataSpecification": {

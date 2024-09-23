@@ -10,10 +10,14 @@ import hashlib
 import json
 from string import Template
 from nsidc.metgen import constants
+from nsidc.metgen import netcdf_to_ummg
+from netCDF4 import Dataset
+from cftime import num2date
 
 SOURCE_SECTION_NAME = 'Source'
 COLLECTION_SECTION_NAME = 'Collection'
 DESTINATION_SECTION_NAME = 'Destination'
+UMMG_BODY_TEMPLATE = 'src/nsidc/metgen/templates/ummg_body_template.json'
 CNM_BODY_TEMPLATE = 'src/nsidc/metgen/templates/cnm_body_template.json'
 CNM_FILES_TEMPLATE = 'src/nsidc/metgen/templates/cnm_files_template.json'
 
@@ -27,6 +31,23 @@ class Config:
     local_output_dir: str
     ummg_dir: str
     kinesis_arn: str
+
+    def show(self):
+        # TODO add section headings in the right spot (if we think we need them in the output)
+        print()
+        print('Using configuration:')
+        for k,v in self.__dict__.items():
+            print(f'  + {k}: {v}')
+
+    def enhance(self, producer_granule_id):
+        mapping = dict(self.__dict__)
+
+        mapping['producer_granule_id'] = producer_granule_id
+        mapping['submission_time'] = datetime.now(timezone.utc).isoformat()
+        mapping['uuid'] = str(uuid.uuid4())
+
+        print(f'mapping is now {mapping}')
+        return mapping
 
 
 def banner():
@@ -42,7 +63,7 @@ def config_parser(configuration_file):
 
 def configuration(config_parser, environment=constants.DEFAULT_CUMULUS_ENVIRONMENT):
     try:
-        # Look here for science files (and any ancillary files)
+        # Look here for science files
         data_dir = config_parser.get('Source', 'data_dir')
 
         # Collection (dataset) information
@@ -120,12 +141,6 @@ def init_config(configuration_file):
 
     return configuration_file
 
-def show_config(configuration):
-    # TODO add section headings in the right spot (if we think we need them in the output)
-    print()
-    print('Using configuration:')
-    for k,v in configuration.__dict__.items():
-        print(f'  + {k}: {v}')
 
 def process(configuration):
     # For each granule in `data_dir`:
@@ -136,7 +151,7 @@ def process(configuration):
     #   * create audit entry
     # TODO:
     #   * Parallelize the operations
-    show_config(configuration)
+    configuration.show()
     print()
     print('--------------------------------------------------')
 
@@ -147,33 +162,35 @@ def process(configuration):
     print()
 
     ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
-    existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
+    all_existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
 
     # initialize template content common to all files
-    template = body_template()
+    cnms_template = cnms_body_template()
     processed_count = 0
 
     for producer_granule_id, granule_files in granules.items():
         print()
         print('--------------------------------------------------')
-        print()
-        ummg_file = find_or_create_ummg(producer_granule_id, configuration, ummg_path, existing_ummg)
+        print(f'data files: {granule_files['data']}')
+        print(f'pgid: {producer_granule_id}')
+
+        # template requires mapping object, including producer granule id!
+        mapping = configuration.enhance(producer_granule_id)
+
+        # could be more than one data file!
+        ummg_file = find_or_create_ummg(mapping, granule_files['data'], ummg_path, all_existing_ummg)
         if not ummg_file:
             print(f'No UMM-G file for {producer_granule_id}, skipping.')
             continue
-        granules[producer_granule_id]['metadata'] = [ummg_file]
+
+        granule_files['metadata'] = [ummg_file]
+        print(f'granule paths: {granule_files}')
 
         processed_count += 1
-        mapping = dict(configuration.__dict__)
-
-        # generate uuid value (will be used to generate path to S3 staging location)
-        mapping['uuid'] = str(uuid.uuid4())
-
-        mapping['producer_granule_id'] = producer_granule_id
 
         stage(mapping, granule_files=granule_files)
         cnm_content = cnms_message(mapping,
-                                   body_template=template,
+                                   body_template=cnms_template,
                                    granule_files=granule_files)
         publish_cnm(mapping, cnm_content)
 
@@ -198,28 +215,53 @@ def granule_paths(data_dir):
 
     return granules
 
-def find_or_create_ummg(granule_id, configuration, ummg_path, existing_ummg):
+def find_or_create_ummg(mapping, data_file_paths, ummg_path, all_existing_ummg):
     """
     Look for an existing UMM-G file. If nothing found, create a new one.
     """
-    #
-    # TODO: create ummg if one doesn't exist, saving it to ummg_path
-    # For now: look for umm-g with same name as granule id plus a '.json' suffix
-    ummg_file = os.path.basename(granule_id) + '.json'
-    if ummg_file in existing_ummg:
+    ummg_file = mapping['producer_granule_id'] + '.json'
+    if ummg_file in all_existing_ummg:
         return (os.path.join(ummg_path, ummg_file))
     else:
-        return create_ummg(granule_id, configuration, ummg_path)
+        return create_ummg(mapping, data_file_paths, os.path.join(ummg_path, ummg_file))
 
-def create_ummg(granule_id, configuration, ummg_path):
+def create_ummg(mapping, data_file_paths, ummg_file):
     # retrieve collection information for validation of version number format, time range, spatial?
-    # (use auth_id and version from config)
+    # (use auth_id and version from mapping)
     # get template to be filled
     # open? file and read metadata. use appropriate file reading function based on file type
     # eventually want a way to hook in custom code to read data files
     # create file in ummg_path
+    metadata_details = {}
+
+    for data_file in data_file_paths:
+        # call method relevant to file type, return structure including
+        # size
+        # production_date_time
+        # time (range or single value)
+        # spatial (in what format?)
+        # 
+        # will need to call correct file handler based on file type
+        metadata_details[data_file] = netcdf_to_ummg.netcdf_to_ummg(data_file)
+        # apply to template here? store template output?
+        print(f'data date_time is {metadata_details[data_file]['date_time']}')
+        print(f'production_date_time is {metadata_details[data_file]['production_date_time']}')
+
+    # summarize metadata
+    summary = metadata_summary(metadata_details) #['size_in_bytes'] = 1 # add together all sizes in response from loop above
+    # get template output for latlons
+    # get template output for temporal
+    # combine latlon, temporal with body template output
+
+    print(f'create ummg file {ummg_file}')
     return ''
 
+def metadata_summary(details):
+    summary = {}
+    print(f'metadata details : {details}')
+    summary['size_in_bytes'] = sum([x['size_in_bytes'] for x in details.values()])
+    print(f'size sum: {summary['size_in_bytes']}')
+    return summary
 
 def stage(mapping, granule_files={}):
     """
@@ -235,14 +277,13 @@ def stage(mapping, granule_files={}):
     print()
 
 def cnms_message(mapping, body_template='', granule_files={}):
-    mapping['submission_time'] = datetime.now(timezone.utc).isoformat()
 
     # Break up the JSON string into its components so information about multiple files is
     # easier to add.
     body_content = body_template.safe_substitute(mapping)
     body_json = json.loads(body_content)
 
-    file_template = files_template()
+    file_template = cnms_files_template()
 
     for type, files in granule_files.items():
         for file in files:
@@ -282,15 +323,18 @@ def checksum(file):
     return sha256.hexdigest()
 
 def s3_url(mapping, name):
+    mapping['s3_name'] = name
     template = Template('s3://nsidc-cumulus-${environment}-ingest-staging/external/${auth_id}/${version}/${uuid}/${s3_name}')
 
-    mapping['s3_name'] = name
     return(template.safe_substitute(mapping))
 
-def body_template():
+def ummg_body_template():
+    return initialize_template(UMMG_BODY_TEMPLATE)
+
+def cnms_body_template():
     return initialize_template(CNM_BODY_TEMPLATE)
 
-def files_template():
+def cnms_files_template():
     return initialize_template(CNM_FILES_TEMPLATE)
 
 def initialize_template(file):
@@ -300,4 +344,5 @@ def initialize_template(file):
     return Template(template_str)
 
 def ummg_content():
+    # use netcdf_stuff here
     return "{ummg: 1}"
