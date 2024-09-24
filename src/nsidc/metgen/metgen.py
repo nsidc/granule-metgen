@@ -18,6 +18,8 @@ SOURCE_SECTION_NAME = 'Source'
 COLLECTION_SECTION_NAME = 'Collection'
 DESTINATION_SECTION_NAME = 'Destination'
 UMMG_BODY_TEMPLATE = 'src/nsidc/metgen/templates/ummg_body_template.json'
+UMMG_TEMPORAL_TEMPLATE = 'src/nsidc/metgen/templates/ummg_temporal_single_template.json'
+UMMG_SPATIAL_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_rectangle_template.json'
 CNM_BODY_TEMPLATE = 'src/nsidc/metgen/templates/cnm_body_template.json'
 CNM_FILES_TEMPLATE = 'src/nsidc/metgen/templates/cnm_files_template.json'
 
@@ -41,13 +43,26 @@ class Config:
 
     def enhance(self, producer_granule_id):
         mapping = dict(self.__dict__)
+        collection_details = self.collection_from_cmr(mapping)
 
+        mapping['auth_id'] = collection_details['auth_id']
+        mapping['version'] = collection_details['version']
         mapping['producer_granule_id'] = producer_granule_id
         mapping['submission_time'] = datetime.now(timezone.utc).isoformat()
         mapping['uuid'] = str(uuid.uuid4())
 
         print(f'mapping is now {mapping}')
         return mapping
+
+    # Is the right place for this function?
+    def collection_from_cmr(self, mapping):
+        # TODO: Use auth_id and version from mapping object to retrieve collection
+        # metadata from CMR, including formatted version number, temporal range, and
+        # spatial coverage.
+        return {
+            'auth_id': mapping['auth_id'],
+            'version': mapping['version']
+        }
 
 
 def banner():
@@ -88,7 +103,7 @@ def configuration(config_parser, environment=constants.DEFAULT_CUMULUS_ENVIRONME
         return Exception('Unable to read the configuration file', e)
 
 #
-# TODO require a non-blank input for values without defaults
+# TODO require a non-blank input for elements that have no default value
 def init_config(configuration_file):
     print("""This utility will create a granule metadata configuration file by prompting """
           """you for values for each of the configuration parameters.""")
@@ -155,8 +170,6 @@ def process(configuration):
     print()
     print('--------------------------------------------------')
 
-    # Right now we assume one file per granule, so the length of the granule_ids
-    # list is the same as the total file count.
     granules = granule_paths(Path(configuration.data_dir))
     print(f'Found {len(granules.items())} granules to process')
     print()
@@ -171,13 +184,11 @@ def process(configuration):
     for producer_granule_id, granule_files in granules.items():
         print()
         print('--------------------------------------------------')
-        print(f'data files: {granule_files['data']}')
         print(f'pgid: {producer_granule_id}')
 
-        # template requires mapping object, including producer granule id!
+        # Add producer_granule_id and information from CMR.
         mapping = configuration.enhance(producer_granule_id)
 
-        # could be more than one data file!
         ummg_file = find_or_create_ummg(mapping, granule_files['data'], ummg_path, all_existing_ummg)
         if not ummg_file:
             print(f'No UMM-G file for {producer_granule_id}, skipping.')
@@ -218,49 +229,65 @@ def granule_paths(data_dir):
 def find_or_create_ummg(mapping, data_file_paths, ummg_path, all_existing_ummg):
     """
     Look for an existing UMM-G file. If nothing found, create a new one.
+
+    Returns complete path to file.
     """
     ummg_file = mapping['producer_granule_id'] + '.json'
+    ummg_file_path = os.path.join(ummg_path, ummg_file)
     if ummg_file in all_existing_ummg:
-        return (os.path.join(ummg_path, ummg_file))
+        return (ummg_file_path)
     else:
-        return create_ummg(mapping, data_file_paths, os.path.join(ummg_path, ummg_file))
+        return create_ummg(mapping, data_file_paths, ummg_file_path)
 
-def create_ummg(mapping, data_file_paths, ummg_file):
-    # retrieve collection information for validation of version number format, time range, spatial?
-    # (use auth_id and version from mapping)
-    # get template to be filled
-    # open? file and read metadata. use appropriate file reading function based on file type
-    # eventually want a way to hook in custom code to read data files
-    # create file in ummg_path
+def create_ummg(mapping, data_file_paths, ummg_file_path):
+    # Open data files and retrieve metadata. Eventually need a way to hook in
+    # custom code to read different data file types, or scrape metadata from
+    # file names, etc.
+    # metadata_details dict looks like:
+    # {
+    #   data_file: {
+    #       'size_in_bytes' => integer,
+    #       'production_date_time'  => iso datetime string,
+    #       'begin_date_time' and 'end_date_time' OR 'date_time'
+    #       'geometry' => {'west' => , 'north' => , 'east' => , 'south' => }
+    #   }
+    # }
     metadata_details = {}
 
     for data_file in data_file_paths:
-        # call method relevant to file type, return structure including
-        # size
-        # production_date_time
-        # time (range or single value)
-        # spatial (in what format?)
-        # 
-        # will need to call correct file handler based on file type
+        # Assumes netCDF!
         metadata_details[data_file] = netcdf_to_ummg.netcdf_to_ummg(data_file)
-        # apply to template here? store template output?
-        print(f'data date_time is {metadata_details[data_file]['date_time']}')
-        print(f'production_date_time is {metadata_details[data_file]['production_date_time']}')
 
-    # summarize metadata
-    summary = metadata_summary(metadata_details) #['size_in_bytes'] = 1 # add together all sizes in response from loop above
-    # get template output for latlons
-    # get template output for temporal
-    # combine latlon, temporal with body template output
+    print(f'metadata details : {metadata_details}')
 
-    print(f'create ummg file {ummg_file}')
-    return ''
+    # Collapse information about (possibly) multiple files into a "granule" summary.
+    summary = metadata_summary(metadata_details)
+    print(f'summary: {summary}')
 
+    # Populate the body template and convert to JSON
+    body_json = json.loads(ummg_body_template().safe_substitute(mapping | summary))
+
+    # Cram JSON for temporal and spatial coverage into the body of the metadata content.
+    body_json['SpatialExtent']['HorizontalSpatialDomain'] = json.loads(ummg_spatial_template().safe_substitute(summary['geometry']))
+    body_json['TemporalExtent'] = json.loads(ummg_temporal_template().safe_substitute(summary))
+
+    # Save it all in a file
+    with open(ummg_file_path, "tw") as f:
+        print(json.dumps(body_json), file=f)
+
+    print(f'Created ummg file {ummg_file_path}')
+    return ummg_file_path
+
+# size is a sum of all associated data file sizes.
+# production datetime, temporal coverage, spatial coverage (geometry): simply use values from first data file entry
 def metadata_summary(details):
     summary = {}
-    print(f'metadata details : {details}')
+    default = list(details.values())[0]
+
     summary['size_in_bytes'] = sum([x['size_in_bytes'] for x in details.values()])
-    print(f'size sum: {summary['size_in_bytes']}')
+    summary['production_date_time'] = default['production_date_time']
+    summary['date_time'] = default['date_time']
+    summary['geometry'] = default['geometry']
     return summary
 
 def stage(mapping, granule_files={}):
@@ -331,6 +358,12 @@ def s3_url(mapping, name):
 def ummg_body_template():
     return initialize_template(UMMG_BODY_TEMPLATE)
 
+def ummg_temporal_template():
+    return initialize_template(UMMG_TEMPORAL_TEMPLATE)
+
+def ummg_spatial_template():
+    return initialize_template(UMMG_SPATIAL_TEMPLATE)
+
 def cnms_body_template():
     return initialize_template(CNM_BODY_TEMPLATE)
 
@@ -342,7 +375,3 @@ def initialize_template(file):
         template_str = template_file.read()
 
     return Template(template_str)
-
-def ummg_content():
-    # use netcdf_stuff here
-    return "{ummg: 1}"

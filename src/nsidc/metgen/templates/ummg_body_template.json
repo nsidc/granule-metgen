@@ -24,7 +24,7 @@
     "ArchiveAndDistributionInformation": [
       {
         "Name": "Not provided",
-        "SizeInBytes": $size,
+        "SizeInBytes": $size_in_bytes
       }
     ]
   },
