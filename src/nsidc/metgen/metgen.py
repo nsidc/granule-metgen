@@ -184,6 +184,7 @@ def process(configuration):
     for producer_granule_id, granule_files in granules.items():
         print()
         print('--------------------------------------------------')
+        print()
         print(f'Processing {producer_granule_id}...')
 
         # Add producer_granule_id and information from CMR.
@@ -257,11 +258,8 @@ def create_ummg(mapping, data_file_paths, ummg_file_path):
         # Assumes netCDF!
         metadata_details[data_file] = netcdf_to_ummg.extract_metadata(data_file)
 
-    print(f'metadata details : {metadata_details}')
-
     # Collapse information about (possibly) multiple files into a "granule" summary.
     summary = metadata_summary(metadata_details)
-    print(f'summary: {summary}')
 
     # Populate the body template and convert to JSON
     body_json = json.loads(ummg_body_template().safe_substitute(mapping | summary))
