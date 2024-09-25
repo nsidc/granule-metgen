@@ -51,7 +51,6 @@ class Config:
         mapping['submission_time'] = datetime.now(timezone.utc).isoformat()
         mapping['uuid'] = str(uuid.uuid4())
 
-        print(f'mapping is now {mapping}')
         return mapping
 
     # Is the right place for this function?
@@ -185,7 +184,7 @@ def process(configuration):
     for producer_granule_id, granule_files in granules.items():
         print()
         print('--------------------------------------------------')
-        print(f'pgid: {producer_granule_id}')
+        print(f'Processing {producer_granule_id}...')
 
         # Add producer_granule_id and information from CMR.
         mapping = configuration.enhance(producer_granule_id)
@@ -196,7 +195,6 @@ def process(configuration):
             continue
 
         granule_files['metadata'] = [ummg_file]
-        print(f'granule paths: {granule_files}')
 
         processed_count += 1
 
