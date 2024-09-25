@@ -174,6 +174,7 @@ def process(configuration):
     print(f'Found {len(granules.items())} granules to process')
     print()
 
+    # TODO: create local_output_dir, ummg_dir, and cnm subdir if they don't exist
     ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
     all_existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
 
@@ -271,7 +272,7 @@ def create_ummg(mapping, data_file_paths, ummg_file_path):
     body_json['SpatialExtent']['HorizontalSpatialDomain'] = json.loads(ummg_spatial_template().safe_substitute(summary['geometry']))
     body_json['TemporalExtent'] = json.loads(ummg_temporal_template().safe_substitute(summary))
 
-    # Save it all in a file
+    # Save it all in a file.
     with open(ummg_file_path, "tw") as f:
         print(json.dumps(body_json), file=f)
 
