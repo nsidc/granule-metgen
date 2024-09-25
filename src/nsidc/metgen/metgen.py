@@ -217,8 +217,8 @@ def granule_paths(data_dir):
     # code to identify the common basename for the cases where more than one
     # file exists per granule (or the case where an ancillary file is associated
     # with the granule), and to add the correct "type" of the file. See the CNM
-    # spec for a list of types. At the moment the assumption is one file per
-    # granule, with a type of "data," plus a metadata (UMM-G) file.
+    # spec for a list of types. At the moment the assumption is one (netCDF!) file
+    # per granule, with a type of "data," plus a metadata (UMM-G) file.
     producer_granule_ids = [os.path.basename(i) for i in data_dir.glob('*.nc')]
     for pgid in producer_granule_ids:
         granules[pgid] = {'data': [os.path.join(data_dir, pgid)]}
@@ -255,7 +255,7 @@ def create_ummg(mapping, data_file_paths, ummg_file_path):
 
     for data_file in data_file_paths:
         # Assumes netCDF!
-        metadata_details[data_file] = netcdf_to_ummg.netcdf_to_ummg(data_file)
+        metadata_details[data_file] = netcdf_to_ummg.extract_metadata(data_file)
 
     print(f'metadata details : {metadata_details}')
 

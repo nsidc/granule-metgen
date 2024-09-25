@@ -59,3 +59,30 @@ def test_config_with_values(cfg_parser):
     assert config.kinesis_arn == 'abcd-1234'
     assert config.environment == 'uat'
 
+def test_enhanced_config():
+    myconfig = metgen.Config('env', 'data_dir', 'auth_id', 'version',
+                  'provider', 'output_dir', 'ummg_dir', 'arn')
+    enhanced_config = myconfig.enhance('pgid')
+    assert set(['auth_id', 'version', 'producer_granule_id',
+                'submission_time', 'uuid']) <= set(enhanced_config.keys())
+
+def test_sums_file_sizes():
+    details = {
+        'first_id': {
+            'size_in_bytes': 100,
+            'production_date_time': 'then',
+            'date_time': 'now',
+            'geometry': 'big'
+        },
+        'second_id': {
+            'size_in_bytes': 200,
+            'production_date_time': 'before',
+            'date_time': 'after',
+            'geometry': 'small'
+        }
+    }
+    summary = metgen.metadata_summary(details)
+    assert summary['size_in_bytes'] == 300
+    assert summary['production_date_time'] == 'then'
+    assert summary['date_time'] == 'now'
+    assert summary['geometry'] == 'big'

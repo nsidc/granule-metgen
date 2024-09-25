@@ -6,13 +6,12 @@ from netCDF4 import Dataset
 # file: full path to netcdf file
 # take an input netcdf file and return a structure with temporal coverage
 # information, spatial coverage information, file size, and production datetime.
-def netcdf_to_ummg(file):
+def extract_metadata(file):
     # Assumptions (may need to make these configurable):
     # - production_date_time is represented by global attribute :date_created
     #   and/or :date_modified
     # - only one coordinate system used by all variables (i.e. only one grid_mapping)
-    summary = {}
-    summary['size_in_bytes'] = os.path.getsize(file)
+    summary = { 'size_in_bytes': os.path.getsize(file) }
 
     nc = Dataset(file)
 
