@@ -27,6 +27,5 @@
         "SizeInBytes": $size_in_bytes
       }
     ]
-  },
-  "AdditionalAttributes": []
+  }
 }
