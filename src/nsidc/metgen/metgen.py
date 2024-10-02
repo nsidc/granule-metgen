@@ -119,6 +119,9 @@ def process(configuration):
 
     granules = granule_paths(Path(configuration.data_dir))
     print(f'Found {len(granules.items())} granules to process')
+    if (configuration.number > 0 and configuration.number < len(granules)):
+        print(f'Processing the first {configuration.number} granule(s)')
+        granules = granules[:configuration.number]
     print()
 
     # TODO: create local_output_dir, ummg_dir, and cnm subdir if they don't exist
