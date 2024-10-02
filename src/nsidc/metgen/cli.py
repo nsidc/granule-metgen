@@ -1,6 +1,7 @@
 import click
 
 from nsidc.metgen import metgen
+from nsidc.metgen import constants
 
 
 @click.group(epilog="For detailed help on each command, run: instameta COMMAND --help")
@@ -24,12 +25,12 @@ def info(config):
     """Summarizes the contents of a configuration file."""
     click.echo(metgen.banner())
     configuration = metgen.configuration(metgen.config_parser(config))
-    metgen.show_config(configuration)
+    configuration.show()
 
 @cli.command()
 @click.option('--config', help='Path to configuration file', required=True)
-@click.option('--env', help='environment', default='int', show_default=True)
-def process(config, env):
+@click.option('--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
+def process(config, env=constants.DEFAULT_CUMULUS_ENVIRONMENT):
     """Processes science data files based on configuration file contents."""
     click.echo(metgen.banner())
     configuration = metgen.configuration(metgen.config_parser(config), env)

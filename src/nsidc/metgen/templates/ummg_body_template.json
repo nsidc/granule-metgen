@@ -1,6 +1,6 @@
 {
   "CollectionReference": {
-    "ShortName": "$shortname",
+    "ShortName": "$auth_id",
     "Version": "$version"
   },
   "MetadataSpecification": {
@@ -24,9 +24,8 @@
     "ArchiveAndDistributionInformation": [
       {
         "Name": "Not provided",
-        "SizeInBytes": $size,
+        "SizeInBytes": $size_in_bytes
       }
     ]
-  },
-  "AdditionalAttributes": []
+  }
 }

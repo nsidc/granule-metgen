@@ -11,6 +11,7 @@ packages = [{include = "nsidc", from = "src"}]
 python = "^3.12"
 click = "^8.1.7"
 pyfiglet = "^1.0.2"
+netCDF4 = "^1.6.5"
 
 rich = "^13.7.1"
 [tool.poetry.group.test.dependencies]
