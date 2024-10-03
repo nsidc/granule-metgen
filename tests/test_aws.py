@@ -8,7 +8,7 @@ import pytest
 from nsidc.metgen import aws
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def aws_credentials():
     """Mocked AWS Credentials for moto."""
     os.environ["AWS_ACCESS_KEY_ID"] = "testing"
@@ -17,7 +17,7 @@ def aws_credentials():
     os.environ["AWS_SESSION_TOKEN"] = "testing"
     os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def kinesis(aws_credentials):
     """A mocked Kinesis client."""
     with mock_aws():

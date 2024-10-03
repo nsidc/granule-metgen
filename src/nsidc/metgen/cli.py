@@ -1,5 +1,6 @@
 import click
 
+from nsidc.metgen import config
 from nsidc.metgen import metgen
 from nsidc.metgen import constants
 
@@ -20,26 +21,25 @@ def init(config):
     click.echo(f'Initialized the metgen configuration file {config}')
 
 @cli.command()
-@click.option('-c', '--config', help='Path to configuration file to display', required=True)
-def info(config):
+@click.option('-c', '--config', 'config_filename', help='Path to configuration file to display', required=True)
+def info(config_filename):
     """Summarizes the contents of a configuration file."""
     click.echo(metgen.banner())
-    configuration = metgen.configuration(metgen.config_parser(config), {})
+    configuration = config.configuration(config.config_parser(config_filename), {})
     configuration.show()
 
 @cli.command()
-@click.option('--config', help='Path to configuration file', required=True)
+@click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
 @click.option('--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
-@click.option('-c', '--config', help='Path to configuration file', required=True)
 @click.option('-e', '--env', help='environment', default='int', show_default=True)
 @click.option('-wc', '--write-cnm', is_flag=True, help="Write CNM messages to files.")
-def process(config, env=constants.DEFAULT_CUMULUS_ENVIRONMENT):
+def process(config_filename, env=constants.DEFAULT_CUMULUS_ENVIRONMENT):
     """Processes science data files based on configuration file contents."""
     click.echo(metgen.banner())
     overrides = {
         'write_cnm_file': write_cnm
     }
-    configuration = metgen.configuration(metgen.config_parser(config), overrides, env)
+    configuration = config.configuration(config.config_parser(config_filename), overrides, env)
     try:
         metgen.process(configuration)
     except Exception as e:
