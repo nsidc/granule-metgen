@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from click.testing import CliRunner
 import pytest
 
@@ -38,14 +40,7 @@ def test_process_requires_config(cli_runner):
     result = cli_runner.invoke(cli, ['process'])
     assert result.exit_code != 0
 
-@pytest.mark.skip('Temporary for GitHub Actions PR')
-def test_process_with_config(cli_runner):
+@patch('nsidc.metgen.metgen.process')
+def test_process_with_config_calls_process(mock, cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
-    assert result.exit_code == 0
-
-@pytest.mark.skip('Temporary for GitHub Actions PR')
-def test_process_output(cli_runner):
-    result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
-    assert result.exit_code == 0
-    assert 'Saved CNM message' in result.output
-    assert 'Processed granules' in result.output
+    assert mock.called
