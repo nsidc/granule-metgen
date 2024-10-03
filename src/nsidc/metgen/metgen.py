@@ -9,6 +9,7 @@ from pyfiglet import Figlet
 from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws
+from nsidc.metgen import config
 from nsidc.metgen import netcdf_to_ummg
 
 
@@ -109,7 +110,7 @@ def process(configuration):
     configuration.show()
     print()
     print('--------------------------------------------------')
-    valid, errors = validate(configuration)
+    valid, errors = config.validate(configuration)
     if not valid:
         print("The configuration is invalid:")
         for msg in errors:

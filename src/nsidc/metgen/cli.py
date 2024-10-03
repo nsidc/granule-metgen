@@ -30,10 +30,9 @@ def info(config_filename):
 
 @cli.command()
 @click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
-@click.option('--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
-@click.option('-e', '--env', help='environment', default='int', show_default=True)
+@click.option('-e', '--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
 @click.option('-wc', '--write-cnm', is_flag=True, help="Write CNM messages to files.")
-def process(config_filename, env=constants.DEFAULT_CUMULUS_ENVIRONMENT):
+def process(config_filename, env, write_cnm):
     """Processes science data files based on configuration file contents."""
     click.echo(metgen.banner())
     overrides = {
