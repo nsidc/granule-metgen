@@ -29,9 +29,6 @@ def cfg_parser():
 def test_banner():
     assert len(metgen.banner()) > 0
 
-def test_read_config(cfg_parser):
-    mapping = metgen.read_config(config.configuration(cfg_parser, {}))
-
 def test_sums_file_sizes():
     details = {
         'first_id': {

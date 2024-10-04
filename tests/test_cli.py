@@ -40,16 +40,24 @@ def test_process_requires_config(cli_runner):
     result = cli_runner.invoke(cli, ['process'])
     assert result.exit_code != 0
 
-@patch('nsidc.metgen.metgen.aws.post_to_kinesis', return_value = True)
-@patch('nsidc.metgen.metgen.validate', return_value = True)
+@patch('nsidc.metgen.aws.post_to_kinesis', return_value = True)
+@patch('nsidc.metgen.config.validate', return_value = [True, []])
 def test_process_with_config(mock, mock2, cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
     assert result.exit_code == 0
     assert 'Saved CNM message' in result.output
     assert 'Processed granules' in result.output
 
-@patch('nsidc.metgen.metgen.aws.post_to_kinesis', return_value = True)
-@patch('nsidc.metgen.metgen.validate', return_value = True)
+@patch('nsidc.metgen.aws.post_to_kinesis', return_value = True)
+@patch('nsidc.metgen.config.validate', return_value = [True, []])
+def test_process_with_write_cnm(mock, mock2, cli_runner):
+    result = cli_runner.invoke(cli, ['process', '-wc', '--config', './example/modscg.ini'])
+    assert result.exit_code == 0
+    assert 'Saved CNM message' in result.output
+    assert 'Processed granules' in result.output
+
+@patch('nsidc.metgen.aws.post_to_kinesis', return_value = True)
+@patch('nsidc.metgen.config.validate', return_value = [True, []])
 def test_process_with_granule_limit(mock, mock2, cli_runner):
     result = cli_runner.invoke(cli, ['process', '-n', '2', '--config', './example/modscg.ini'])
     assert result.exit_code == 0

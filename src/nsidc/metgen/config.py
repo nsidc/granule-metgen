@@ -20,6 +20,7 @@ class Config:
     kinesis_arn: str
     write_cnm_file: bool
     checksum_type: str
+    number: int
 
     def show(self):
         # TODO add section headings in the right spot (if we think we need them in the output)
@@ -50,7 +51,7 @@ class Config:
             'version': mapping['version']
         }
 
-def config_parser(configuration_file):
+def config_parser_factory(configuration_file):
     if configuration_file is None or not os.path.exists(configuration_file):
         raise ValueError(f'Unable to find configuration file {configuration_file}')
     cfg_parser = configparser.ConfigParser()
@@ -77,6 +78,7 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
             _get_configuration_value('Destination', 'kinesis_arn', config_parser, overrides),
             _get_configuration_value('Destination', 'write_cnm_file', config_parser, overrides, False),
             _get_configuration_value('Settings', 'checksum_type', config_parser, overrides, 'SHA256'),
+            _get_configuration_value('Settings', 'number', config_parser, overrides, -1),
         )
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
