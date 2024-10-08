@@ -20,6 +20,7 @@ class Config:
     kinesis_arn: str
     write_cnm_file: bool
     checksum_type: str
+    number: int
 
     def show(self):
         # TODO add section headings in the right spot (if we think we need them in the output)
@@ -50,7 +51,7 @@ class Config:
             'version': mapping['version']
         }
 
-def config_parser(configuration_file):
+def config_parser_factory(configuration_file):
     if configuration_file is None or not os.path.exists(configuration_file):
         raise ValueError(f'Unable to find configuration file {configuration_file}')
     cfg_parser = configparser.ConfigParser()
@@ -58,9 +59,14 @@ def config_parser(configuration_file):
     return cfg_parser
 
 
-def _get_configuration_value(section, name, config_parser, overrides, default=None):
+def _get_configuration_value(section, name, value_type, config_parser, overrides, default=None):
     if overrides.get(name) is None:
-        return config_parser.get(section, name, fallback=default)
+        if value_type is bool:
+            return config_parser.getboolean(section, name, fallback=default)
+        elif value_type is int:
+            return config_parser.getint(section, name, fallback=default)
+        else:
+            return config_parser.get(section, name, fallback=default)
     else:
         return overrides.get(name)
 
@@ -68,15 +74,16 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
     try:
         return Config(
             environment,
-            _get_configuration_value('Source', 'data_dir', config_parser, overrides),
-            _get_configuration_value('Collection', 'auth_id', config_parser, overrides),
-            _get_configuration_value('Collection', 'version', config_parser, overrides),
-            _get_configuration_value('Collection', 'provider', config_parser, overrides),
-            _get_configuration_value('Destination', 'local_output_dir', config_parser, overrides),
-            _get_configuration_value('Destination', 'ummg_dir', config_parser, overrides),
-            _get_configuration_value('Destination', 'kinesis_arn', config_parser, overrides),
-            _get_configuration_value('Destination', 'write_cnm_file', config_parser, overrides, False),
-            _get_configuration_value('Settings', 'checksum_type', config_parser, overrides, 'SHA256'),
+            _get_configuration_value('Source', 'data_dir', str, config_parser, overrides),
+            _get_configuration_value('Collection', 'auth_id', str, config_parser, overrides),
+            _get_configuration_value('Collection', 'version', int, config_parser, overrides),
+            _get_configuration_value('Collection', 'provider', str, config_parser, overrides),
+            _get_configuration_value('Destination', 'local_output_dir', str, config_parser, overrides),
+            _get_configuration_value('Destination', 'ummg_dir', str, config_parser, overrides),
+            _get_configuration_value('Destination', 'kinesis_arn', str, config_parser, overrides),
+            _get_configuration_value('Destination', 'write_cnm_file', bool, config_parser, overrides, False),
+            _get_configuration_value('Settings', 'checksum_type', str, config_parser, overrides, 'SHA256'),
+            _get_configuration_value('Settings', 'number', int, config_parser, overrides, -1),
         )
     except Exception as e:
         return Exception('Unable to read the configuration file', e)

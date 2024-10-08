@@ -16,6 +16,7 @@ from nsidc.metgen import netcdf_to_ummg
 SOURCE_SECTION_NAME = 'Source'
 COLLECTION_SECTION_NAME = 'Collection'
 DESTINATION_SECTION_NAME = 'Destination'
+SETTINGS_SECTION_NAME = 'Settings'
 UMMG_BODY_TEMPLATE = 'src/nsidc/metgen/templates/ummg_body_template.json'
 UMMG_TEMPORAL_TEMPLATE = 'src/nsidc/metgen/templates/ummg_temporal_single_template.json'
 UMMG_SPATIAL_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_rectangle_template.json'
@@ -72,13 +73,13 @@ def init_config(configuration_file):
     cfg_parser.set(DESTINATION_SECTION_NAME, "local_output_dir", Prompt.ask("Local output directory", default="output"))
     cfg_parser.set(DESTINATION_SECTION_NAME, "ummg_dir", Prompt.ask("Local UMM-G output directory (relative to local output directory)", default="ummg"))
     cfg_parser.set(DESTINATION_SECTION_NAME, "kinesis_arn", Prompt.ask("Kinesis Stream ARN"))
-    cfg_parser.set("Destination", "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
+    cfg_parser.set(DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
 
     print()
-    print("Settings Parameters")
+    print(f'{SETTINGS_SECTION_NAME} Parameters')
     print('--------------------------------------------------')
-    cfg_parser.add_section("Settings")
-    cfg_parser.set("Settings", "checksum_type", Prompt.ask("Checksum type", default="SHA256"))
+    cfg_parser.add_section(SETTINGS_SECTION_NAME)
+    cfg_parser.set(SETTINGS_SECTION_NAME, "checksum_type", Prompt.ask("Checksum type", default="SHA256"))
 
     print()
     print(f'Saving new configuration: {configuration_file}')
@@ -86,10 +87,6 @@ def init_config(configuration_file):
         cfg_parser.write(file)
 
     return configuration_file
-
-def read_config(configuration):
-    mapping = dict(configuration.__dict__)
-    return mapping
 
 def show_config(configuration):
     # TODO add section headings in the right spot (if we think we need them in the output)
@@ -119,6 +116,9 @@ def process(configuration):
 
     granules = granule_paths(Path(configuration.data_dir))
     print(f'Found {len(granules.items())} granules to process')
+    if (configuration.number > 0 and configuration.number < len(granules)):
+        print(f'Processing the first {configuration.number} granule(s)')
+        granules = granules[:configuration.number]
     print()
 
     # TODO: create local_output_dir, ummg_dir, and cnm subdir if they don't exist
