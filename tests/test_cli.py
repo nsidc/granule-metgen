@@ -36,18 +36,13 @@ def test_info_with_config_summarizes(cli_runner):
     for key in ['auth_id', 'data_dir', 'environment', 'local_output_dir', 'kinesis_arn', 'provider', 'ummg_dir', 'version']:
         assert key in result.output
 
-def test_process_requires_config(cli_runner):
+@patch('nsidc.metgen.metgen.process')
+def test_process_requires_config_does_not_call_process(mock, cli_runner):
     result = cli_runner.invoke(cli, ['process'])
+    assert not mock.called
     assert result.exit_code != 0
 
-def test_process_with_config(cli_runner):
+@patch('nsidc.metgen.metgen.process')
+def test_process_with_config_calls_process(mock, cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
-    assert result.exit_code == 0
-
-@pytest.mark.skip("Need to patch the validation")
-@patch('nsidc.metgen.metgen.aws.post_to_kinesis', return_value = True)
-def test_process_with_config(mock, cli_runner):
-    result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
-    assert result.exit_code == 0
-    assert 'Saved CNM message' in result.output
-    assert 'Processed granules' in result.output
+    assert mock.called
