@@ -8,6 +8,14 @@ import pytest
 from nsidc.metgen import aws
 
 
+# Unit tests for the 'aws' module functions.
+#
+# The test boundary is the aws module's interface with the AWS library's boto3
+# module, so in addition to testing the aws module's behavior, the tests should
+# mock that module's functions and assert that aws functions call them with the
+# correct parameters, correctly handle their return values, and handle any
+# exceptions they may throw.
+
 @pytest.fixture(scope="module")
 def aws_credentials():
     """Mocked AWS Credentials for moto."""
