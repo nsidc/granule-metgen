@@ -29,7 +29,7 @@ def cfg_parser():
     cp['Destination'] = {
         'local_output_dir': '/output/here',
         'ummg_dir': 'ummg',
-        'kinesis_arn': 'abcd-1234'
+        'kinesis_stream_name': 'xyzzy-stream'
     }
     return cp
 

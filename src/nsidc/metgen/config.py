@@ -17,7 +17,7 @@ class Config:
     provider: str
     local_output_dir: str
     ummg_dir: str
-    kinesis_arn: str
+    kinesis_stream_name: str
     write_cnm_file: bool
     checksum_type: str
     number: int
@@ -80,7 +80,7 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
             _get_configuration_value('Collection', 'provider', str, config_parser, overrides),
             _get_configuration_value('Destination', 'local_output_dir', str, config_parser, overrides),
             _get_configuration_value('Destination', 'ummg_dir', str, config_parser, overrides),
-            _get_configuration_value('Destination', 'kinesis_arn', str, config_parser, overrides),
+            _get_configuration_value('Destination', 'kinesis_stream_name', str, config_parser, overrides),
             _get_configuration_value('Destination', 'write_cnm_file', bool, config_parser, overrides, False),
             _get_configuration_value('Settings', 'checksum_type', str, config_parser, overrides, 'SHA256'),
             _get_configuration_value('Settings', 'number', int, config_parser, overrides, -1),
@@ -94,7 +94,7 @@ def validate(configuration):
         ['data_dir', lambda dir: os.path.exists(dir), 'The data_dir does not exist.'],
         ['local_output_dir', lambda dir: os.path.exists(dir), 'The local_output_dir does not exist.'],
         # ['ummg_dir', lambda dir: os.path.exists(dir), 'The ummg_dir does not exist.'],                 ## Not sure what validation to do
-        ['kinesis_arn', lambda arn: aws.kinesis_stream_exists(arn), 'The kinesis_arn does not exist.'],
+        ['kinesis_stream_name', lambda name: aws.kinesis_stream_exists(name), 'The kinesis stream does not exist.'],
     ]
     errors = [msg for name, fn, msg in validations if not fn(getattr(configuration, name))]
     return len(errors) == 0, errors

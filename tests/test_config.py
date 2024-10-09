@@ -25,7 +25,7 @@ def expected_keys():
                 'provider',
                 'local_output_dir',
                 'ummg_dir',
-                'kinesis_arn',
+                'kinesis_stream_name',
                 'write_cnm_file',
                 'checksum_type',
                 'number'])
@@ -44,7 +44,7 @@ def cfg_parser():
     cp['Destination'] = {
         'local_output_dir': '/output/here',
         'ummg_dir': 'ummg',
-        'kinesis_arn': 'abcd-1234',
+        'kinesis_stream_name': 'xyzzy-stream',
         'write_cnm_file': False
     }
     return cp
@@ -71,7 +71,7 @@ def test_config_with_no_write_cnm(cfg_parser, expected_keys):
 
     assert cfg.data_dir == '/data/example'
     assert cfg.auth_id == 'DATA-0001'
-    assert cfg.kinesis_arn == 'abcd-1234'
+    assert cfg.kinesis_stream_name == 'xyzzy-stream'
     assert cfg.environment == 'uat'
     assert not cfg.write_cnm_file
 
@@ -84,13 +84,13 @@ def test_config_with_write_cnm(cfg_parser, expected_keys):
 
     assert cfg.data_dir == '/data/example'
     assert cfg.auth_id == 'DATA-0001'
-    assert cfg.kinesis_arn == 'abcd-1234'
+    assert cfg.kinesis_stream_name == 'xyzzy-stream'
     assert cfg.environment == 'uat'
     assert cfg.write_cnm_file == True
 
 def test_enhanced_config():
     myconfig = config.Config('env', 'data_dir', 'auth_id', 'version',
-                  'provider', 'output_dir', 'ummg_dir', 'arn',
+                  'provider', 'output_dir', 'ummg_dir', 'stream_name',
                   'write_cnm_file', 'checksum_type', 'number')
     enhanced_config = myconfig.enhance('pgid')
     assert set(['auth_id', 'version', 'producer_granule_id',

@@ -72,7 +72,7 @@ def init_config(configuration_file):
     cfg_parser.add_section(DESTINATION_SECTION_NAME)
     cfg_parser.set(DESTINATION_SECTION_NAME, "local_output_dir", Prompt.ask("Local output directory", default="output"))
     cfg_parser.set(DESTINATION_SECTION_NAME, "ummg_dir", Prompt.ask("Local UMM-G output directory (relative to local output directory)", default="ummg"))
-    cfg_parser.set(DESTINATION_SECTION_NAME, "kinesis_arn", Prompt.ask("Kinesis Stream ARN"))
+    cfg_parser.set(DESTINATION_SECTION_NAME, "kinesis_stream_name", Prompt.ask("Kinesis stream name"))
     cfg_parser.set(DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
 
     print()
@@ -281,7 +281,7 @@ def publish_cnm(configuration, mapping, cnm_message):
         with open(cnm_file, "tw") as f:
             print(cnm_message, file=f)
         print(f'Saved CNM message {cnm_message} to {cnm_file}')
-    aws.post_to_kinesis(configuration.kinesis_arn, cnm_message)
+    aws.post_to_kinesis(configuration.kinesis_stream_name, cnm_message)
 
 def checksum(file):
     BUF_SIZE = 65536

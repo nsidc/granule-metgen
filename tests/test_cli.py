@@ -41,7 +41,7 @@ def test_info_with_config(cli_runner):
 def test_info_with_config_summarizes(cli_runner):
     result = cli_runner.invoke(cli, ['info', '--config', './example/modscg.ini'])
 
-    for key in ['auth_id', 'data_dir', 'environment', 'local_output_dir', 'kinesis_arn', 'provider', 'ummg_dir', 'version']:
+    for key in ['auth_id', 'data_dir', 'environment', 'local_output_dir', 'kinesis_stream_name', 'provider', 'ummg_dir', 'version']:
         assert key in result.output
 
 @patch('nsidc.metgen.metgen.process')
