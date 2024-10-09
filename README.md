@@ -75,6 +75,58 @@ With the Poetry shell running, start the instameta tool and verify that it’s w
       init
       process
 
+## AWS Credentials
+
+In order to process science data and stage it for Cumulus, you must first create & setup your AWS
+credentials. Several options for doing this are given here:
+
+### Manually Creating Configuration Files
+
+First, create a directory in your user's home directory to store the AWS configuration:
+
+    $ mkdir -p ~/.aws
+
+In the `~/.aws` directory, create a file named `config` with the contents:
+
+    [default]
+    region = us-west-2
+    output = json
+
+In the `~/.aws` directory, create a file named `credentials` with the contents:
+
+    [default]
+    aws_access_key_id = TBD
+    aws_secret_access_key = TBD
+
+Finally, restrict the permissions of the directory and files:
+
+    $ chmod -R go-rwx ~/.aws
+
+When you obtain the AWS key pair (not covered here), edit the `~/.aws/credentials` file
+and replace `TBD` with the public and secret key values.
+
+### Using the AWS CLI
+
+You may install (or already have it installed) the AWS Command Line Interface on the
+machine where you are running the tool. Follow the 
+[AWS CLI Install instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+for the platform on which you are running.
+
+Once you have the AWS CLI, you can use it to create the `~/.aws` directory and the
+`config` and `credentials` files:
+
+    $ aws configure
+
+You will be prompted to enter your AWS public access and secret key values, along with
+the AWS region and CLI output format. The AWS CLI will create and populate the directory
+and files with your values.
+
+If you require access to multiple AWS accounts, each with their own configuration--for
+example, different accounts for pre-production vs. production--you can use the AWS CLI
+'profile' feature to manage settings for each account. See the [AWS configuration 
+documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles)
+for the details.
+
 ## Usage
 
 * Show the help text:
@@ -88,6 +140,12 @@ With the Poetry shell running, start the instameta tool and verify that it’s w
 * Show summary information about an `instameta` configuration file. Here we use the example configuration file provided in the repo:
 
         $ instameta info --config example/modscg.ini
+
+* Process science data and stage it for Cumulus:
+
+        # Source the AWS profile (once) before running 'process'-- use 'default' or a named profile
+        $ source scripts/env.sh default
+        $ instameta process --config example/modscg.ini
 
 * Exit the Poetry shell:
 
@@ -114,9 +172,13 @@ TBD
 
         $ poetry install
 
-### Running tests:
+### Run tests:
 
         $ poetry run pytest
+
+### Run tests when source changes (uses [pytest-watcher](https://github.com/olzhasar/pytest-watcher)):
+
+        $ poetry run ptw . --now --clear
 
 ## Credit
 

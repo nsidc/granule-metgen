@@ -1,107 +1,33 @@
 import configparser
-from dataclasses import dataclass
-import os.path
-from pathlib import Path
-from pyfiglet import Figlet
-from rich.prompt import Confirm, Prompt
-from datetime import datetime, timezone
-import uuid
 import hashlib
 import json
+import os.path
+from pathlib import Path
 from string import Template
-from nsidc.metgen import constants
+
+from pyfiglet import Figlet
+from rich.prompt import Confirm, Prompt
+
+from nsidc.metgen import aws
+from nsidc.metgen import config
 from nsidc.metgen import netcdf_to_ummg
-from netCDF4 import Dataset
-from cftime import num2date
+
 
 SOURCE_SECTION_NAME = 'Source'
 COLLECTION_SECTION_NAME = 'Collection'
 DESTINATION_SECTION_NAME = 'Destination'
+SETTINGS_SECTION_NAME = 'Settings'
 UMMG_BODY_TEMPLATE = 'src/nsidc/metgen/templates/ummg_body_template.json'
 UMMG_TEMPORAL_TEMPLATE = 'src/nsidc/metgen/templates/ummg_temporal_single_template.json'
 UMMG_SPATIAL_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_rectangle_template.json'
 CNM_BODY_TEMPLATE = 'src/nsidc/metgen/templates/cnm_body_template.json'
 CNM_FILES_TEMPLATE = 'src/nsidc/metgen/templates/cnm_files_template.json'
 
-@dataclass
-class Config:
-    environment: str
-    data_dir: str
-    auth_id: str
-    version: str
-    provider: str
-    local_output_dir: str
-    ummg_dir: str
-    kinesis_arn: str
-
-    def show(self):
-        # TODO add section headings in the right spot (if we think we need them in the output)
-        print()
-        print('Using configuration:')
-        for k,v in self.__dict__.items():
-            print(f'  + {k}: {v}')
-
-    def enhance(self, producer_granule_id):
-        mapping = dict(self.__dict__)
-        collection_details = self.collection_from_cmr(mapping)
-
-        mapping['auth_id'] = collection_details['auth_id']
-        mapping['version'] = collection_details['version']
-        mapping['producer_granule_id'] = producer_granule_id
-        mapping['submission_time'] = datetime.now(timezone.utc).isoformat()
-        mapping['uuid'] = str(uuid.uuid4())
-
-        return mapping
-
-    # Is the right place for this function?
-    def collection_from_cmr(self, mapping):
-        # TODO: Use auth_id and version from mapping object to retrieve collection
-        # metadata from CMR, including formatted version number, temporal range, and
-        # spatial coverage.
-        return {
-            'auth_id': mapping['auth_id'],
-            'version': mapping['version']
-        }
-
 
 def banner():
     f = Figlet(font='slant')
     return f.renderText('Instameta')
 
-def config_parser(configuration_file):
-    if configuration_file is None or not os.path.exists(configuration_file):
-        raise ValueError(f'Unable to find configuration file {configuration_file}')
-    cfg_parser = configparser.ConfigParser()
-    cfg_parser.read(configuration_file)
-    return cfg_parser
-
-def configuration(config_parser, environment=constants.DEFAULT_CUMULUS_ENVIRONMENT):
-    try:
-        # Look here for science files
-        data_dir = config_parser.get('Source', 'data_dir')
-
-        # Collection (dataset) information
-        auth_id = config_parser.get(COLLECTION_SECTION_NAME, 'auth_id')
-        version = config_parser.get(COLLECTION_SECTION_NAME, 'version')
-        provider = config_parser.get(COLLECTION_SECTION_NAME, 'provider')
-
-        local_output_dir = config_parser.get(DESTINATION_SECTION_NAME, 'local_output_dir')
-        ummg_dir = config_parser.get(DESTINATION_SECTION_NAME, 'ummg_dir')
-        kinesis_arn = config_parser.get(DESTINATION_SECTION_NAME, 'kinesis_arn')
-
-        return Config(
-            environment,
-            data_dir,
-            auth_id,
-            version,
-            provider,
-            local_output_dir,
-            ummg_dir,
-            kinesis_arn)
-    except Exception as e:
-        return Exception('Unable to read the configuration file', e)
-
-#
 # TODO require a non-blank input for elements that have no default value
 def init_config(configuration_file):
     print("""This utility will create a granule metadata configuration file by prompting """
@@ -146,7 +72,14 @@ def init_config(configuration_file):
     cfg_parser.add_section(DESTINATION_SECTION_NAME)
     cfg_parser.set(DESTINATION_SECTION_NAME, "local_output_dir", Prompt.ask("Local output directory", default="output"))
     cfg_parser.set(DESTINATION_SECTION_NAME, "ummg_dir", Prompt.ask("Local UMM-G output directory (relative to local output directory)", default="ummg"))
-    cfg_parser.set(DESTINATION_SECTION_NAME, "kinesis_arn", Prompt.ask("Kinesis Stream ARN"))
+    cfg_parser.set(DESTINATION_SECTION_NAME, "kinesis_stream_name", Prompt.ask("Kinesis stream name"))
+    cfg_parser.set(DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
+
+    print()
+    print(f'{SETTINGS_SECTION_NAME} Parameters')
+    print('--------------------------------------------------')
+    cfg_parser.add_section(SETTINGS_SECTION_NAME)
+    cfg_parser.set(SETTINGS_SECTION_NAME, "checksum_type", Prompt.ask("Checksum type", default="SHA256"))
 
     print()
     print(f'Saving new configuration: {configuration_file}')
@@ -154,7 +87,6 @@ def init_config(configuration_file):
         cfg_parser.write(file)
 
     return configuration_file
-
 
 def process(configuration):
     # For each granule in `data_dir`:
@@ -168,9 +100,18 @@ def process(configuration):
     configuration.show()
     print()
     print('--------------------------------------------------')
+    valid, errors = config.validate(configuration)
+    if not valid:
+        print("The configuration is invalid:")
+        for msg in errors:
+            print(" * " + msg)
+        raise Exception('Invalid configuration')
 
     granules = granule_paths(Path(configuration.data_dir))
     print(f'Found {len(granules.items())} granules to process')
+    if (configuration.number > 0 and configuration.number < len(granules)):
+        print(f'Processing the first {configuration.number} granule(s)')
+        granules = granules[:configuration.number]
     print()
 
     # TODO: create local_output_dir, ummg_dir, and cnm subdir if they don't exist
@@ -328,11 +269,12 @@ def cnms_file_json_parts(mapping, file, file_type):
     return file_mapping
 
 def publish_cnm(mapping, cnm_message):
-    # TODO: add option to post to Kinesis rather than write an actual file
-    cnm_file = os.path.join(mapping['local_output_dir'], 'cnm', mapping['producer_granule_id'] + '.cnm.json')
-    with open(cnm_file, "tw") as f:
-        print(cnm_message, file=f)
-    print(f'Saved CNM message {cnm_message} to {cnm_file}')
+    if mapping['write_cnm_file']:
+        cnm_file = os.path.join(mapping['local_output_dir'], 'cnm', mapping['producer_granule_id'] + '.cnm.json')
+        with open(cnm_file, "tw") as f:
+            print(cnm_message, file=f)
+        print(f'Saved CNM message {cnm_message} to {cnm_file}')
+    aws.post_to_kinesis(mapping['kinesis_stream_name'], cnm_message)
 
 def checksum(file):
     BUF_SIZE = 65536

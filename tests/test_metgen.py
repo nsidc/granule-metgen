@@ -3,8 +3,17 @@ from unittest.mock import patch
 
 import pytest
 
+from nsidc.metgen import config
+from nsidc.metgen import constants
 from nsidc.metgen import metgen
 
+# Unit tests for the 'metgen' module functions.
+#
+# The test boundary is the metgen module's interface with the filesystem and
+# the aws & config modules, so in addition to testing the metgen module's
+# behavior, the tests should mock those module's functions and assert that
+# metgen functions call them with the correct parameters, correctly handle
+# their return values, and handle any exceptions they may throw.
 
 @pytest.fixture
 def cfg_parser():
@@ -20,51 +29,12 @@ def cfg_parser():
     cp['Destination'] = {
         'local_output_dir': '/output/here',
         'ummg_dir': 'ummg',
-        'kinesis_arn': 'abcd-1234'
+        'kinesis_stream_name': 'xyzzy-stream'
     }
     return cp
 
 def test_banner():
     assert len(metgen.banner()) > 0
-
-def test_config_parser_without_filename():
-    with pytest.raises(ValueError):
-        metgen.config_parser(None)
-
-@patch('nsidc.metgen.metgen.os.path.exists', return_value = True)
-def test_config_parser_return_type(mock):
-    result = metgen.config_parser('foo.ini')
-
-    assert isinstance(result, ConfigParser)
-
-def test_config_from_config_parser(cfg_parser):
-    config = metgen.configuration(cfg_parser)
-    assert isinstance(config, metgen.Config)
-
-def test_config_with_values(cfg_parser):
-    expected_keys = set(['environment',
-                         'data_dir',
-                         'auth_id',
-                         'version',
-                         'provider',
-                         'local_output_dir',
-                         'ummg_dir',
-                         'kinesis_arn'])
-    config = metgen.configuration(cfg_parser)
-    config_keys = set(config.__dict__)
-    assert len(config_keys - expected_keys) == 0
-
-    assert config.data_dir == '/data/example'
-    assert config.auth_id == 'DATA-0001'
-    assert config.kinesis_arn == 'abcd-1234'
-    assert config.environment == 'uat'
-
-def test_enhanced_config():
-    myconfig = metgen.Config('env', 'data_dir', 'auth_id', 'version',
-                  'provider', 'output_dir', 'ummg_dir', 'arn')
-    enhanced_config = myconfig.enhance('pgid')
-    assert set(['auth_id', 'version', 'producer_granule_id',
-                'submission_time', 'uuid']) <= set(enhanced_config.keys())
 
 def test_sums_file_sizes():
     details = {
@@ -86,3 +56,7 @@ def test_sums_file_sizes():
     assert summary['production_date_time'] == 'then'
     assert summary['date_time'] == 'now'
     assert summary['geometry'] == 'big'
+
+# TODO: Test that it writes files if 'write cnm' flag is True
+
+# TODO: Test that it does not write files if 'write cnm' flag is False
