@@ -1,5 +1,5 @@
 import configparser
-from dataclasses import dataclass
+import dataclasses
 from datetime import datetime, timezone
 import os.path
 import uuid
@@ -8,7 +8,7 @@ from nsidc.metgen import aws
 from nsidc.metgen import constants
 
 
-@dataclass
+@dataclasses.dataclass
 class Config:
     environment: str
     data_dir: str
@@ -30,7 +30,7 @@ class Config:
             print(f'  + {k}: {v}')
 
     def enhance(self, producer_granule_id):
-        mapping = dict(self.__dict__)
+        mapping = dataclasses.asdict(self)
         collection_details = self.collection_from_cmr(mapping)
 
         mapping['auth_id'] = collection_details['auth_id']

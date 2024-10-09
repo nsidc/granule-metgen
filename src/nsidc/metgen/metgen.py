@@ -144,7 +144,7 @@ def process(configuration):
         cnm_content = cnms_message(mapping,
                                    body_template=cnms_template,
                                    granule_files=granule_files)
-        publish_cnm(configuration, mapping, cnm_content)
+        publish_cnm(mapping, cnm_content)
 
     print()
     print('--------------------------------------------------')
@@ -268,13 +268,13 @@ def cnms_file_json_parts(mapping, file, file_type):
     file_mapping['staging_uri'] = s3_url(mapping, file_name)
     return file_mapping
 
-def publish_cnm(configuration, mapping, cnm_message):
-    if configuration.write_cnm_file:
+def publish_cnm(mapping, cnm_message):
+    if mapping['write_cnm_file']:
         cnm_file = os.path.join(mapping['local_output_dir'], 'cnm', mapping['producer_granule_id'] + '.cnm.json')
         with open(cnm_file, "tw") as f:
             print(cnm_message, file=f)
         print(f'Saved CNM message {cnm_message} to {cnm_file}')
-    aws.post_to_kinesis(configuration.kinesis_stream_name, cnm_message)
+    aws.post_to_kinesis(mapping['kinesis_stream_name'], cnm_message)
 
 def checksum(file):
     BUF_SIZE = 65536
