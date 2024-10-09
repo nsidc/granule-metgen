@@ -1,4 +1,4 @@
-from configparser import ConfigParser
+from configparser import ConfigParser, ExtendedInterpolation
 from unittest.mock import patch
 
 import pytest
@@ -25,14 +25,14 @@ def expected_keys():
                 'provider',
                 'local_output_dir',
                 'ummg_dir',
-                'kinesis_arn',
+                'kinesis_stream_name',
                 'write_cnm_file',
                 'checksum_type',
                 'number'])
 
 @pytest.fixture
 def cfg_parser():
-    cp = ConfigParser()
+    cp = ConfigParser(interpolation=ExtendedInterpolation())
     cp['Source'] = {
          'data_dir': '/data/example'
     }
@@ -44,7 +44,7 @@ def cfg_parser():
     cp['Destination'] = {
         'local_output_dir': '/output/here',
         'ummg_dir': 'ummg',
-        'kinesis_arn': 'abcd-1234',
+        'kinesis_stream_name': "xyzzy-${environment}-stream",
         'write_cnm_file': False
     }
     return cp
@@ -64,15 +64,15 @@ def test_config_from_config_parser(cfg_parser):
     assert isinstance(cfg, config.Config)
 
 def test_config_with_no_write_cnm(cfg_parser, expected_keys):
-    cfg = config.configuration(cfg_parser, {})
+    cfg = config.configuration(cfg_parser, {}, constants.DEFAULT_CUMULUS_ENVIRONMENT)
 
     config_keys = set(cfg.__dict__)
     assert len(config_keys - expected_keys) == 0
 
+    assert cfg.environment == 'uat'
     assert cfg.data_dir == '/data/example'
     assert cfg.auth_id == 'DATA-0001'
-    assert cfg.kinesis_arn == 'abcd-1234'
-    assert cfg.environment == 'uat'
+    assert cfg.kinesis_stream_name == 'xyzzy-uat-stream'
     assert not cfg.write_cnm_file
 
 def test_config_with_write_cnm(cfg_parser, expected_keys):
@@ -84,34 +84,44 @@ def test_config_with_write_cnm(cfg_parser, expected_keys):
 
     assert cfg.data_dir == '/data/example'
     assert cfg.auth_id == 'DATA-0001'
-    assert cfg.kinesis_arn == 'abcd-1234'
+    assert cfg.kinesis_stream_name == 'xyzzy-uat-stream'
     assert cfg.environment == 'uat'
     assert cfg.write_cnm_file == True
 
 def test_enhanced_config():
     myconfig = config.Config('env', 'data_dir', 'auth_id', 'version',
-                  'provider', 'output_dir', 'ummg_dir', 'arn',
+                  'provider', 'output_dir', 'ummg_dir', 'stream_name',
                   'write_cnm_file', 'checksum_type', 'number')
     enhanced_config = myconfig.enhance('pgid')
     assert set(['auth_id', 'version', 'producer_granule_id',
                 'submission_time', 'uuid']) <= set(enhanced_config.keys())
 
 def test_get_configuration_value(cfg_parser):
-    result = config._get_configuration_value("Source", "data_dir", str, cfg_parser, {})
+    environment = constants.DEFAULT_CUMULUS_ENVIRONMENT
+    result = config._get_configuration_value(environment, "Source", "data_dir", str, cfg_parser, {})
     assert result == cfg_parser.get("Source", "data_dir")
 
 def test_get_configuration_value_with_override(cfg_parser):
+    environment = constants.DEFAULT_CUMULUS_ENVIRONMENT
     overrides = { 'data_dir': 'foobar' }
-    result = config._get_configuration_value("Source", "data_dir", str, cfg_parser, overrides)
+    result = config._get_configuration_value(environment, "Source", "data_dir", str, cfg_parser, overrides)
     assert result == overrides['data_dir']
 
 def test_get_configuration_value_with_default(cfg_parser):
+    environment = constants.DEFAULT_CUMULUS_ENVIRONMENT
     default_value = '/etc/foobar'
-    result = config._get_configuration_value("Source", "foobar_dir", str, cfg_parser, {}, default_value)
+    result = config._get_configuration_value(environment, "Source", "foobar_dir", str, cfg_parser, {}, default_value)
     assert result == default_value
 
 def test_get_configuration_value_with_default_and_override(cfg_parser):
+    environment = constants.DEFAULT_CUMULUS_ENVIRONMENT
     overrides = { 'data_dir': 'foobar' }
     default_value = '/etc/foobar'
-    result = config._get_configuration_value("Source", "data_dir", str, cfg_parser, overrides, default_value)
+    result = config._get_configuration_value(environment, "Source", "data_dir", str, cfg_parser, overrides, default_value)
     assert result == overrides['data_dir']
+
+def test_get_configuration_value_interpolates_the_environment(cfg_parser):
+    environment = constants.DEFAULT_CUMULUS_ENVIRONMENT
+    result = config._get_configuration_value(environment, "Destination", "kinesis_stream_name", str, cfg_parser, {})
+    assert result == "xyzzy-uat-stream"
+

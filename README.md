@@ -172,9 +172,13 @@ TBD
 
         $ poetry install
 
-### Running tests:
+### Run tests:
 
         $ poetry run pytest
+
+### Run tests when source changes (uses [pytest-watcher](https://github.com/olzhasar/pytest-watcher)):
+
+        $ poetry run ptw . --now --clear
 
 ## Credit
 

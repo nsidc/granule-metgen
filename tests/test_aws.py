@@ -32,11 +32,11 @@ def kinesis(aws_credentials):
         yield boto3.client("kinesis", region_name="us-west-2")
 
 @pytest.fixture
-def kinesis_stream_arn(kinesis):
-    """Create a Kinesis stream and return its ARN."""
+def kinesis_stream_summary(kinesis):
+    """Create a Kinesis stream and return its summary info."""
     kinesis.create_stream(StreamName="duck-test-stream", ShardCount=1)
     summary = kinesis.describe_stream_summary(StreamName="duck-test-stream")
-    return summary['StreamDescriptionSummary']['StreamARN']
+    return summary['StreamDescriptionSummary']
 
 @pytest.fixture
 def test_message():
@@ -46,23 +46,34 @@ def test_message():
         'bar': 'xyzzy'
     })
 
-def test_post_to_kinesis(kinesis_stream_arn, test_message):
-    """Given a Kinesis stream ARN and a message, it should post successfully."""
-    success = aws.post_to_kinesis(kinesis_stream_arn, test_message)
+def test_kinesis_stream_exists_for_valid_name(kinesis_stream_summary):
+    stream_name = "duck-test-stream"
+    assert aws.kinesis_stream_exists(stream_name)
+
+def test_kinesis_stream_exists_for_invalid_name(kinesis_stream_summary):
+    stream_name = "xyzzy"
+    assert not aws.kinesis_stream_exists(stream_name)
+
+def test_post_to_kinesis(kinesis_stream_summary, test_message):
+    """Given a Kinesis stream name and a message, it should post successfully."""
+    stream_name = kinesis_stream_summary['StreamName']
+    success = aws.post_to_kinesis(stream_name, test_message)
     assert type(success) is str
 
-def test_post_to_kinesis_returns_foo(kinesis_stream_arn, test_message):
-    """Given a Kinesis stream ARN and a test message, the response should include the shard id."""
-    result = aws.post_to_kinesis(kinesis_stream_arn, test_message)
+def test_post_to_kinesis_returns_shard_id(kinesis_stream_summary, test_message):
+    """Given a Kinesis stream name and a test message, the response should include the shard id."""
+    stream_name = kinesis_stream_summary['StreamName']
+    result = aws.post_to_kinesis(stream_name, test_message)
     assert "shardId" in result
 
-def test_post_to_kinesis_with_invalid_stream_arn(kinesis_stream_arn, test_message):
-    """Given an invalid Kinesis stream ARN and a message, it should raise an exception."""
-    invalid_stream_arn = "abcd-1234-wxyz-0987"
+def test_post_to_kinesis_with_invalid_stream_name(kinesis_stream_summary, test_message):
+    """Given an invalid Kinesis stream name and a message, it should raise an exception."""
+    invalid_stream_name = "abcd-1234-wxyz-0987"
     with pytest.raises(Exception):
-        aws.post_to_kinesis(invalid_stream_arn, test_message)
+        aws.post_to_kinesis(invalid_stream_name, test_message)
 
-def test_post_to_kinesis_with_empty_message(kinesis_stream_arn):
-    """Given a Kinesis stream ARN, it should raise an exception when posting an empty message."""
+def test_post_to_kinesis_with_empty_message(kinesis_stream_summary):
+    """Given a Kinesis stream name, it should raise an exception when posting an empty message."""
+    stream_name = kinesis_stream_summary['StreamName']
     with pytest.raises(Exception):
-        aws.post_to_kinesis(kinesis_stream_arn, None)
+        aws.post_to_kinesis(stream_name, None)

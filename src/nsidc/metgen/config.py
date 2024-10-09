@@ -17,7 +17,7 @@ class Config:
     provider: str
     local_output_dir: str
     ummg_dir: str
-    kinesis_arn: str
+    kinesis_stream_name: str
     write_cnm_file: bool
     checksum_type: str
     number: int
@@ -54,19 +54,22 @@ class Config:
 def config_parser_factory(configuration_file):
     if configuration_file is None or not os.path.exists(configuration_file):
         raise ValueError(f'Unable to find configuration file {configuration_file}')
-    cfg_parser = configparser.ConfigParser()
+    cfg_parser = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
     cfg_parser.read(configuration_file)
     return cfg_parser
 
 
-def _get_configuration_value(section, name, value_type, config_parser, overrides, default=None):
+def _get_configuration_value(environment, section, name, value_type, config_parser, overrides, default=None):
+    vars = { 'environment': environment }
     if overrides.get(name) is None:
         if value_type is bool:
             return config_parser.getboolean(section, name, fallback=default)
         elif value_type is int:
             return config_parser.getint(section, name, fallback=default)
         else:
-            return config_parser.get(section, name, fallback=default)
+            value = config_parser.get(section, name, vars=vars, fallback=default)
+            print(name, vars, value)
+            return value
     else:
         return overrides.get(name)
 
@@ -74,16 +77,16 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
     try:
         return Config(
             environment,
-            _get_configuration_value('Source', 'data_dir', str, config_parser, overrides),
-            _get_configuration_value('Collection', 'auth_id', str, config_parser, overrides),
-            _get_configuration_value('Collection', 'version', int, config_parser, overrides),
-            _get_configuration_value('Collection', 'provider', str, config_parser, overrides),
-            _get_configuration_value('Destination', 'local_output_dir', str, config_parser, overrides),
-            _get_configuration_value('Destination', 'ummg_dir', str, config_parser, overrides),
-            _get_configuration_value('Destination', 'kinesis_arn', str, config_parser, overrides),
-            _get_configuration_value('Destination', 'write_cnm_file', bool, config_parser, overrides, False),
-            _get_configuration_value('Settings', 'checksum_type', str, config_parser, overrides, 'SHA256'),
-            _get_configuration_value('Settings', 'number', int, config_parser, overrides, -1),
+            _get_configuration_value(environment, 'Source', 'data_dir', str, config_parser, overrides),
+            _get_configuration_value(environment, 'Collection', 'auth_id', str, config_parser, overrides),
+            _get_configuration_value(environment, 'Collection', 'version', int, config_parser, overrides),
+            _get_configuration_value(environment, 'Collection', 'provider', str, config_parser, overrides),
+            _get_configuration_value(environment, 'Destination', 'local_output_dir', str, config_parser, overrides),
+            _get_configuration_value(environment, 'Destination', 'ummg_dir', str, config_parser, overrides),
+            _get_configuration_value(environment, 'Destination', 'kinesis_stream_name', str, config_parser, overrides),
+            _get_configuration_value(environment, 'Destination', 'write_cnm_file', bool, config_parser, overrides, False),
+            _get_configuration_value(environment, 'Settings', 'checksum_type', str, config_parser, overrides, 'SHA256'),
+            _get_configuration_value(environment, 'Settings', 'number', int, config_parser, overrides, -1),
         )
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
@@ -94,7 +97,7 @@ def validate(configuration):
         ['data_dir', lambda dir: os.path.exists(dir), 'The data_dir does not exist.'],
         ['local_output_dir', lambda dir: os.path.exists(dir), 'The local_output_dir does not exist.'],
         # ['ummg_dir', lambda dir: os.path.exists(dir), 'The ummg_dir does not exist.'],                 ## Not sure what validation to do
-        ['kinesis_arn', lambda arn: aws.kinesis_stream_exists(arn), 'The kinesis_arn does not exist.'],
+        ['kinesis_stream_name', lambda name: aws.kinesis_stream_exists(name), 'The kinesis stream does not exist.'],
     ]
     errors = [msg for name, fn, msg in validations if not fn(getattr(configuration, name))]
     return len(errors) == 0, errors
