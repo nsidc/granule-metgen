@@ -46,18 +46,13 @@ def test_message():
         'bar': 'xyzzy'
     })
 
-def test_kinesis_stream_arn_for_valid_name(kinesis_stream_arn):
+def test_kinesis_stream_exists_for_valid_name(kinesis_stream_arn):
     stream_name = "duck-test-stream"
-    assert aws.kinesis_stream_arn(stream_name) == kinesis_stream_arn
+    assert aws.kinesis_stream_exists(stream_name)
 
-def test_kinesis_stream_arn_for_invalid_name(kinesis_stream_arn):
+def test_kinesis_stream_exists_for_invalid_name(kinesis_stream_arn):
     stream_name = "xyzzy"
-    assert aws.kinesis_stream_arn(stream_name) is None
-
-# Do these become OBE then?
-# TODO: test_kinesis_stream_exists_for_valid_name
-
-# TODO: test_kinesis_stream_exists_for_invalid_name
+    assert not aws.kinesis_stream_exists(stream_name)
 
 def test_post_to_kinesis(kinesis_stream_arn, test_message):
     """Given a Kinesis stream ARN and a message, it should post successfully."""
