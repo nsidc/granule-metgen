@@ -88,13 +88,6 @@ def init_config(configuration_file):
 
     return configuration_file
 
-def show_config(configuration):
-    # TODO add section headings in the right spot (if we think we need them in the output)
-    print()
-    print('Using configuration:')
-    for k,v in configuration.__dict__.items():
-        print(f'  + {k}: {v}')
-
 def process(configuration):
     # For each granule in `data_dir`:
     #   * create or find ummg file
