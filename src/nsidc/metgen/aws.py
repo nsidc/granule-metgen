@@ -11,16 +11,16 @@ def kinesis_stream_exists(stream_name):
     except Exception as e:
         return False
 
-def post_to_kinesis(kinesis_stream_arn, cnm_message):
+def post_to_kinesis(stream_name, cnm_message):
     """Posts a message to a Kinesis stream."""
     client = boto3.client("kinesis", region_name="us-west-2")
     try:
         result = client.put_record(
-            StreamARN=kinesis_stream_arn,
+            StreamName=stream_name,
             Data=cnm_message,
             PartitionKey=KINESIS_PARTITION_KEY
         )
-        print(f'Published CNM message {cnm_message} to stream ARN: {kinesis_stream_arn}')
+        print(f'Published CNM message {cnm_message} to stream: {stream_name}')
         return result['ShardId']
     except Exception as e:
         print(e)
