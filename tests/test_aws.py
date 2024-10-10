@@ -46,6 +46,32 @@ def test_message():
         'bar': 'xyzzy'
     })
 
+@pytest.fixture
+def s3(aws_credentials):
+    """A mocked s3 client."""
+    with mock_aws():
+        yield boto3.client("s3")
+
+@pytest.fixture
+def s3_bucket(s3):
+    """Create an S3 buket and return the bucket name."""
+    bucket_name = "duck-test-bucket"
+    response = s3.create_bucket(
+            Bucket=bucket_name,
+            CreateBucketConfiguration={
+                'LocationConstraint': 'us-west-2'
+            },
+    )
+    return bucket_name
+
+@pytest.fixture
+def science_data():
+    return """
+        xyzzy
+        foo
+        bar
+        """
+
 def test_kinesis_stream_exists_for_valid_name(kinesis_stream_summary):
     stream_name = "duck-test-stream"
     assert aws.kinesis_stream_exists(stream_name)
@@ -77,3 +103,18 @@ def test_post_to_kinesis_with_empty_message(kinesis_stream_summary):
     stream_name = kinesis_stream_summary['StreamName']
     with pytest.raises(Exception):
         aws.post_to_kinesis(stream_name, None)
+
+def test_copy_to_s3(s3, s3_bucket, science_data):
+    path = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987"
+    filename = "science-data.bin"
+    aws.stage_file(s3_bucket, path, filename, science_data)
+
+    s3_object = s3.get_object(
+            Bucket=s3_bucket,
+            Key=f'{path}/{filename}',
+    )
+    object_lines = [line.decode(encoding="utf-8") for line in s3_object['Body'].readlines()]
+    object_data = "".join(object_lines)
+
+    assert object_data == science_data
+
