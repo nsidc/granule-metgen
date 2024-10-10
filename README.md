@@ -38,6 +38,9 @@ installed, you should be able to run:
     $ poetry --version
     Poetry (version 1.8.3)
 
+Finally, install the AWS commandline interface (CLI) by [following the appropriate
+instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+
 ## Assumptions
 
 - Checksums are all SHA256
