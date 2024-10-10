@@ -118,3 +118,11 @@ def test_copy_to_s3(s3, s3_bucket, science_data):
 
     assert object_data == science_data
 
+# TODO: Test invalid bucket name
+# TODO: Test invalid path
+# TODO: Test invalid filename
+# TODO: Test no data
+# TODO: Should we be able to pass in either a filename or data?
+# TODO: What about converting text to bytes / vice-versa?
+# TODO: Extract bucket name pattern into config file
+# TODO: Separate the bucket name, path, and filename in the code
