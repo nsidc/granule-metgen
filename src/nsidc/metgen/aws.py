@@ -3,6 +3,8 @@ import boto3
 
 KINESIS_PARTITION_KEY = "metgenc-duck"
 
+# TODO: Get rid of hardcoded region
+
 def kinesis_stream_exists(stream_name):
     client = boto3.client("kinesis", region_name="us-west-2")
     try:
@@ -23,5 +25,16 @@ def post_to_kinesis(stream_name, cnm_message):
         print(f'Published CNM message {cnm_message} to stream: {stream_name}')
         return result['ShardId']
     except Exception as e:
-        print(e)
+        raise e
+
+def stage_file(s3_bucket_name, path, name, data):
+    """Stages data into an s3 bucket at a given path."""
+    client = boto3.client("s3", region_name="us-west-2")
+    try:
+        client.put_object(
+            Body=data,
+            Bucket=s3_bucket_name,
+            Key=f'{path}/{name}',
+        )
+    except Exception as e:
         raise e
