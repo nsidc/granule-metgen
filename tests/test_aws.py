@@ -119,6 +119,17 @@ def test_copy_to_s3(s3, s3_bucket, science_data):
     assert object_data == science_data
 
 # TODO: Test invalid bucket name
+def test_copy_to_s3(s3, s3_bucket, science_data):
+    path = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987"
+    filename = "science-data.bin"
+    aws.stage_file(s3_bucket, path, filename, science_data)
+
+    with pytest.raises(Exception):
+        s3_object = s3.get_object(
+            Bucket="xyzzy",
+            Key=f'{path}/{filename}',
+        )
+
 # TODO: Test invalid path
 # TODO: Test invalid filename
 # TODO: Test no data
