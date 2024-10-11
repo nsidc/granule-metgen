@@ -1,5 +1,7 @@
 import json
 import os
+from tempfile import TemporaryFile
+from unittest.mock import mock_open, patch, Mock
 
 import boto3
 from moto import mock_aws
@@ -104,36 +106,48 @@ def test_post_to_kinesis_with_empty_message(kinesis_stream_summary):
     with pytest.raises(Exception):
         aws.post_to_kinesis(stream_name, None)
 
-def test_copy_to_s3(s3, s3_bucket, science_data):
-    path = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987"
-    filename = "science-data.bin"
-    aws.stage_file(s3_bucket, path, filename, science_data)
+def test_stage_data_to_s3(s3, s3_bucket, science_data):
+    object_name = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987/science-data.bin"
+    aws.stage_file(s3_bucket, object_name, data=science_data)
 
     s3_object = s3.get_object(
             Bucket=s3_bucket,
-            Key=f'{path}/{filename}',
+            Key=object_name,
     )
     object_lines = [line.decode(encoding="utf-8") for line in s3_object['Body'].readlines()]
     object_data = "".join(object_lines)
 
     assert object_data == science_data
 
-def test_copy_to_s3_with_invalid_bucket_name(s3_bucket, science_data):
+def test_stage_data_to_s3_with_invalid_bucket_name(s3_bucket, science_data):
     bucket_name = "xyzzy"
-    path = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987"
-    filename = "science-data.bin"
+    object_name = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987/science-data.bin"
     with pytest.raises(Exception):
-        aws.stage_file(bucket_name, path, filename, science_data)
+        aws.stage_file(bucket_name, object_name, data=science_data)
 
-def test_copy_to_s3_with_missing_path(s3, s3_bucket, science_data):
-    path = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987"
-    filename = "science-data.bin"
+def test_stage_data_to_s3_with_missing_object_name(s3, s3_bucket, science_data):
     with pytest.raises(Exception):
-        aws.stage_file(s3_bucket, None, filename, science_data)
+        aws.stage_file(s3_bucket, None, data=science_data)
 
-# TODO: Test invalid filename
-# TODO: Test no data
-# TODO: Should we be able to pass in either a filename or data?
-# TODO: What about converting text to bytes / vice-versa?
+def test_stage_data_to_s3_with_no_data(s3, s3_bucket):
+    object_name = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987/science-data.bin"
+    with pytest.raises(Exception):
+        aws.stage_file(s3_bucket, object_name, data=None)
+
+def test_stage_file_to_s3(s3, s3_bucket, science_data):
+    with TemporaryFile() as source_file:
+        source_file.write(science_data.encode('UTF-8'))
+        source_file.seek(0)
+        object_name = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987/science-data.bin"
+        aws.stage_file(s3_bucket, object_name, file=source_file)
+
+        s3_object = s3.get_object(
+                Bucket=s3_bucket,
+                Key=object_name,
+        )
+        object_lines = [line.decode(encoding="utf-8") for line in s3_object['Body'].readlines()]
+        object_data = "".join(object_lines)
+        assert object_data == science_data
+
 # TODO: Extract bucket name pattern into config file
 # TODO: Separate the bucket name, path, and filename in the code
