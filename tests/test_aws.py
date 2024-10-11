@@ -118,19 +118,19 @@ def test_copy_to_s3(s3, s3_bucket, science_data):
 
     assert object_data == science_data
 
-# TODO: Test invalid bucket name
-def test_copy_to_s3(s3, s3_bucket, science_data):
+def test_copy_to_s3_with_invalid_bucket_name(s3_bucket, science_data):
+    bucket_name = "xyzzy"
     path = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987"
     filename = "science-data.bin"
-    aws.stage_file(s3_bucket, path, filename, science_data)
-
     with pytest.raises(Exception):
-        s3_object = s3.get_object(
-            Bucket="xyzzy",
-            Key=f'{path}/{filename}',
-        )
+        aws.stage_file(bucket_name, path, filename, science_data)
 
-# TODO: Test invalid path
+def test_copy_to_s3_with_missing_path(s3, s3_bucket, science_data):
+    path = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987"
+    filename = "science-data.bin"
+    with pytest.raises(Exception):
+        aws.stage_file(s3_bucket, None, filename, science_data)
+
 # TODO: Test invalid filename
 # TODO: Test no data
 # TODO: Should we be able to pass in either a filename or data?

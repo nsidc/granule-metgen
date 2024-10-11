@@ -30,11 +30,15 @@ def post_to_kinesis(stream_name, cnm_message):
 def stage_file(s3_bucket_name, path, name, data):
     """Stages data into an s3 bucket at a given path."""
     client = boto3.client("s3", region_name="us-west-2")
+    if not path:
+        raise Exception("Missing path for file")
+
     try:
-        client.put_object(
+        r = client.put_object(
             Body=data,
             Bucket=s3_bucket_name,
             Key=f'{path}/{name}',
         )
+        print(r)
     except Exception as e:
         raise e
