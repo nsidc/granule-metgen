@@ -236,7 +236,10 @@ def stage(mapping, granule_files={}):
     print()
     for file_type, file_paths in granule_files.items():
         for file_path in file_paths:
-            print(f'TODO: stage {file_type} file {file_path} to {s3_url(mapping, os.path.basename(file_path))}')
+            print(f'WIP: stage {file_type} file {file_path} to {s3_url(mapping, os.path.basename(file_path))}')
+            with open(file_path, 'rb') as f:
+                name = s3_object_path(mapping, os.path.basename(file_path))
+                aws.stage_file(s3_bucket_name(mapping, name), s3_object_path(mapping, name), file=f)
             print()
 
     print()
@@ -292,6 +295,17 @@ def s3_url(mapping, name):
     mapping['s3_name'] = name
     template = Template('s3://nsidc-cumulus-${environment}-ingest-staging/external/${auth_id}/${version}/${uuid}/${s3_name}')
 
+    return(template.safe_substitute(mapping))
+
+def s3_bucket_name(mapping, name):
+    mapping['s3_name'] = name
+    # template = Template('nsidc-cumulus-${environment}-ingest-staging')
+    template = Template('duck-${environment}-bucket')
+    return(template.safe_substitute(mapping))
+
+def s3_object_path(mapping, name):
+    mapping['s3_name'] = name
+    template = Template('/external/${auth_id}/${version}/${uuid}/${s3_name}')
     return(template.safe_substitute(mapping))
 
 def ummg_body_template():
