@@ -10,6 +10,7 @@ from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws
 from nsidc.metgen import config
+from nsidc.metgen import constants
 from nsidc.metgen import netcdf_to_ummg
 
 
@@ -17,12 +18,8 @@ SOURCE_SECTION_NAME = 'Source'
 COLLECTION_SECTION_NAME = 'Collection'
 DESTINATION_SECTION_NAME = 'Destination'
 SETTINGS_SECTION_NAME = 'Settings'
-UMMG_BODY_TEMPLATE = 'src/nsidc/metgen/templates/ummg_body_template.json'
-UMMG_TEMPORAL_TEMPLATE = 'src/nsidc/metgen/templates/ummg_temporal_single_template.json'
-UMMG_SPATIAL_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_rectangle_template.json'
 CNM_BODY_TEMPLATE = 'src/nsidc/metgen/templates/cnm_body_template.json'
 CNM_FILES_TEMPLATE = 'src/nsidc/metgen/templates/cnm_files_template.json'
-
 
 def banner():
     f = Figlet(font='slant')
@@ -190,28 +187,25 @@ def create_ummg(mapping, data_file_paths, ummg_file_path):
     #       'size_in_bytes' => integer,
     #       'production_date_time'  => iso datetime string,
     #       'begin_date_time' and 'end_date_time' OR 'date_time'
-    #       'geometry' => {'west' => , 'north' => , 'east' => , 'south' => }
+    #       'geometry' => { depends on spatial coverage type }
     #   }
     # }
     metadata_details = {}
 
     for data_file in data_file_paths:
-        # Assumes netCDF!
         metadata_details[data_file] = netcdf_to_ummg.extract_metadata(data_file)
 
-    # Collapse information about (possibly) multiple files into a "granule" summary.
+    # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)
+    summary['spatial_extent'] = populate_spatial(summary['geometry'])
+    summary['temporal_extent'] = populate_temporal(summary)
 
-    # Populate the body template and convert to JSON
-    body_json = json.loads(ummg_body_template().safe_substitute(mapping | summary))
-
-    # Cram JSON for temporal and spatial coverage into the body of the metadata content.
-    body_json['SpatialExtent']['HorizontalSpatialDomain'] = json.loads(ummg_spatial_template().safe_substitute(summary['geometry']))
-    body_json['TemporalExtent'] = json.loads(ummg_temporal_template().safe_substitute(summary))
+    # Populate the body template
+    body = ummg_body_template().safe_substitute(mapping | summary)
 
     # Save it all in a file.
     with open(ummg_file_path, "tw") as f:
-        print(json.dumps(body_json), file=f)
+        print(body, file=f)
 
     print(f'Created ummg file {ummg_file_path}')
     return ummg_file_path
@@ -269,12 +263,13 @@ def cnms_file_json_parts(mapping, file, file_type):
     return file_mapping
 
 def publish_cnm(mapping, cnm_message):
+    print(f'mapping is {mapping}')
     if mapping['write_cnm_file']:
         cnm_file = os.path.join(mapping['local_output_dir'], 'cnm', mapping['producer_granule_id'] + '.cnm.json')
         with open(cnm_file, "tw") as f:
             print(cnm_message, file=f)
         print(f'Saved CNM message {cnm_message} to {cnm_file}')
-    aws.post_to_kinesis(mapping['kinesis_stream_name'], cnm_message)
+    #aws.post_to_kinesis(mapping['kinesis_stream_name'], cnm_message)
 
 def checksum(file):
     BUF_SIZE = 65536
@@ -295,13 +290,13 @@ def s3_url(mapping, name):
     return(template.safe_substitute(mapping))
 
 def ummg_body_template():
-    return initialize_template(UMMG_BODY_TEMPLATE)
+    return initialize_template(constants.UMMG_BODY_TEMPLATE)
 
 def ummg_temporal_template():
-    return initialize_template(UMMG_TEMPORAL_TEMPLATE)
+    return initialize_template(constants.UMMG_TEMPORAL_TEMPLATE)
 
-def ummg_spatial_template():
-    return initialize_template(UMMG_SPATIAL_TEMPLATE)
+def ummg_gpolygon_template():
+    return initialize_template(constants.UMMG_SPATIAL_GPOLYGON_TEMPLATE)
 
 def cnms_body_template():
     return initialize_template(CNM_BODY_TEMPLATE)
@@ -314,3 +309,16 @@ def initialize_template(file):
         template_str = template_file.read()
 
     return Template(template_str)
+
+def populate_spatial(spatial_values):
+    # spatial_values is a dict suitable for use in template substitution, like: 
+    # { 'points': string representation of an array of {lon: lat:} dicts }
+    return ummg_gpolygon_template().safe_substitute(spatial_values)
+
+def spatial_type():
+    # set a flag in configuration file to indicate expected shape?
+    # use GridSpatialRepresentation in collection metadata?
+    return constants.GPOLYGON
+
+def populate_temporal(summary):
+    return ummg_temporal_template().safe_substitute(summary)

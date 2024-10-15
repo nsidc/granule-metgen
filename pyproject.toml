@@ -14,6 +14,9 @@ pyfiglet = "^1.0.2"
 netCDF4 = "^1.6.5"
 rich = "^13.7.1"
 boto3 = "^1.35.22"
+xarray = "^2024.09.0"
+rasterio = "^1.4.1"
+rioxarray = "^0.17.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.2"
