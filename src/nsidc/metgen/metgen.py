@@ -10,7 +10,6 @@ from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws
 from nsidc.metgen import config
-from nsidc.metgen import constants
 from nsidc.metgen import netcdf_reader
 
 
@@ -20,6 +19,12 @@ DESTINATION_SECTION_NAME = 'Destination'
 SETTINGS_SECTION_NAME = 'Settings'
 CNM_BODY_TEMPLATE = 'src/nsidc/metgen/templates/cnm_body_template.json'
 CNM_FILES_TEMPLATE = 'src/nsidc/metgen/templates/cnm_files_template.json'
+UMMG_BODY_TEMPLATE = 'src/nsidc/metgen/templates/ummg_body_template.json'
+UMMG_TEMPORAL_SINGLE_TEMPLATE = 'src/nsidc/metgen/templates/ummg_temporal_single_template.json'
+UMMG_TEMPORAL_RANGE_TEMPLATE = 'src/nsidc/metgen/templates/ummg_temporal_range_template.json'
+UMMG_SPATIAL_GPOLYGON_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_gpolygon_template.json'
+UMMG_SPATIAL_POINT_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_point_template.json'
+UMMG_SPATIAL_RECTANGLE_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_rectangle_template.json'
 
 def banner():
     f = Figlet(font='slant')
@@ -291,16 +296,16 @@ def s3_url(mapping, name):
     return(template.safe_substitute(mapping))
 
 def ummg_body_template():
-    return initialize_template(constants.UMMG_BODY_TEMPLATE)
+    return initialize_template(UMMG_BODY_TEMPLATE)
 
 def ummg_temporal_single_template():
-    return initialize_template(constants.UMMG_TEMPORAL_SINGLE_TEMPLATE)
+    return initialize_template(UMMG_TEMPORAL_SINGLE_TEMPLATE)
 
 def ummg_temporal_range_template():
-    return initialize_template(constants.UMMG_TEMPORAL_SINGLE_TEMPLATE)
+    return initialize_template(UMMG_TEMPORAL_SINGLE_TEMPLATE)
 
 def ummg_spatial_gpolygon_template():
-    return initialize_template(constants.UMMG_SPATIAL_GPOLYGON_TEMPLATE)
+    return initialize_template(UMMG_SPATIAL_GPOLYGON_TEMPLATE)
 
 def cnms_body_template():
     return initialize_template(CNM_BODY_TEMPLATE)
