@@ -270,7 +270,7 @@ def publish_cnm(mapping, cnm_message):
         with open(cnm_file, "tw") as f:
             print(cnm_message, file=f)
         print(f'Saved CNM message {cnm_message} to {cnm_file}')
-    # aws.post_to_kinesis(mapping['kinesis_stream_name'], cnm_message)
+    aws.post_to_kinesis(mapping['kinesis_stream_name'], cnm_message)
 
 def checksum(file):
     BUF_SIZE = 65536

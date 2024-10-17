@@ -41,20 +41,20 @@ def test_sums_file_sizes():
         'first_id': {
             'size_in_bytes': 100,
             'production_date_time': 'then',
-            'date_time': 'now',
+            'temporal': 'now',
             'geometry': 'big'
         },
         'second_id': {
             'size_in_bytes': 200,
             'production_date_time': 'before',
-            'date_time': 'after',
+            'temporal': 'after',
             'geometry': 'small'
         }
     }
     summary = metgen.metadata_summary(details)
     assert summary['size_in_bytes'] == 300
     assert summary['production_date_time'] == 'then'
-    assert summary['date_time'] == 'now'
+    assert summary['temporal'] == 'now'
     assert summary['geometry'] == 'big'
 
 # TODO: Test that it writes files if 'write cnm' flag is True
