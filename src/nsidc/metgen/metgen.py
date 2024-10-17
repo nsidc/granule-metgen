@@ -11,7 +11,7 @@ from rich.prompt import Confirm, Prompt
 from nsidc.metgen import aws
 from nsidc.metgen import config
 from nsidc.metgen import constants
-from nsidc.metgen import netcdf_to_ummg
+from nsidc.metgen import netcdf_reader
 
 
 SOURCE_SECTION_NAME = 'Source'
@@ -178,27 +178,29 @@ def find_or_create_ummg(mapping, data_file_paths, ummg_path, all_existing_ummg):
         return create_ummg(mapping, data_file_paths, ummg_file_path)
 
 def create_ummg(mapping, data_file_paths, ummg_file_path):
-    # Open data files and retrieve metadata. Eventually need a way to hook in
-    # custom code to read different data file types, or scrape metadata from
-    # file names, etc.
-    # metadata_details dict looks like:
+    """
+    Open data file(s) associated with one granule and retrieve metadata.
+    """
+
+    metadata_details = {}
+
+    # Populated metadata_details dict looks like:
     # {
     #   data_file: {
     #       'size_in_bytes' => integer,
     #       'production_date_time'  => iso datetime string,
-    #       'begin_date_time' and 'end_date_time' OR 'date_time'
-    #       'geometry' => { depends on spatial coverage type }
+    #       'temporal' => an array of one (data represent a single point in time)
+    #                     or two (data cover a time range) datetime strings
+    #       'geometry' => { 'points': a string representation of one or more lat/lon pairs }
     #   }
     # }
-    metadata_details = {}
-
     for data_file in data_file_paths:
-        metadata_details[data_file] = netcdf_to_ummg.extract_metadata(data_file)
+        metadata_details[data_file] = netcdf_reader.extract_metadata(data_file)
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)
     summary['spatial_extent'] = populate_spatial(summary['geometry'])
-    summary['temporal_extent'] = populate_temporal(summary)
+    summary['temporal_extent'] = populate_temporal(summary['temporal'])
 
     # Populate the body template
     body = ummg_body_template().safe_substitute(mapping | summary)
@@ -211,16 +213,16 @@ def create_ummg(mapping, data_file_paths, ummg_file_path):
     return ummg_file_path
 
 # size is a sum of all associated data file sizes.
-# production datetime, temporal coverage, spatial coverage (geometry): simply use values from first data file entry
+# all other attributes use the values from the first data file entry.
 def metadata_summary(details):
-    summary = {}
     default = list(details.values())[0]
 
-    summary['size_in_bytes'] = sum([x['size_in_bytes'] for x in details.values()])
-    summary['production_date_time'] = default['production_date_time']
-    summary['date_time'] = default['date_time']
-    summary['geometry'] = default['geometry']
-    return summary
+    return {
+        'size_in_bytes': sum([x['size_in_bytes'] for x in details.values()]),
+        'production_date_time': default['production_date_time'],
+        'temporal': default['temporal'],
+        'geometry': default['geometry']
+    }
 
 def stage(mapping, granule_files={}):
     """
@@ -263,13 +265,12 @@ def cnms_file_json_parts(mapping, file, file_type):
     return file_mapping
 
 def publish_cnm(mapping, cnm_message):
-    print(f'mapping is {mapping}')
     if mapping['write_cnm_file']:
         cnm_file = os.path.join(mapping['local_output_dir'], 'cnm', mapping['producer_granule_id'] + '.cnm.json')
         with open(cnm_file, "tw") as f:
             print(cnm_message, file=f)
         print(f'Saved CNM message {cnm_message} to {cnm_file}')
-    #aws.post_to_kinesis(mapping['kinesis_stream_name'], cnm_message)
+    # aws.post_to_kinesis(mapping['kinesis_stream_name'], cnm_message)
 
 def checksum(file):
     BUF_SIZE = 65536
@@ -292,10 +293,13 @@ def s3_url(mapping, name):
 def ummg_body_template():
     return initialize_template(constants.UMMG_BODY_TEMPLATE)
 
-def ummg_temporal_template():
-    return initialize_template(constants.UMMG_TEMPORAL_TEMPLATE)
+def ummg_temporal_single_template():
+    return initialize_template(constants.UMMG_TEMPORAL_SINGLE_TEMPLATE)
 
-def ummg_gpolygon_template():
+def ummg_temporal_range_template():
+    return initialize_template(constants.UMMG_TEMPORAL_SINGLE_TEMPLATE)
+
+def ummg_spatial_gpolygon_template():
     return initialize_template(constants.UMMG_SPATIAL_GPOLYGON_TEMPLATE)
 
 def cnms_body_template():
@@ -310,15 +314,19 @@ def initialize_template(file):
 
     return Template(template_str)
 
+# TODO: Use the GranuleSpatialRepresentation value in the collection metadata
+# to determine the expected spatial type. See Issue #15. For now, default to
+# a Gpolygon.
 def populate_spatial(spatial_values):
-    # spatial_values is a dict suitable for use in template substitution, like: 
+    # spatial_values is a dict suitable for use in template substitution, like:
     # { 'points': string representation of an array of {lon: lat:} dicts }
-    return ummg_gpolygon_template().safe_substitute(spatial_values)
+    return ummg_spatial_gpolygon_template().safe_substitute(spatial_values)
 
-def spatial_type():
-    # set a flag in configuration file to indicate expected shape?
-    # use GridSpatialRepresentation in collection metadata?
-    return constants.GPOLYGON
-
-def populate_temporal(summary):
-    return ummg_temporal_template().safe_substitute(summary)
+def populate_temporal(datetime_values):
+    if len(datetime_values) > 1:
+        return ummg_temporal_range_template().safe_substitute({
+            'begin_date_time': datetime_values[0],
+            'end_date_time': datetime_values[1]})
+    else:
+        return ummg_temporal_single_template().safe_substitute({
+            'date_time': datetime_values[0]})

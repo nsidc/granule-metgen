@@ -9,9 +9,9 @@
     "Version": "1.6.6"
   },
   "SpatialExtent": {
-    "HorizontalSpatialDomain": {$spatial_extent}
+    "HorizontalSpatialDomain": $spatial_extent
   },
-  "TemporalExtent": {$temporal_extent},
+  "TemporalExtent": $temporal_extent,
   "DataGranule": {
     "DayNightFlag": "Unspecified",
     "Identifiers": [
