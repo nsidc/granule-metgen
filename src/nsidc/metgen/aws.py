@@ -3,8 +3,6 @@ import boto3
 
 KINESIS_PARTITION_KEY = "metgenc-duck"
 
-# TODO: Get rid of hardcoded region
-
 def kinesis_stream_exists(stream_name):
     client = boto3.client("kinesis")
     try:
