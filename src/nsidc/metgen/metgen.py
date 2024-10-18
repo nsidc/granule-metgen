@@ -129,7 +129,7 @@ def process(configuration):
     cnms_template = cnms_body_template()
     processed_count = 0
 
-    for producer_granule_id, granule_files in granules.items():
+    for producer_granule_id, granule_files in granules:
         print('--------------------------------------------------')
         print(f'Processing {producer_granule_id}:')
         print()
