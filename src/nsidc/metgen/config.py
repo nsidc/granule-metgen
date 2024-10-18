@@ -18,6 +18,7 @@ class Config:
     local_output_dir: str
     ummg_dir: str
     kinesis_stream_name: str
+    staging_bucket_name: str
     write_cnm_file: bool
     checksum_type: str
     number: int
@@ -84,6 +85,7 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
             _get_configuration_value(environment, 'Destination', 'local_output_dir', str, config_parser, overrides),
             _get_configuration_value(environment, 'Destination', 'ummg_dir', str, config_parser, overrides),
             _get_configuration_value(environment, 'Destination', 'kinesis_stream_name', str, config_parser, overrides),
+            _get_configuration_value(environment, 'Destination', 'staging_bucket_name', str, config_parser, overrides),
             _get_configuration_value(environment, 'Destination', 'write_cnm_file', bool, config_parser, overrides, False),
             _get_configuration_value(environment, 'Settings', 'checksum_type', str, config_parser, overrides, 'SHA256'),
             _get_configuration_value(environment, 'Settings', 'number', int, config_parser, overrides, -1),

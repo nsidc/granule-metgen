@@ -148,6 +148,3 @@ def test_stage_file_to_s3(s3, s3_bucket, science_data):
         object_lines = [line.decode(encoding="utf-8") for line in s3_object['Body'].readlines()]
         object_data = "".join(object_lines)
         assert object_data == science_data
-
-# TODO: Extract bucket name pattern into config file
-# TODO: Separate the bucket name, path, and filename in the code

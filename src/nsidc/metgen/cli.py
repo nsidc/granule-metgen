@@ -46,7 +46,7 @@ def process(config_filename, env, write_cnm, number):
     except Exception as e:
         print("\nUnable to process data: " + str(e))
         exit(1)
-    click.echo(f'Processed granules using the configuration file {config}')
+    click.echo(f'Processing complete')
 
 if __name__ == "__main__":
     cli()

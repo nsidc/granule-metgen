@@ -73,6 +73,7 @@ def init_config(configuration_file):
     cfg_parser.set(DESTINATION_SECTION_NAME, "local_output_dir", Prompt.ask("Local output directory", default="output"))
     cfg_parser.set(DESTINATION_SECTION_NAME, "ummg_dir", Prompt.ask("Local UMM-G output directory (relative to local output directory)", default="ummg"))
     cfg_parser.set(DESTINATION_SECTION_NAME, "kinesis_stream_name", Prompt.ask("Kinesis stream name"))
+    cfg_parser.set(DESTINATION_SECTION_NAME, "staging_bucket_name", Prompt.ask("Cumulus s3 bucket name"))
     cfg_parser.set(DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
 
     print()
@@ -123,10 +124,9 @@ def process(configuration):
     processed_count = 0
 
     for producer_granule_id, granule_files in granules.items():
-        print()
         print('--------------------------------------------------')
+        print(f'Processing {producer_granule_id}:')
         print()
-        print(f'Processing {producer_granule_id}...')
 
         # Add producer_granule_id and information from CMR.
         mapping = configuration.enhance(producer_granule_id)
@@ -145,10 +145,9 @@ def process(configuration):
                                    body_template=cnms_template,
                                    granule_files=granule_files)
         publish_cnm(mapping, cnm_content)
+        print()
 
-    print()
     print('--------------------------------------------------')
-    print()
     print(f'Processed {processed_count} source files')
 
 def granule_paths(data_dir):
@@ -233,16 +232,12 @@ def stage(mapping, granule_files={}):
     Stage all files related to a granule to a Cumulus location
     """
 
-    print()
     for file_type, file_paths in granule_files.items():
         for file_path in file_paths:
-            print(f'WIP: stage {file_type} file {file_path} to {s3_url(mapping, os.path.basename(file_path))}')
+            file_name = os.path.basename(file_path)
+            bucket_path = s3_object_path(mapping, os.path.basename(file_path))
             with open(file_path, 'rb') as f:
-                name = s3_object_path(mapping, os.path.basename(file_path))
-                aws.stage_file(s3_bucket_name(mapping, name), s3_object_path(mapping, name), file=f)
-            print()
-
-    print()
+                aws.stage_file(mapping['staging_bucket_name'], bucket_path, file=f)
 
 def cnms_message(mapping, body_template='', granule_files={}):
 
@@ -292,21 +287,13 @@ def checksum(file):
     return sha256.hexdigest()
 
 def s3_url(mapping, name):
-    mapping['s3_name'] = name
-    template = Template('s3://nsidc-cumulus-${environment}-ingest-staging/external/${auth_id}/${version}/${uuid}/${s3_name}')
-
-    return(template.safe_substitute(mapping))
-
-def s3_bucket_name(mapping, name):
-    mapping['s3_name'] = name
-    # template = Template('nsidc-cumulus-${environment}-ingest-staging')
-    template = Template('duck-${environment}-bucket')
-    return(template.safe_substitute(mapping))
+    bucket_name = mapping['staging_bucket_name']
+    object_path = s3_object_path(mapping, name)
+    return f's3://{bucket_name}{object_path}'
 
 def s3_object_path(mapping, name):
-    mapping['s3_name'] = name
-    template = Template('/external/${auth_id}/${version}/${uuid}/${s3_name}')
-    return(template.safe_substitute(mapping))
+    template = Template('/external/${auth_id}/${version}/${uuid}/')
+    return(template.safe_substitute(mapping) + name)
 
 def ummg_body_template():
     return initialize_template(UMMG_BODY_TEMPLATE)
