@@ -18,6 +18,7 @@ class Config:
     local_output_dir: str
     ummg_dir: str
     kinesis_stream_name: str
+    staging_bucket_name: str
     write_cnm_file: bool
     checksum_type: str
     number: int
@@ -52,6 +53,9 @@ class Config:
         }
 
 def config_parser_factory(configuration_file):
+    """
+    Returns a ConfigParser by reading the specified file.
+    """
     if configuration_file is None or not os.path.exists(configuration_file):
         raise ValueError(f'Unable to find configuration file {configuration_file}')
     cfg_parser = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
@@ -60,6 +64,11 @@ def config_parser_factory(configuration_file):
 
 
 def _get_configuration_value(environment, section, name, value_type, config_parser, overrides, default=None):
+    """
+    Returns a value from the provided config parser, using the default if
+    none exists; any value for the key that is provided in the 'overrides'
+    dictionary will take precedence.
+    """
     vars = { 'environment': environment }
     if overrides.get(name) is None:
         if value_type is bool:
@@ -74,6 +83,11 @@ def _get_configuration_value(environment, section, name, value_type, config_pars
         return overrides.get(name)
 
 def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULUS_ENVIRONMENT):
+    """
+    Returns a valid Config object that is populated from the provided config
+    parser based on the 'environment', and with values overriden with anything
+    provided in 'overrides'.
+    """
     try:
         return Config(
             environment,
@@ -84,6 +98,7 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
             _get_configuration_value(environment, 'Destination', 'local_output_dir', str, config_parser, overrides),
             _get_configuration_value(environment, 'Destination', 'ummg_dir', str, config_parser, overrides),
             _get_configuration_value(environment, 'Destination', 'kinesis_stream_name', str, config_parser, overrides),
+            _get_configuration_value(environment, 'Destination', 'staging_bucket_name', str, config_parser, overrides),
             _get_configuration_value(environment, 'Destination', 'write_cnm_file', bool, config_parser, overrides, False),
             _get_configuration_value(environment, 'Settings', 'checksum_type', str, config_parser, overrides, 'SHA256'),
             _get_configuration_value(environment, 'Settings', 'number', int, config_parser, overrides, -1),
@@ -92,7 +107,9 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
         return Exception('Unable to read the configuration file', e)
 
 def validate(configuration):
-    """Validates each value in the configuration."""
+    """
+    Validates each value in the configuration.
+    """
     validations = [
         ['data_dir', lambda dir: os.path.exists(dir), 'The data_dir does not exist.'],
         ['local_output_dir', lambda dir: os.path.exists(dir), 'The local_output_dir does not exist.'],

@@ -26,6 +26,7 @@ def expected_keys():
                 'local_output_dir',
                 'ummg_dir',
                 'kinesis_stream_name',
+                'staging_bucket_name',
                 'write_cnm_file',
                 'checksum_type',
                 'number'])
@@ -45,6 +46,7 @@ def cfg_parser():
         'local_output_dir': '/output/here',
         'ummg_dir': 'ummg',
         'kinesis_stream_name': "xyzzy-${environment}-stream",
+        'staging_bucket_name': "xyzzy-${environment}-bucket",
         'write_cnm_file': False
     }
     return cp
@@ -90,7 +92,7 @@ def test_config_with_write_cnm(cfg_parser, expected_keys):
 
 def test_enhanced_config():
     myconfig = config.Config('env', 'data_dir', 'auth_id', 'version',
-                  'provider', 'output_dir', 'ummg_dir', 'stream_name',
+                  'provider', 'output_dir', 'ummg_dir', 'stream_name', 'bucket_name',
                   'write_cnm_file', 'checksum_type', 'number')
     enhanced_config = myconfig.enhance('pgid')
     assert set(['auth_id', 'version', 'producer_granule_id',
