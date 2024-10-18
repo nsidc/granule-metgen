@@ -102,7 +102,9 @@ def process(configuration):
     """
     configuration.show()
     print()
+
     print('--------------------------------------------------')
+
     valid, errors = config.validate(configuration)
     if not valid:
         print("The configuration is invalid:")
@@ -111,8 +113,10 @@ def process(configuration):
         raise Exception('Invalid configuration')
 
     granules = granule_paths(Path(configuration.data_dir))
-    print(f'Found {len(granules.items())} granules to process')
-    if (configuration.number > 0 and configuration.number < len(granules)):
+    print(f'Found {len(granules)} granules to process')
+    if configuration.number < 1 or configuration.number >= len(granules):
+        print('Processing all available granules')
+    else:
         print(f'Processing the first {configuration.number} granule(s)')
         granules = granules[:configuration.number]
     print()
@@ -153,20 +157,18 @@ def process(configuration):
     print(f'Processed {processed_count} source files')
 
 def granule_paths(data_dir):
-    granules = {}
+    # Returns a list of tuples containing the "producer granule id" and a dict
+    # containing the key 'data' with a list of one or more files identified as 
+    # part of the same granule. We still need code to identify the common
+    # basename for the cases where more than one file exists per granule (or
+    # the case where an ancillary file is associated with the granule), and to
+    # add the correct "type" of the file. See the CNM spec for a list of types.
+    # At the moment the assumption is one (netCDF!) file per granule, with a
+    # type of "data," plus a metadata (UMM-G) file.
+    producer_granule_ids = [os.path.basename(f) for f in data_dir.glob('*.nc')]
+    granule_data_files = [{ 'data': [f] } for f in data_dir.glob('*.nc')]
 
-    # This sets up a data structure to associate a "producer granule id" with
-    # one or more files identified as part of the same granule. We still need
-    # code to identify the common basename for the cases where more than one
-    # file exists per granule (or the case where an ancillary file is associated
-    # with the granule), and to add the correct "type" of the file. See the CNM
-    # spec for a list of types. At the moment the assumption is one (netCDF!) file
-    # per granule, with a type of "data," plus a metadata (UMM-G) file.
-    producer_granule_ids = [os.path.basename(i) for i in data_dir.glob('*.nc')]
-    for pgid in producer_granule_ids:
-        granules[pgid] = {'data': [os.path.join(data_dir, pgid)]}
-
-    return granules
+    return list(zip(producer_granule_ids, granule_data_files))
 
 def find_or_create_ummg(mapping, data_file_paths, ummg_path, all_existing_ummg):
     """

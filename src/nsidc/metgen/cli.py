@@ -48,5 +48,6 @@ def process(config_filename, env, write_cnm, number):
         exit(1)
     click.echo(f'Processing complete')
 
+
 if __name__ == "__main__":
     cli()
