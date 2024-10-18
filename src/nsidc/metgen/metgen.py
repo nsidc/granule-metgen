@@ -29,7 +29,7 @@ def banner():
     Displays the name of this utility using incredible ASCII-art.
     """
     f = Figlet(font='slant')
-    return f.renderText('Instameta')
+    return f.renderText('metgenc')
 
 # TODO require a non-blank input for elements that have no default value
 def init_config(configuration_file):
