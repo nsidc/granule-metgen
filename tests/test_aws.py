@@ -148,3 +148,7 @@ def test_stage_file_to_s3(s3, s3_bucket, science_data):
         object_lines = [line.decode(encoding="utf-8") for line in s3_object['Body'].readlines()]
         object_data = "".join(object_lines)
         assert object_data == science_data
+
+def test_stage_file_requires_data_or_file(s3_bucket):
+    with pytest.raises(Exception):
+        aws.stage_file(s3_bucket, 'foo')
