@@ -1,25 +1,31 @@
 import json
 import os.path
-import rioxarray
 import xarray as xr
+from pyproj import CRS
+from pyproj import Transformer
 
 
 def extract_metadata(netcdf_path):
     """
     Read the content at netcdf_path and return a structure with temporal coverage
     information, spatial coverage information, file size, and production datetime.
+
+    Current assumptions (these may eventually need to be configured in the .ini file):
+    - The global attribute "date_modified" exists and will be used to represent
+      the production date and time.
+    - Global attributes "time_coverage_start" and "time_coverage_end" exist and
+      will be used for the time range metadata values.
+    - Only one coordinate system is used by all variables (i.e. only one grid_mapping)
+    - x,y coordinates represent the center of the pixel. The pixel size in the
+      GeoTransform attribute is used to determine the padding added to x and y values.
     """
 
-    # Assumptions (may need to make these configurable):
-    # - production_date_time is represented by global attribute date_modified
-    # - only one coordinate system used by all variables (i.e. only one grid_mapping)
-    # - only one time dimension
-
     # TODO: handle errors if any needed attributes don't exist.
-    netcdf = xr.open_dataset(netcdf_path, use_cftime=True, decode_coords="all")
+    netcdf = xr.open_dataset(netcdf_path, decode_coords="all")
 
     return { 
         'size_in_bytes': os.path.getsize(netcdf_path),
+        # time needs to be iso string
         'production_date_time': netcdf.attrs['date_modified'],
         'temporal': time_range(netcdf),
         'geometry': {'points': json.dumps(spatial_values(netcdf))}
@@ -28,12 +34,10 @@ def extract_metadata(netcdf_path):
 def time_range(netcdf):
     """Returns array of datetime strings"""
     datetimes = []
+    datetimes.append(netcdf.attrs['time_coverage_start'])
+    datetimes.append(netcdf.attrs['time_coverage_end'])
 
-    d = netcdf['time'].data
-    datetimes.append(d[0].isoformat())
-
-    if len(d) > 1:
-        datetimes.append(d[-1].isoformat())
+    # show in isoformat
 
     return datetimes
 
@@ -47,27 +51,38 @@ def spatial_values(netcdf):
         }
     """
 
-    # Reproject (x,y) meter values to EPSG 4326
-    netcdf_lonlat = netcdf.rio.reproject("EPSG:4326")
-    londata = netcdf_lonlat['x'].data
-    latdata = netcdf_lonlat['y'].data
+    data_crs = CRS.from_wkt(netcdf.crs.crs_wkt)
+    crs_4326 = CRS.from_epsg(4326)
+    xformer = Transformer.from_crs(data_crs,crs_4326, always_xy=True)
+
+    # Adding padding should give us values that match up to the netcdf.attrs.geospatial_bounds
+    pad = abs(float(netcdf.crs.GeoTransform.split()[1]))/2
+    xdata = list(map(lambda x: x - pad if x < 0 else x + pad, netcdf.x.data))
+    ydata = list(map(lambda y: y - pad if y < 0 else y + pad, netcdf.y.data))
+
+    # Generate a gap between values that will give us four points per side of
+    # the polygon.
+    xgap = round(len(xdata)/5)
+    ygap = round(len(ydata)/5)
 
     # Pull out just the perimeter of the grid, counter-clockwise direction,
     # starting at top left.
-    # first x, all y
-    left = [(lon,lat) for lon in londata[:1] for lat in latdata[::40]]
+    # x0, y0..yn-gap
+    left = [(x,y) for x in xdata[:1] for y in ydata[:-5:ygap]]
 
-    # all x starting at x1, last y
-    bottom = [(lon,lat) for lon in londata[::40] for lat in latdata[-1:]]
+    # x0..xn-gap, yn
+    bottom = [(x,y) for x in xdata[:-5:xgap] for y in ydata[-1:]]
 
-    # last x, all reverse y starting at yn-1
-    right = [(lon,lat) for lon in londata[-1:] for lat in latdata[::-40]]
+    # xn, yn..y0
+    right = [(x,y) for x in xdata[-1:] for y in ydata[:5:-ygap]]
 
-    # all reverse x starting at xn-1, first y
-    # this includes first value again
-    top = [(lon,lat) for lon in londata[::-40] for lat in latdata[:1]]
+    # xn..x0, first y
+    top = [(x,y) for x in xdata[:5:-xgap] for y in ydata[:1]]
 
-    # concatenate the "sides"
-    perimeter = left + bottom + right + top
+    if top[-1] != left[0]:
+        top.append(left[0])
+
+    # concatenate the "sides" and transform to lon, lat
+    perimeter = list(map(lambda xy: xformer.transform(xy[0], xy[1]), left + bottom + right + top))
 
     return [{'Longitude': round(lon, 8), 'Latitude': round(lat, 8)} for (lon, lat) in perimeter]

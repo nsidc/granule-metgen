@@ -302,7 +302,7 @@ def ummg_temporal_single_template():
     return initialize_template(UMMG_TEMPORAL_SINGLE_TEMPLATE)
 
 def ummg_temporal_range_template():
-    return initialize_template(UMMG_TEMPORAL_SINGLE_TEMPLATE)
+    return initialize_template(UMMG_TEMPORAL_RANGE_TEMPLATE)
 
 def ummg_spatial_gpolygon_template():
     return initialize_template(UMMG_SPATIAL_GPOLYGON_TEMPLATE)
