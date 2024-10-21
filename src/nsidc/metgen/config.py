@@ -1,12 +1,15 @@
 import configparser
 import dataclasses
 from datetime import datetime, timezone
+import logging
 import os.path
 import uuid
 
 from nsidc.metgen import aws
 from nsidc.metgen import constants
 
+
+LOGGER = logging.getLogger('metgenc')
 
 @dataclasses.dataclass
 class Config:
@@ -26,10 +29,10 @@ class Config:
 
     def show(self):
         # TODO add section headings in the right spot (if we think we need them in the output)
-        print()
-        print('Using configuration:')
+        LOGGER.info('')
+        LOGGER.info('Using configuration:')
         for k,v in self.__dict__.items():
-            print(f'  + {k}: {v}')
+            LOGGER.info(f'  + {k}: {v}')
 
     def enhance(self, producer_granule_id):
         mapping = dataclasses.asdict(self)

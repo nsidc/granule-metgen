@@ -38,11 +38,11 @@ def test_info_with_config(cli_runner):
     result = cli_runner.invoke(cli, ['info', '--config', './example/modscg.ini'])
     assert result.exit_code == 0
 
-def test_info_with_config_summarizes(cli_runner):
+@patch('nsidc.metgen.config.Config.show')
+def test_info_with_config_summarizes(mock, cli_runner):
     result = cli_runner.invoke(cli, ['info', '--config', './example/modscg.ini'])
-
-    for key in ['auth_id', 'data_dir', 'environment', 'local_output_dir', 'kinesis_stream_name', 'provider', 'ummg_dir', 'version']:
-        assert key in result.output
+    assert mock.called
+    assert result.exit_code == 0
 
 @patch('nsidc.metgen.metgen.process')
 def test_process_requires_config(mock, cli_runner):
