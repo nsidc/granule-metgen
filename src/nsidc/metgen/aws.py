@@ -28,6 +28,18 @@ def post_to_kinesis(stream_name, cnm_message):
 
     return result['ShardId']
 
+def staging_bucket_exists(bucket_name):
+    """
+    Predicate which determines if an s3 bucket with the given name exists
+    in the configured AWS environment.
+    """
+    client = boto3.client("s3")
+    try:
+        client.head_bucket(Bucket=bucket_name)
+        return True
+    except Exception as e:
+        return False
+
 def stage_file(s3_bucket_name, object_name, *, data=None, file=None):
     """
     Stages data into an s3 bucket at a given path.

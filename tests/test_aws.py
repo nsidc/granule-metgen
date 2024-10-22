@@ -152,3 +152,11 @@ def test_stage_file_to_s3(s3, s3_bucket, science_data):
 def test_stage_file_requires_data_or_file(s3_bucket):
     with pytest.raises(Exception):
         aws.stage_file(s3_bucket, 'foo')
+
+def test_staging_bucket_exists_for_valid_name(s3_bucket):
+    bucket_name = "duck-test-bucket"
+    assert aws.staging_bucket_exists(bucket_name)
+
+def test_staging_bucket_exists_for_invalid_name(s3_bucket):
+    bucket_name = "xyzzy"
+    assert not aws.staging_bucket_exists(bucket_name)
