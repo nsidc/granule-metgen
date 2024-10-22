@@ -1,4 +1,5 @@
 from configparser import ConfigParser, ExtendedInterpolation
+import dataclasses
 from unittest.mock import patch
 
 import pytest
@@ -48,6 +49,10 @@ def cfg_parser():
         'kinesis_stream_name': "xyzzy-${environment}-stream",
         'staging_bucket_name': "xyzzy-${environment}-bucket",
         'write_cnm_file': False
+    }
+    cp['Settings'] = {
+        'checksum_type': 'SHA256',
+        'number': -1
     }
     return cp
 
@@ -109,21 +114,24 @@ def test_get_configuration_value_with_override(cfg_parser):
     result = config._get_configuration_value(environment, "Source", "data_dir", str, cfg_parser, overrides)
     assert result == overrides['data_dir']
 
-def test_get_configuration_value_with_default(cfg_parser):
-    environment = constants.DEFAULT_CUMULUS_ENVIRONMENT
-    default_value = '/etc/foobar'
-    result = config._get_configuration_value(environment, "Source", "foobar_dir", str, cfg_parser, {}, default_value)
-    assert result == default_value
-
-def test_get_configuration_value_with_default_and_override(cfg_parser):
-    environment = constants.DEFAULT_CUMULUS_ENVIRONMENT
-    overrides = { 'data_dir': 'foobar' }
-    default_value = '/etc/foobar'
-    result = config._get_configuration_value(environment, "Source", "data_dir", str, cfg_parser, overrides, default_value)
-    assert result == overrides['data_dir']
-
 def test_get_configuration_value_interpolates_the_environment(cfg_parser):
     environment = constants.DEFAULT_CUMULUS_ENVIRONMENT
     result = config._get_configuration_value(environment, "Destination", "kinesis_stream_name", str, cfg_parser, {})
     assert result == "xyzzy-uat-stream"
 
+@pytest.mark.parametrize("section,option,expected", [
+        ("Destination", "kinesis_stream_name", f"nsidc-cumulus-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-ciss_notification"),
+        ("Destination", "staging_bucket_name", f"nsidc-cumulus-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-ingest-staging"),
+        ("Destination", "write_cnm_file", constants.DEFAULT_WRITE_CNM_FILE),
+        ("Settings", "checksum_type", constants.DEFAULT_CHECKSUM_TYPE),
+        ("Settings", "number", constants.DEFAULT_NUMBER),
+    ])
+def test_configuration_has_good_defaults(cfg_parser, section, option, expected):
+    cfg_parser.remove_option(section, option)
+    result = config.configuration(cfg_parser, {}, constants.DEFAULT_CUMULUS_ENVIRONMENT)
+    result_dict = dataclasses.asdict(result)
+    assert result_dict[option] == expected
+
+
+# TODO: Test validate function
+# TODO: Add validation for s3 bucket

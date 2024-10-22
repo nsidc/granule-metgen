@@ -13,17 +13,6 @@ from nsidc.metgen import config
 from nsidc.metgen import netcdf_to_ummg
 
 
-SOURCE_SECTION_NAME = 'Source'
-COLLECTION_SECTION_NAME = 'Collection'
-DESTINATION_SECTION_NAME = 'Destination'
-SETTINGS_SECTION_NAME = 'Settings'
-UMMG_BODY_TEMPLATE = 'src/nsidc/metgen/templates/ummg_body_template.json'
-UMMG_TEMPORAL_TEMPLATE = 'src/nsidc/metgen/templates/ummg_temporal_single_template.json'
-UMMG_SPATIAL_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_rectangle_template.json'
-CNM_BODY_TEMPLATE = 'src/nsidc/metgen/templates/cnm_body_template.json'
-CNM_FILES_TEMPLATE = 'src/nsidc/metgen/templates/cnm_files_template.json'
-
-
 def banner():
     """
     Displays the name of this utility using incredible ASCII-art.
@@ -57,36 +46,36 @@ def init_config(configuration_file):
     cfg_parser = configparser.ConfigParser()
 
     print()
-    print(f'{SOURCE_SECTION_NAME} Data Parameters')
+    print(f'{constants.SOURCE_SECTION_NAME} Data Parameters')
     print('--------------------------------------------------')
-    cfg_parser.add_section(SOURCE_SECTION_NAME)
-    cfg_parser.set(SOURCE_SECTION_NAME, "data_dir", Prompt.ask("Data directory", default="data"))
+    cfg_parser.add_section(constants.SOURCE_SECTION_NAME)
+    cfg_parser.set(constants.SOURCE_SECTION_NAME, "data_dir", Prompt.ask("Data directory", default="data"))
     print()
 
     print()
-    print(f'{COLLECTION_SECTION_NAME} Parameters')
+    print(f'{constants.COLLECTION_SECTION_NAME} Parameters')
     print('--------------------------------------------------')
-    cfg_parser.add_section(COLLECTION_SECTION_NAME)
-    cfg_parser.set(COLLECTION_SECTION_NAME, "auth_id", Prompt.ask("Authoritative ID"))
-    cfg_parser.set(COLLECTION_SECTION_NAME, "version", Prompt.ask("Version"))
-    cfg_parser.set(COLLECTION_SECTION_NAME, "provider", Prompt.ask("Provider"))
+    cfg_parser.add_section(constants.COLLECTION_SECTION_NAME)
+    cfg_parser.set(constants.COLLECTION_SECTION_NAME, "auth_id", Prompt.ask("Authoritative ID"))
+    cfg_parser.set(constants.COLLECTION_SECTION_NAME, "version", Prompt.ask("Version"))
+    cfg_parser.set(constants.COLLECTION_SECTION_NAME, "provider", Prompt.ask("Provider"))
     print()
 
     print()
-    print(f'{DESTINATION_SECTION_NAME} Parameters')
+    print(f'{constants.DESTINATION_SECTION_NAME} Parameters')
     print('--------------------------------------------------')
-    cfg_parser.add_section(DESTINATION_SECTION_NAME)
-    cfg_parser.set(DESTINATION_SECTION_NAME, "local_output_dir", Prompt.ask("Local output directory", default="output"))
-    cfg_parser.set(DESTINATION_SECTION_NAME, "ummg_dir", Prompt.ask("Local UMM-G output directory (relative to local output directory)", default="ummg"))
-    cfg_parser.set(DESTINATION_SECTION_NAME, "kinesis_stream_name", Prompt.ask("Kinesis stream name"))
-    cfg_parser.set(DESTINATION_SECTION_NAME, "staging_bucket_name", Prompt.ask("Cumulus s3 bucket name"))
-    cfg_parser.set(DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
+    cfg_parser.add_section(constants.DESTINATION_SECTION_NAME)
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "local_output_dir", Prompt.ask("Local output directory", default="output"))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "ummg_dir", Prompt.ask("Local UMM-G output directory (relative to local output directory)", default="ummg"))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "kinesis_stream_name", Prompt.ask("Kinesis stream name"))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "staging_bucket_name", Prompt.ask("Cumulus s3 bucket name"))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
 
     print()
-    print(f'{SETTINGS_SECTION_NAME} Parameters')
+    print(f'{constants.SETTINGS_SECTION_NAME} Parameters')
     print('--------------------------------------------------')
-    cfg_parser.add_section(SETTINGS_SECTION_NAME)
-    cfg_parser.set(SETTINGS_SECTION_NAME, "checksum_type", Prompt.ask("Checksum type", default="SHA256"))
+    cfg_parser.add_section(constants.SETTINGS_SECTION_NAME)
+    cfg_parser.set(constants.SETTINGS_SECTION_NAME, "checksum_type", Prompt.ask("Checksum type", default="SHA256"))
 
     print()
     print(f'Saving new configuration: {configuration_file}')
@@ -309,19 +298,19 @@ def s3_object_path(mapping, name):
     return(template.safe_substitute(mapping) + name)
 
 def ummg_body_template():
-    return initialize_template(UMMG_BODY_TEMPLATE)
+    return initialize_template(constants.UMMG_BODY_TEMPLATE)
 
 def ummg_temporal_template():
-    return initialize_template(UMMG_TEMPORAL_TEMPLATE)
+    return initialize_template(constants.UMMG_TEMPORAL_TEMPLATE)
 
 def ummg_spatial_template():
-    return initialize_template(UMMG_SPATIAL_TEMPLATE)
+    return initialize_template(constants.UMMG_SPATIAL_TEMPLATE)
 
 def cnms_body_template():
-    return initialize_template(CNM_BODY_TEMPLATE)
+    return initialize_template(constants.CNM_BODY_TEMPLATE)
 
 def cnms_files_template():
-    return initialize_template(CNM_FILES_TEMPLATE)
+    return initialize_template(constants.CNM_FILES_TEMPLATE)
 
 def initialize_template(file):
     with open(file) as template_file:

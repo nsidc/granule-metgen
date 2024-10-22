@@ -63,21 +63,19 @@ def config_parser_factory(configuration_file):
     return cfg_parser
 
 
-def _get_configuration_value(environment, section, name, value_type, config_parser, overrides, default=None):
+def _get_configuration_value(environment, section, name, value_type, config_parser, overrides):
     """
-    Returns a value from the provided config parser, using the default if
-    none exists; any value for the key that is provided in the 'overrides'
-    dictionary will take precedence.
+    Returns a value from the provided config parser; any value for the key that
+    is provided in the 'overrides' dictionary will take precedence.
     """
     vars = { 'environment': environment }
     if overrides.get(name) is None:
         if value_type is bool:
-            return config_parser.getboolean(section, name, fallback=default)
+            return config_parser.getboolean(section, name)
         elif value_type is int:
-            return config_parser.getint(section, name, fallback=default)
+            return config_parser.getint(section, name)
         else:
-            value = config_parser.get(section, name, vars=vars, fallback=default)
-            print(name, vars, value)
+            value = config_parser.get(section, name, vars=vars)
             return value
     else:
         return overrides.get(name)
@@ -88,6 +86,13 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
     parser based on the 'environment', and with values overriden with anything
     provided in 'overrides'.
     """
+    config_parser['DEFAULT'] = {
+        'kinesis_stream_name': constants.DEFAULT_STAGING_KINESIS_STREAM,
+        'staging_bucket_name': constants.DEFAULT_STAGING_BUCKET_NAME,
+        'write_cnm_file': constants.DEFAULT_WRITE_CNM_FILE,
+        'checksum_type': constants.DEFAULT_CHECKSUM_TYPE,
+        'number': constants.DEFAULT_NUMBER,
+    }
     try:
         return Config(
             environment,
@@ -99,9 +104,9 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
             _get_configuration_value(environment, 'Destination', 'ummg_dir', str, config_parser, overrides),
             _get_configuration_value(environment, 'Destination', 'kinesis_stream_name', str, config_parser, overrides),
             _get_configuration_value(environment, 'Destination', 'staging_bucket_name', str, config_parser, overrides),
-            _get_configuration_value(environment, 'Destination', 'write_cnm_file', bool, config_parser, overrides, False),
-            _get_configuration_value(environment, 'Settings', 'checksum_type', str, config_parser, overrides, 'SHA256'),
-            _get_configuration_value(environment, 'Settings', 'number', int, config_parser, overrides, -1),
+            _get_configuration_value(environment, 'Destination', 'write_cnm_file', bool, config_parser, overrides),
+            _get_configuration_value(environment, 'Settings', 'checksum_type', str, config_parser, overrides),
+            _get_configuration_value(environment, 'Settings', 'number', int, config_parser, overrides),
         )
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
