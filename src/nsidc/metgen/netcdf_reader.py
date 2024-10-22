@@ -1,6 +1,9 @@
 import json
 import os.path
 import xarray as xr
+import re
+from datetime import datetime, timezone
+
 from pyproj import CRS
 from pyproj import Transformer
 
@@ -9,15 +12,6 @@ def extract_metadata(netcdf_path):
     """
     Read the content at netcdf_path and return a structure with temporal coverage
     information, spatial coverage information, file size, and production datetime.
-
-    Current assumptions (these may eventually need to be configured in the .ini file):
-    - The global attribute "date_modified" exists and will be used to represent
-      the production date and time.
-    - Global attributes "time_coverage_start" and "time_coverage_end" exist and
-      will be used for the time range metadata values.
-    - Only one coordinate system is used by all variables (i.e. only one grid_mapping)
-    - x,y coordinates represent the center of the pixel. The pixel size in the
-      GeoTransform attribute is used to determine the padding added to x and y values.
     """
 
     # TODO: handle errors if any needed attributes don't exist.
@@ -25,25 +19,22 @@ def extract_metadata(netcdf_path):
 
     return { 
         'size_in_bytes': os.path.getsize(netcdf_path),
-        # time needs to be iso string
-        'production_date_time': netcdf.attrs['date_modified'],
+        'production_date_time': ensure_iso(netcdf.attrs['date_modified']),
         'temporal': time_range(netcdf),
         'geometry': {'points': json.dumps(spatial_values(netcdf))}
     }
 
 def time_range(netcdf):
-    """Returns array of datetime strings"""
+    """Return an array of datetime strings"""
     datetimes = []
-    datetimes.append(netcdf.attrs['time_coverage_start'])
-    datetimes.append(netcdf.attrs['time_coverage_end'])
-
-    # show in isoformat
+    datetimes.append(ensure_iso(netcdf.attrs['time_coverage_start']))
+    datetimes.append(ensure_iso(netcdf.attrs['time_coverage_end']))
 
     return datetimes
 
 def spatial_values(netcdf):
     """
-    Returns an array of dicts, each dict representing one lat/lon pair:
+    Return an array of dicts, each dict representing one lat/lon pair like so:
 
         {
             "Longitude: float,
@@ -53,27 +44,27 @@ def spatial_values(netcdf):
 
     data_crs = CRS.from_wkt(netcdf.crs.crs_wkt)
     crs_4326 = CRS.from_epsg(4326)
-    xformer = Transformer.from_crs(data_crs,crs_4326, always_xy=True)
+    xformer = Transformer.from_crs(data_crs, crs_4326, always_xy=True)
 
     # Adding padding should give us values that match up to the netcdf.attrs.geospatial_bounds
     pad = abs(float(netcdf.crs.GeoTransform.split()[1]))/2
     xdata = list(map(lambda x: x - pad if x < 0 else x + pad, netcdf.x.data))
     ydata = list(map(lambda y: y - pad if y < 0 else y + pad, netcdf.y.data))
 
-    # Generate a gap between values that will give us four points per side of
-    # the polygon.
+    # Generate a gap between points that will give us four points per side of
+    # the polygon (plus the corners).
     xgap = round(len(xdata)/5)
     ygap = round(len(ydata)/5)
 
     # Pull out just the perimeter of the grid, counter-clockwise direction,
     # starting at top left.
-    # x0, y0..yn-gap
+    # x0, y0..yn-ygap
     left = [(x,y) for x in xdata[:1] for y in ydata[:-5:ygap]]
 
-    # x0..xn-gap, yn
+    # x0..xn-xgap, yn
     bottom = [(x,y) for x in xdata[:-5:xgap] for y in ydata[-1:]]
 
-    # xn, yn..y0
+    # xn, yn..y0-ygap
     right = [(x,y) for x in xdata[-1:] for y in ydata[:5:-ygap]]
 
     # xn..x0, first y
@@ -86,3 +77,18 @@ def spatial_values(netcdf):
     perimeter = list(map(lambda xy: xformer.transform(xy[0], xy[1]), left + bottom + right + top))
 
     return [{'Longitude': round(lon, 8), 'Latitude': round(lat, 8)} for (lon, lat) in perimeter]
+
+def ensure_iso(datetime_str):
+    """
+    Do a little fidgeting with time strings that are technically ISO, but have a
+    space rather than "T" separating date and time, fractional minutes, and no
+    time zone.
+
+    Apparently nobody on earth has thought to modify isoformat to adjust the zero-
+    padding of the microseconds value, so we are currently stuck with extra zeros.
+    """
+    iso_obj = datetime.fromisoformat(datetime_str)
+    fractional_minutes = re.match(r'[^\s]* (?P<hour>\d{2}):(?P<min>\d*)\.(?P<fraction>\d*)', datetime_str)
+    sec = 59 if fractional_minutes and fractional_minutes.group('fraction') == '99' else iso_obj.second
+
+    return(iso_obj.replace(second=sec, tzinfo=timezone.utc).isoformat())
