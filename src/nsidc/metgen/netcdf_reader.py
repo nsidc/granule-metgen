@@ -53,32 +53,48 @@ def spatial_values(netcdf):
     xdata = list(map(lambda x: x - pad if x < 0 else x + pad, netcdf.x.data))
     ydata = list(map(lambda y: y - pad if y < 0 else y + pad, netcdf.y.data))
 
-    # Generate a gap between points that will give us four points per side of
-    # the polygon (plus the corners).
-    xgap = round(len(xdata)/5)
-    ygap = round(len(ydata)/5)
+    # Extract the perimeter points and transform to lon, lat
+    perimeter = list(map(lambda xy: xformer.transform(xy[0], xy[1]), thinned_perimeter(xdata, ydata)))
+
+    return [{'Longitude': round(lon, 8), 'Latitude': round(lat, 8)} for (lon, lat) in perimeter]
+
+def thinned_perimeter(xdata, ydata):
+    """
+    Extract the thinned perimeter of a grid.
+    """
+    xindices = index_subset(len(xdata))
+    yindices = index_subset(len(ydata))
 
     # Pull out just the perimeter of the grid, counter-clockwise direction,
     # starting at top left.
-    # x0, y0..yn-ygap
-    left = [(x,y) for x in xdata[:1] for y in ydata[:-5:ygap]]
+    # xindex[0], yindex[0]..yindex[-2]
+    left = [(x,y) for x in xdata[:1] for i in yindices[:5] for y in [ydata[i]]]
 
-    # x0..xn-xgap, yn
-    bottom = [(x,y) for x in xdata[:-5:xgap] for y in ydata[-1:]]
+    # xindex[0]..xindex[-2], yindex[-1]
+    bottom = [(x,y) for i in xindices[:5] for x in [xdata[i]] for y in ydata[-1:]]
 
-    # xn, yn..y0-ygap
-    right = [(x,y) for x in xdata[-1:] for y in ydata[:5:-ygap]]
+    # xindex[-1], yindex[-1]..yindex[1]
+    right = [(x,y) for x in xdata[-1:] for i in yindices[5:0:-1] for y in [ydata[i]]]
 
-    # xn..x0, first y
-    top = [(x,y) for x in xdata[:5:-xgap] for y in ydata[:1]]
+    # xindex[-1]..xindex[0], yindex[0]
+    top = [(x,y) for i in xindices[5::-1] for x in [xdata[i]] for y in ydata[:1]]
 
+    # The last point should already be the same as the first, given that top
+    # uses all of the xindices, but just in case...
     if top[-1] != left[0]:
         top.append(left[0])
 
-    # concatenate the "sides" and transform to lon, lat
-    perimeter = list(map(lambda xy: xformer.transform(xy[0], xy[1]), left + bottom + right + top))
+    # concatenate the "sides" and return the perimeter points
+    return(left + bottom + right + top)
 
-    return [{'Longitude': round(lon, 8), 'Latitude': round(lat, 8)} for (lon, lat) in perimeter]
+def index_subset(original_length):
+    """
+    Pluck out the values for the first and last index of an array, plus a
+    somewhat arbitrary, and approximately evenly spaced, additional number
+    of indices in between the beginning and end.
+    """
+    TOTAL_INDICES = 6
+    return [round(index*count*.2) for count in range(TOTAL_INDICES) for index in [original_length - 1]]
 
 def ensure_iso(datetime_str):
     """
@@ -89,9 +105,8 @@ def ensure_iso(datetime_str):
     """
     iso_obj = datetime.fromisoformat(datetime_str)
     fractional_minutes = re.match(r'[^\s]* (?P<hour>\d{2}):(?P<min>\d*)\.(?P<fraction>\d*)', datetime_str)
-    sec = 59 if fractional_minutes and \
-        fractional_minutes.group('min') == '59' and \
-        fractional_minutes.group('fraction') >= '99' \
-        else iso_obj.second
+    sec = 59 if (fractional_minutes and
+        fractional_minutes.group('min') == '59' and
+        fractional_minutes.group('fraction') >= '99') else iso_obj.second
 
     return(iso_obj.replace(second=sec, tzinfo=timezone.utc).isoformat())
