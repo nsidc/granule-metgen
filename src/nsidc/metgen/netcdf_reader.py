@@ -40,6 +40,8 @@ def spatial_values(netcdf):
             "Longitude: float,
             "Latitude: float
         }
+    Eventually this can/should be pulled out of the netCDF-specific code into a
+    general-use module.
     """
 
     data_crs = CRS.from_wkt(netcdf.crs.crs_wkt)
@@ -80,15 +82,16 @@ def spatial_values(netcdf):
 
 def ensure_iso(datetime_str):
     """
-    Do a little fidgeting with time strings that are technically ISO, but have a
-    space rather than "T" separating date and time, fractional minutes, and no
-    time zone.
-
-    Apparently nobody on earth has thought to modify isoformat to adjust the zero-
-    padding of the microseconds value, so we are currently stuck with extra zeros.
+    Reformat time values like "23:59.99" to "23:59:59.99". Fractional minutes are
+    valid ISO, but not handled by Python's built-in datetime.fromisoformat() class
+    method. We could also use datetime.strptime() but that approach also requires
+    some assumptions.
     """
     iso_obj = datetime.fromisoformat(datetime_str)
     fractional_minutes = re.match(r'[^\s]* (?P<hour>\d{2}):(?P<min>\d*)\.(?P<fraction>\d*)', datetime_str)
-    sec = 59 if fractional_minutes and fractional_minutes.group('fraction') == '99' else iso_obj.second
+    sec = 59 if fractional_minutes and \
+        fractional_minutes.group('min') == '59' and \
+        fractional_minutes.group('fraction') >= '99' \
+        else iso_obj.second
 
     return(iso_obj.replace(second=sec, tzinfo=timezone.utc).isoformat())
