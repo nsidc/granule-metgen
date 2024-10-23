@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-import xarray as xr
 
 from nsidc.metgen import netcdf_reader
 
