@@ -64,20 +64,22 @@ def thinned_perimeter(xdata, ydata):
     """
     xindices = index_subset(len(xdata))
     yindices = index_subset(len(ydata))
+    xlen = len(xindices)
+    ylen = len(yindices)
 
     # Pull out just the perimeter of the grid, counter-clockwise direction,
     # starting at top left.
     # xindex[0], yindex[0]..yindex[-2]
-    left = [(x,y) for x in xdata[:1] for i in yindices[:5] for y in [ydata[i]]]
+    left = [(x,y) for x in xdata[:1] for i in yindices[:ylen-1] for y in [ydata[i]]]
 
     # xindex[0]..xindex[-2], yindex[-1]
-    bottom = [(x,y) for i in xindices[:5] for x in [xdata[i]] for y in ydata[-1:]]
+    bottom = [(x,y) for i in xindices[:xlen-1] for x in [xdata[i]] for y in ydata[-1:]]
 
     # xindex[-1], yindex[-1]..yindex[1]
-    right = [(x,y) for x in xdata[-1:] for i in yindices[5:0:-1] for y in [ydata[i]]]
+    right = [(x,y) for x in xdata[-1:] for i in yindices[ylen-1:0:-1] for y in [ydata[i]]]
 
     # xindex[-1]..xindex[0], yindex[0]
-    top = [(x,y) for i in xindices[5::-1] for x in [xdata[i]] for y in ydata[:1]]
+    top = [(x,y) for i in xindices[xlen-1::-1] for x in [xdata[i]] for y in ydata[:1]]
 
     # The last point should already be the same as the first, given that top
     # uses all of the xindices, but just in case...
@@ -94,7 +96,10 @@ def index_subset(original_length):
     of indices in between the beginning and end.
     """
     TOTAL_INDICES = 6
-    return [round(index*count*.2) for count in range(TOTAL_INDICES) for index in [original_length - 1]]
+    if(original_length > 6):
+        return [round(index*count*.2) for count in range(TOTAL_INDICES) for index in [original_length - 1]]
+    else:
+        return list(range(original_length))
 
 def ensure_iso(datetime_str):
     """
