@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-import xarray as xr
 
 from nsidc.metgen import netcdf_reader
 
@@ -14,16 +13,25 @@ from nsidc.metgen import netcdf_reader
 # and handle any exceptions they may throw.
 
 @pytest.fixture
-def netcdf_file():
-    x = [100, 200, 300]
-    y = [100, 200, 300]
-    return xr.Dataset(coords={"x": (["loc"], x), "y": (["loc"], y)})
+def xdata():
+    return list(range(0, 6, 2))
 
-@pytest.mark.skip
-@patch('nsidc.metgen.netcdf_reader.xr.open_dataset', return_value = netcdf_file)
-@patch('nsidc.metgen.netcdf_reader.os.path.getsize', return_value = 42)
-def test_spatial_values_returned_as_string(os_mock, netcdf_mock):
-    result = netcdf_reader.extract_metadata('path_to_nowhere')
+@pytest.fixture
+def ydata():
+    return list(range(0, 25, 5))
+
+def test_spatial_values_are_thinned(xdata, ydata):
+    result = netcdf_reader.thinned_perimeter(xdata, ydata)
+    assert len(result) == (len(xdata) * 2) + (len(ydata) * 2) - 3
+
+def test_perimeter_is_closed_polygon(xdata, ydata):
+    result = netcdf_reader.thinned_perimeter(xdata, ydata)
+    assert result[0] == result[-1]
+
+def test_no_other_duplicate_values(xdata, ydata):
+    result = netcdf_reader.thinned_perimeter(xdata, ydata)
+    result_set = set(result)
+    assert len(result_set) == len(result) -1
 
 @pytest.mark.parametrize("input,expected", [
     pytest.param('2001-01-01', '2001-01-01T00:00:00.000+00:00', id="Date and no time"),
