@@ -1,8 +1,8 @@
 import json
 import os.path
+
 import xarray as xr
-import re
-from datetime import datetime, timezone
+from datetime import timezone
 from dateutil.parser import parse
 
 from pyproj import CRS

@@ -10,6 +10,7 @@ from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws
 from nsidc.metgen import config
+from nsidc.metgen import constants
 from nsidc.metgen import netcdf_reader
 
 
@@ -300,13 +301,13 @@ def ummg_body_template():
     return initialize_template(constants.UMMG_BODY_TEMPLATE)
 
 def ummg_temporal_single_template():
-    return initialize_template(UMMG_TEMPORAL_SINGLE_TEMPLATE)
+    return initialize_template(constants.UMMG_TEMPORAL_SINGLE_TEMPLATE)
 
 def ummg_temporal_range_template():
-    return initialize_template(UMMG_TEMPORAL_RANGE_TEMPLATE)
+    return initialize_template(constants.UMMG_TEMPORAL_RANGE_TEMPLATE)
 
 def ummg_spatial_gpolygon_template():
-    return initialize_template(UMMG_SPATIAL_GPOLYGON_TEMPLATE)
+    return initialize_template(constants.UMMG_SPATIAL_GPOLYGON_TEMPLATE)
 
 def cnms_body_template():
     return initialize_template(constants.CNM_BODY_TEMPLATE)
