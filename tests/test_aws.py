@@ -1,5 +1,7 @@
 import json
 import os
+from tempfile import TemporaryFile
+from unittest.mock import mock_open, patch, Mock
 
 import boto3
 from moto import mock_aws
@@ -46,6 +48,32 @@ def test_message():
         'bar': 'xyzzy'
     })
 
+@pytest.fixture
+def s3(aws_credentials):
+    """A mocked s3 client."""
+    with mock_aws():
+        yield boto3.client("s3")
+
+@pytest.fixture
+def s3_bucket(s3):
+    """Create an S3 buket and return the bucket name."""
+    bucket_name = "duck-test-bucket"
+    response = s3.create_bucket(
+            Bucket=bucket_name,
+            CreateBucketConfiguration={
+                'LocationConstraint': 'us-west-2'
+            },
+    )
+    return bucket_name
+
+@pytest.fixture
+def science_data():
+    return """
+        xyzzy
+        foo
+        bar
+        """
+
 def test_kinesis_stream_exists_for_valid_name(kinesis_stream_summary):
     stream_name = "duck-test-stream"
     assert aws.kinesis_stream_exists(stream_name)
@@ -77,3 +105,58 @@ def test_post_to_kinesis_with_empty_message(kinesis_stream_summary):
     stream_name = kinesis_stream_summary['StreamName']
     with pytest.raises(Exception):
         aws.post_to_kinesis(stream_name, None)
+
+def test_stage_data_to_s3(s3, s3_bucket, science_data):
+    object_name = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987/science-data.bin"
+    aws.stage_file(s3_bucket, object_name, data=science_data)
+
+    s3_object = s3.get_object(
+            Bucket=s3_bucket,
+            Key=object_name,
+    )
+    object_lines = [line.decode(encoding="utf-8") for line in s3_object['Body'].readlines()]
+    object_data = "".join(object_lines)
+
+    assert object_data == science_data
+
+def test_stage_data_to_s3_with_invalid_bucket_name(s3_bucket, science_data):
+    bucket_name = "xyzzy"
+    object_name = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987/science-data.bin"
+    with pytest.raises(Exception):
+        aws.stage_file(bucket_name, object_name, data=science_data)
+
+def test_stage_data_to_s3_with_missing_object_name(s3, s3_bucket, science_data):
+    with pytest.raises(Exception):
+        aws.stage_file(s3_bucket, None, data=science_data)
+
+def test_stage_data_to_s3_with_no_data(s3, s3_bucket):
+    object_name = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987/science-data.bin"
+    with pytest.raises(Exception):
+        aws.stage_file(s3_bucket, object_name, data=None)
+
+def test_stage_file_to_s3(s3, s3_bucket, science_data):
+    with TemporaryFile() as source_file:
+        source_file.write(science_data.encode('UTF-8'))
+        source_file.seek(0)
+        object_name = "/external/NSIDC-TEST666/3/abcd-1234-wxyz-0987/science-data.bin"
+        aws.stage_file(s3_bucket, object_name, file=source_file)
+
+        s3_object = s3.get_object(
+                Bucket=s3_bucket,
+                Key=object_name,
+        )
+        object_lines = [line.decode(encoding="utf-8") for line in s3_object['Body'].readlines()]
+        object_data = "".join(object_lines)
+        assert object_data == science_data
+
+def test_stage_file_requires_data_or_file(s3_bucket):
+    with pytest.raises(Exception):
+        aws.stage_file(s3_bucket, 'foo')
+
+def test_staging_bucket_exists_for_valid_name(s3_bucket):
+    bucket_name = "duck-test-bucket"
+    assert aws.staging_bucket_exists(bucket_name)
+
+def test_staging_bucket_exists_for_invalid_name(s3_bucket):
+    bucket_name = "xyzzy"
+    assert not aws.staging_bucket_exists(bucket_name)

@@ -19,7 +19,7 @@ nsidc@nsidc.org for more information.
 
 ## Requirements
 
-To use the `nsidc-metgen` command-line tool, `instameta`, you must first have
+To use the `nsidc-metgen` command-line tool, `metgenc`, you must first have
 Python version 3.12 installed. To determine the version of Python you have, run
 this at the command-line:
 
@@ -37,6 +37,9 @@ installed, you should be able to run:
 
     $ poetry --version
     Poetry (version 1.8.3)
+
+Finally, install the AWS commandline interface (CLI) by [following the appropriate
+instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
 ## Assumptions
 
@@ -71,10 +74,10 @@ Enter the `granule-metgen` directory and run Poetry to have it install the `gran
     $ poetry install
     $ poetry shell
 
-With the Poetry shell running, start the instameta tool and verify that it’s working by requesting its usage options and having them returned:
+With the Poetry shell running, start the metgenc tool and verify that it’s working by requesting its usage options and having them returned:
 
-    $ instameta --help
-    Usage: instameta [OPTIONS] COMMAND [ARGS]...
+    $ metgenc --help
+    Usage: metgenc [OPTIONS] COMMAND [ARGS]...
 
     Options:
       --help  Show this message and exit.
@@ -140,21 +143,21 @@ for the details.
 
 * Show the help text:
 
-        $ instameta --help
+        $ metgenc --help
 
 * Show the help text for an individual command:
 
-        $ instameta init --help
+        $ metgenc init --help
 
-* Show summary information about an `instameta` configuration file. Here we use the example configuration file provided in the repo:
+* Show summary information about an `metgenc` configuration file. Here we use the example configuration file provided in the repo:
 
-        $ instameta info --config example/modscg.ini
+        $ metgenc info --config example/modscg.ini
 
 * Process science data and stage it for Cumulus:
 
         # Source the AWS profile (once) before running 'process'-- use 'default' or a named profile
         $ source scripts/env.sh default
-        $ instameta process --config example/modscg.ini
+        $ metgenc process --config example/modscg.ini
 
 * Exit the Poetry shell:
 

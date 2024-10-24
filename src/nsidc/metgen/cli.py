@@ -5,9 +5,9 @@ from nsidc.metgen import metgen
 from nsidc.metgen import constants
 
 
-@click.group(epilog="For detailed help on each command, run: instameta COMMAND --help")
+@click.group(epilog="For detailed help on each command, run: metgenc COMMAND --help")
 def cli():
-    """The instameta utility allows users to create granule-level
+    """The metgenc utility allows users to create granule-level
     metadata, stage granule files and their associated metadata to
     Cumulus, and post CNM messages."""
     pass
@@ -46,7 +46,8 @@ def process(config_filename, env, write_cnm, number):
     except Exception as e:
         print("\nUnable to process data: " + str(e))
         exit(1)
-    click.echo(f'Processed granules using the configuration file {config_filename}')
+    click.echo(f'Processing complete')
+
 
 if __name__ == "__main__":
     cli()

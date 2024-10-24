@@ -13,25 +13,18 @@ from nsidc.metgen import config
 from nsidc.metgen import netcdf_reader
 
 
-SOURCE_SECTION_NAME = 'Source'
-COLLECTION_SECTION_NAME = 'Collection'
-DESTINATION_SECTION_NAME = 'Destination'
-SETTINGS_SECTION_NAME = 'Settings'
-CNM_BODY_TEMPLATE = 'src/nsidc/metgen/templates/cnm_body_template.json'
-CNM_FILES_TEMPLATE = 'src/nsidc/metgen/templates/cnm_files_template.json'
-UMMG_BODY_TEMPLATE = 'src/nsidc/metgen/templates/ummg_body_template.json'
-UMMG_TEMPORAL_SINGLE_TEMPLATE = 'src/nsidc/metgen/templates/ummg_temporal_single_template.json'
-UMMG_TEMPORAL_RANGE_TEMPLATE = 'src/nsidc/metgen/templates/ummg_temporal_range_template.json'
-UMMG_SPATIAL_GPOLYGON_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_gpolygon_template.json'
-UMMG_SPATIAL_POINT_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_point_template.json'
-UMMG_SPATIAL_RECTANGLE_TEMPLATE = 'src/nsidc/metgen/templates/ummg_horizontal_rectangle_template.json'
-
 def banner():
+    """
+    Displays the name of this utility using incredible ASCII-art.
+    """
     f = Figlet(font='slant')
-    return f.renderText('Instameta')
+    return f.renderText('metgenc')
 
 # TODO require a non-blank input for elements that have no default value
 def init_config(configuration_file):
+    """
+    Prompts the user for configuration values and then creates a valid configuration file.
+    """
     print("""This utility will create a granule metadata configuration file by prompting """
           """you for values for each of the configuration parameters.""")
     print()
@@ -53,35 +46,36 @@ def init_config(configuration_file):
     cfg_parser = configparser.ConfigParser()
 
     print()
-    print(f'{SOURCE_SECTION_NAME} Data Parameters')
+    print(f'{constants.SOURCE_SECTION_NAME} Data Parameters')
     print('--------------------------------------------------')
-    cfg_parser.add_section(SOURCE_SECTION_NAME)
-    cfg_parser.set(SOURCE_SECTION_NAME, "data_dir", Prompt.ask("Data directory", default="data"))
+    cfg_parser.add_section(constants.SOURCE_SECTION_NAME)
+    cfg_parser.set(constants.SOURCE_SECTION_NAME, "data_dir", Prompt.ask("Data directory", default="data"))
     print()
 
     print()
-    print(f'{COLLECTION_SECTION_NAME} Parameters')
+    print(f'{constants.COLLECTION_SECTION_NAME} Parameters')
     print('--------------------------------------------------')
-    cfg_parser.add_section(COLLECTION_SECTION_NAME)
-    cfg_parser.set(COLLECTION_SECTION_NAME, "auth_id", Prompt.ask("Authoritative ID"))
-    cfg_parser.set(COLLECTION_SECTION_NAME, "version", Prompt.ask("Version"))
-    cfg_parser.set(COLLECTION_SECTION_NAME, "provider", Prompt.ask("Provider"))
+    cfg_parser.add_section(constants.COLLECTION_SECTION_NAME)
+    cfg_parser.set(constants.COLLECTION_SECTION_NAME, "auth_id", Prompt.ask("Authoritative ID"))
+    cfg_parser.set(constants.COLLECTION_SECTION_NAME, "version", Prompt.ask("Version"))
+    cfg_parser.set(constants.COLLECTION_SECTION_NAME, "provider", Prompt.ask("Provider"))
     print()
 
     print()
-    print(f'{DESTINATION_SECTION_NAME} Parameters')
+    print(f'{constants.DESTINATION_SECTION_NAME} Parameters')
     print('--------------------------------------------------')
-    cfg_parser.add_section(DESTINATION_SECTION_NAME)
-    cfg_parser.set(DESTINATION_SECTION_NAME, "local_output_dir", Prompt.ask("Local output directory", default="output"))
-    cfg_parser.set(DESTINATION_SECTION_NAME, "ummg_dir", Prompt.ask("Local UMM-G output directory (relative to local output directory)", default="ummg"))
-    cfg_parser.set(DESTINATION_SECTION_NAME, "kinesis_stream_name", Prompt.ask("Kinesis stream name"))
-    cfg_parser.set(DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
+    cfg_parser.add_section(constants.DESTINATION_SECTION_NAME)
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "local_output_dir", Prompt.ask("Local output directory", default="output"))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "ummg_dir", Prompt.ask("Local UMM-G output directory (relative to local output directory)", default="ummg"))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "kinesis_stream_name", Prompt.ask("Kinesis stream name"))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "staging_bucket_name", Prompt.ask("Cumulus s3 bucket name"))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
 
     print()
-    print(f'{SETTINGS_SECTION_NAME} Parameters')
+    print(f'{constants.SETTINGS_SECTION_NAME} Parameters')
     print('--------------------------------------------------')
-    cfg_parser.add_section(SETTINGS_SECTION_NAME)
-    cfg_parser.set(SETTINGS_SECTION_NAME, "checksum_type", Prompt.ask("Checksum type", default="SHA256"))
+    cfg_parser.add_section(constants.SETTINGS_SECTION_NAME)
+    cfg_parser.set(constants.SETTINGS_SECTION_NAME, "checksum_type", Prompt.ask("Checksum type", default="SHA256"))
 
     print()
     print(f'Saving new configuration: {configuration_file}')
@@ -91,14 +85,10 @@ def init_config(configuration_file):
     return configuration_file
 
 def process(configuration):
-    # For each granule in `data_dir`:
-    #   * create or find ummg file
-    #   * stage data & ummg files
-    #   * compose CNM-S
-    #   * publish CNM-S
-    #   * create audit entry
-    # TODO:
-    #   * Parallelize the operations
+    """
+    Processes input files by creating UMM-G metadata, staging the science and
+    metadata files, and publishing a CNM message.
+    """
     configuration.show()
     print()
 
@@ -130,7 +120,8 @@ def process(configuration):
 
     for producer_granule_id, granule_files in granules:
         print('--------------------------------------------------')
-        print(f'Processing {producer_granule_id}...')
+        print(f'Processing {producer_granule_id}:')
+        print()
 
         # Add producer_granule_id and information from CMR.
         mapping = configuration.enhance(producer_granule_id)
@@ -149,10 +140,9 @@ def process(configuration):
                                    body_template=cnms_template,
                                    granule_files=granule_files)
         publish_cnm(mapping, cnm_content)
+        print()
 
-    print()
     print('--------------------------------------------------')
-    print()
     print(f'Processed {processed_count} source files')
 
 def granule_paths(data_dir):
@@ -233,14 +223,14 @@ def stage(mapping, granule_files={}):
     """
     Stage all files related to a granule to a Cumulus location
     """
-
-    print()
     for file_type, file_paths in granule_files.items():
         for file_path in file_paths:
-            print(f'TODO: stage {file_type} file {file_path} to {s3_url(mapping, os.path.basename(file_path))}')
-            print()
-
-    print()
+            file_name = os.path.basename(file_path)
+            bucket_path = s3_object_path(mapping, file_name)
+            with open(file_path, 'rb') as f:
+                bucket_name = mapping['staging_bucket_name']
+                aws.stage_file(bucket_name, bucket_path, file=f)
+                print(f'Staged {file_name} to bucket {bucket_name}{bucket_path}')
 
 def cnms_message(mapping, body_template='', granule_files={}):
 
@@ -275,7 +265,9 @@ def publish_cnm(mapping, cnm_message):
         with open(cnm_file, "tw") as f:
             print(cnm_message, file=f)
         print(f'Saved CNM message {cnm_message} to {cnm_file}')
-    aws.post_to_kinesis(mapping['kinesis_stream_name'], cnm_message)
+    stream_name = mapping['kinesis_stream_name']
+    aws.post_to_kinesis(stream_name, cnm_message)
+    print(f'Published CNM message to Kinesis stream {stream_name}')
 
 def checksum(file):
     BUF_SIZE = 65536
@@ -290,13 +282,22 @@ def checksum(file):
     return sha256.hexdigest()
 
 def s3_url(mapping, name):
-    mapping['s3_name'] = name
-    template = Template('s3://nsidc-cumulus-${environment}-ingest-staging/external/${auth_id}/${version}/${uuid}/${s3_name}')
+    """
+    Returns the full s3 URL for the given file name.
+    """
+    bucket_name = mapping['staging_bucket_name']
+    object_path = s3_object_path(mapping, name)
+    return f's3://{bucket_name}{object_path}'
 
-    return(template.safe_substitute(mapping))
+def s3_object_path(mapping, name):
+    """
+    Returns the full s3 object path for the given file name.
+    """
+    template = Template('/external/${auth_id}/${version}/${uuid}/')
+    return(template.safe_substitute(mapping) + name)
 
 def ummg_body_template():
-    return initialize_template(UMMG_BODY_TEMPLATE)
+    return initialize_template(constants.UMMG_BODY_TEMPLATE)
 
 def ummg_temporal_single_template():
     return initialize_template(UMMG_TEMPORAL_SINGLE_TEMPLATE)
@@ -308,10 +309,10 @@ def ummg_spatial_gpolygon_template():
     return initialize_template(UMMG_SPATIAL_GPOLYGON_TEMPLATE)
 
 def cnms_body_template():
-    return initialize_template(CNM_BODY_TEMPLATE)
+    return initialize_template(constants.CNM_BODY_TEMPLATE)
 
 def cnms_files_template():
-    return initialize_template(CNM_FILES_TEMPLATE)
+    return initialize_template(constants.CNM_FILES_TEMPLATE)
 
 def initialize_template(file):
     with open(file) as template_file:
