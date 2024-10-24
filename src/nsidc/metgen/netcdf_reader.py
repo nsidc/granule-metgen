@@ -51,11 +51,11 @@ def spatial_values(netcdf):
 
     # Adding padding should give us values that match up to the netcdf.attrs.geospatial_bounds
     pad = abs(float(netcdf.crs.GeoTransform.split()[1]))/2
-    xdata = list(map(lambda x: x - pad if x < 0 else x + pad, netcdf.x.data))
-    ydata = list(map(lambda y: y - pad if y < 0 else y + pad, netcdf.y.data))
+    xdata = [x - pad if x < 0 else x + pad for x in netcdf.x.data]
+    ydata = [y - pad if y < 0 else y + pad for y in netcdf.y.data]
 
     # Extract the perimeter points and transform to lon, lat
-    perimeter = list(map(lambda xy: xformer.transform(xy[0], xy[1]), thinned_perimeter(xdata, ydata)))
+    perimeter = [xformer.transform(x, y) for (x, y) in thinned_perimeter(xdata, ydata)]
 
     return [{'Longitude': round(lon, 8), 'Latitude': round(lat, 8)} for (lon, lat) in perimeter]
 
