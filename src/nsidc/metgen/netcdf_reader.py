@@ -3,6 +3,7 @@ import os.path
 import xarray as xr
 import re
 from datetime import datetime, timezone
+from dateutil.parser import parse
 
 from pyproj import CRS
 from pyproj import Transformer
@@ -103,15 +104,7 @@ def index_subset(original_length):
 
 def ensure_iso(datetime_str):
     """
-    Reformat time values like "23:59.99" to "23:59:59.99". Fractional minutes are
-    valid ISO, but not handled by Python's built-in datetime.fromisoformat() class
-    method. We could also use datetime.strptime() but that approach also requires
-    some assumptions.
+    Parse ISO-standard datetime strings without a timezone identifier.
     """
-    iso_obj = datetime.fromisoformat(datetime_str)
-    fractional_minutes = re.match(r'[^\s]* (?P<hour>\d{2}):(?P<min>\d*)\.(?P<fraction>\d*)', datetime_str)
-    sec = 59 if (fractional_minutes and
-        fractional_minutes.group('min') == '59' and
-        fractional_minutes.group('fraction') >= '99') else iso_obj.second
-
-    return(iso_obj.replace(second=sec, tzinfo=timezone.utc).isoformat())
+    iso_obj = parse(datetime_str)
+    return iso_obj.replace(tzinfo=timezone.utc).isoformat(timespec='milliseconds')
