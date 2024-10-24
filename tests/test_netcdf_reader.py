@@ -43,6 +43,6 @@ def test_no_other_duplicate_values(xdata, ydata):
     pytest.param('2001-01-01 18:59:20.666', '2001-01-01T18:59:20.666+00:00', id="Datetime and fractional seconds"),
     pytest.param('2001-01-01 18:59', '2001-01-01T18:59:00.000+00:00', id="Datetime and hours/minutes"),
 ])
-def test_correctly_formats_hhmmss(input, expected):
+def test_correctly_reads_date_time_strings(input, expected):
     result = netcdf_reader.ensure_iso(input)
     assert result == expected
