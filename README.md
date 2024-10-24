@@ -44,6 +44,15 @@ instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide
 ## Assumptions
 
 - Checksums are all SHA256
+- The global attribute "date_modified" exists and will be used to represent
+  the production date and time.
+- Global attributes "time_coverage_start" and "time_coverage_end" exist and
+  will be used for the time range metadata values.
+- Only one coordinate system is used by all variables (i.e. only one grid_mapping)
+- (x[0],y[0]) represents the upper left corner of the spatial coverage.
+- x,y coordinates represent the center of the pixel. The pixel size in the
+  GeoTransform attribute is used to determine the padding added to x and y values.
+- Date/time strings can be parsed using `datetime.fromisoformat`
 
 ## Installation
 

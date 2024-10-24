@@ -32,7 +32,7 @@ def info(config_filename):
 @click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
 @click.option('-e', '--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
 @click.option('-n', '--number', help="Process at most 'count' granules.", metavar='count', required=False, default=-1)
-@click.option('-wc', '--write-cnm', is_flag=True, help="Write CNM messages to files.")
+@click.option('-wc', '--write-cnm', is_flag=True, required=False, default=None, help="Write CNM messages to files.")
 def process(config_filename, env, write_cnm, number):
     """Processes science data files based on configuration file contents."""
     click.echo(metgen.banner())

@@ -1,5 +1,5 @@
 {
     "Geometry": {
-        "Points": [{"Longitude": $longitude, "Latitude": $latitude }]
+        "Points": $points
     }
 }

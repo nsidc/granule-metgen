@@ -2,14 +2,7 @@
     "Geometry": {
         "GPolygons": [{
             "Boundary": {
-                "Points": [{"Longitude": $longitude, "Latitude": $latitude }]
-            },
-            "ExclusiveZone": {
-                "Boundaries": [
-                    {
-                        "Points": [{"Longitude": $longitude, "Latitude": $latitude }]
-                    }
-                ]
+                "Points": $points
             }
         }]
     }

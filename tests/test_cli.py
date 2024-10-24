@@ -45,7 +45,7 @@ def test_info_with_config_summarizes(cli_runner):
         assert key in result.output
 
 @patch('nsidc.metgen.metgen.process')
-def test_process_requires_config_does_not_call_process(mock, cli_runner):
+def test_process_requires_config(mock, cli_runner):
     result = cli_runner.invoke(cli, ['process'])
     assert not mock.called
     assert result.exit_code != 0
@@ -67,6 +67,27 @@ def test_process_with_granule_limit(process_mock, cli_runner):
     assert configuration.number == number_files
     assert result.exit_code == 0
 
+@patch('nsidc.metgen.config.configuration')
+@patch('nsidc.metgen.metgen.process')
+def test_process_with_no_write_cnm(process_mock, configuration_mock, cli_runner):
+    result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
+
+    assert configuration_mock.called
+    args = configuration_mock.call_args.args
+    overrides = args[1]
+    assert overrides['write_cnm_file'] == None
+    assert result.exit_code == 0
+
+@patch('nsidc.metgen.config.configuration')
+@patch('nsidc.metgen.metgen.process')
+def test_process_with_write_cnm(process_mock, configuration_mock, cli_runner):
+    result = cli_runner.invoke(cli, ['process', '-wc', '--config', './example/modscg.ini'])
+
+    assert configuration_mock.called
+    args = configuration_mock.call_args.args
+    overrides = args[1]
+    assert overrides['write_cnm_file'] == True
+    assert result.exit_code == 0
 
 # TODO: When process raises an exception, cli handles it and displays a message
 #       and has non-zero exit code
