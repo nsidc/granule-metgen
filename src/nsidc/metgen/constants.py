@@ -12,6 +12,9 @@ COLLECTION_SECTION_NAME = 'Collection'
 DESTINATION_SECTION_NAME = 'Destination'
 SETTINGS_SECTION_NAME = 'Settings'
 
+# Spatial coverage
+DEFAULT_SPATIAL_AXIS_SIZE = 6
+
 # Templates
 CNM_BODY_TEMPLATE = 'src/nsidc/metgen/templates/cnm_body_template.json'
 CNM_FILES_TEMPLATE = 'src/nsidc/metgen/templates/cnm_files_template.json'

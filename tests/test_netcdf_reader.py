@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
+from nsidc.metgen import constants
 from nsidc.metgen import netcdf_reader
 
 # Unit tests for the 'netcdf_reader' module functions.
@@ -20,7 +21,19 @@ def xdata():
 def ydata():
     return list(range(0, 25, 5))
 
-def test_spatial_values_are_thinned(xdata, ydata):
+@pytest.fixture
+def big_xdata():
+    return list(range(0, 20, 2))
+
+@pytest.fixture
+def big_ydata():
+    return list(range(0, 50, 5))
+
+def test_large_grids_are_thinned(big_xdata, big_ydata):
+    result = netcdf_reader.thinned_perimeter(big_xdata, big_ydata)
+    assert len(result) == (constants.DEFAULT_SPATIAL_AXIS_SIZE * 4) - 3
+
+def test_small_grids_are_not_thinned(xdata, ydata):
     result = netcdf_reader.thinned_perimeter(xdata, ydata)
     assert len(result) == (len(xdata) * 2) + (len(ydata) * 2) - 3
 
@@ -28,10 +41,10 @@ def test_perimeter_is_closed_polygon(xdata, ydata):
     result = netcdf_reader.thinned_perimeter(xdata, ydata)
     assert result[0] == result[-1]
 
-def test_no_other_duplicate_values(xdata, ydata):
-    result = netcdf_reader.thinned_perimeter(xdata, ydata)
+def test_no_other_duplicate_values(big_xdata, big_ydata):
+    result = netcdf_reader.thinned_perimeter(big_xdata, big_ydata)
     result_set = set(result)
-    assert len(result_set) == len(result) -1
+    assert len(result_set) == len(result) - 1
 
 @pytest.mark.parametrize("input,expected", [
     pytest.param('2001-01-01', '2001-01-01T00:00:00.000+00:00', id="Date and no time"),

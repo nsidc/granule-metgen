@@ -1,6 +1,5 @@
 import json
 import os.path
-
 import xarray as xr
 from datetime import timezone
 from dateutil.parser import parse
@@ -8,6 +7,7 @@ from dateutil.parser import parse
 from pyproj import CRS
 from pyproj import Transformer
 
+from nsidc.metgen import constants
 
 def extract_metadata(netcdf_path):
     """
@@ -96,9 +96,8 @@ def index_subset(original_length):
     somewhat arbitrary, and approximately evenly spaced, additional number
     of indices in between the beginning and end.
     """
-    TOTAL_INDICES = 6
     if(original_length > 6):
-        return [round(index*count*.2) for count in range(TOTAL_INDICES) for index in [original_length - 1]]
+        return [round(index*count*.2) for count in range(constants.DEFAULT_SPATIAL_AXIS_SIZE) for index in [original_length - 1]]
     else:
         return list(range(original_length))
 
