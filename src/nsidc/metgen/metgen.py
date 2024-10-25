@@ -1,7 +1,10 @@
 import configparser
+import dataclasses
+import functools
 import hashlib
 import json
 import os.path
+from typing import Callable
 from pathlib import Path
 from string import Template
 
@@ -13,6 +16,11 @@ from nsidc.metgen import config
 from nsidc.metgen import constants
 from nsidc.metgen import netcdf_reader
 
+
+@dataclasses.dataclass
+class Granule:
+    id: str
+    data_files: list[str]
 
 def banner():
     """
@@ -109,6 +117,39 @@ def scrub_json_files(path):
         except Exception as e:
             print('Failed to delete %s: %s' % (file_path, e))
 
+def fn_process(configuration):
+    gs = granules(Path(configuration.data_dir))
+    work = [granule_work(g) for g in gs]
+    results = [process_work(w) for w in work]
+    summary = summarize_results(results)
+
+@dataclasses.dataclass
+class Result:
+    granule: Granule
+    success: bool
+
+@dataclasses.dataclass
+class Action:
+    granule: Granule
+    name: str
+    fn: Callable[[], Result]
+
+@dataclasses.dataclass
+class GranuleWork:
+    granule: Granule
+    actions: list[Action]
+
+def granule_work(granule):
+    return GranuleWork(granule, [
+            Action(granule, 'foo', lambda: True),
+            Action(granule, 'bar', lambda: True),
+    ])
+
+def process_work(work):
+    return [Result(a.granule, a.fn()) for a in work.actions]
+
+def summarize_results(results):
+    [print(r) for r in results]
 
 def process(configuration):
     """
@@ -169,6 +210,10 @@ def process(configuration):
 
     print('--------------------------------------------------')
     print(f'Processed {processed_count} source files')
+
+def granules(data_dir):
+    files = data_dir.glob('*.nc')
+    return [Granule(os.path.basename(f), [f]) for f in files]
 
 def granule_paths(data_dir):
     # Returns a list of tuples containing the "producer granule id" and a dict

@@ -1,9 +1,13 @@
+import logging
+
 import click
 
 from nsidc.metgen import config
 from nsidc.metgen import metgen
 from nsidc.metgen import constants
 
+
+LOGGER = logging.getLogger('metgenc')
 
 @click.group(epilog="For detailed help on each command, run: metgenc COMMAND --help")
 def cli():
@@ -44,9 +48,9 @@ def process(config_filename, env, overwrite, write_cnm, number):
     }
     configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
     try:
-        metgen.process(configuration)
+        metgen.fn_process(configuration)
     except Exception as e:
-        print("\nUnable to process data: " + str(e))
+        click.echo("\nUnable to process data: " + str(e))
         exit(1)
     click.echo(f'Processing complete')
 
