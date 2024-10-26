@@ -137,7 +137,7 @@ class Action:
 class Granule:
     id: str
     data_filenames: list[str]
-    ummg_filenames: list[str]
+    ummg_filename: str
     actions: list[Action]
     results: list[Result]
 
@@ -151,13 +151,13 @@ def fn_process(configuration: config.Config) -> None:
 
 def granules(data_dir: Path) -> list[Granule]:
     paths = data_dir.glob('*.nc')
-    return [Granule(p.name, [str(p)], [], [], []) for p in paths]
+    return [Granule(p.name, [str(p)], '', [], []) for p in paths]
 
 def granule_actions(granule: Granule) -> Granule:
     return Granule(
             granule.id, 
             granule.data_filenames,
-            granule.ummg_filenames,
+            granule.ummg_filename,
             [
                 Action('create_ummg', lambda: Result(True, ''), False),
                 Action('stage_files', lambda: Result(True, ''), False),
@@ -171,7 +171,7 @@ def process_actions(granule: Granule) -> Granule:
     return Granule(
             granule.id,
             granule.data_filenames,
-            granule.ummg_filenames,
+            granule.ummg_filename,
             granule.actions,
             [a.fn() for a in granule.actions]
     )
