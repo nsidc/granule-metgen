@@ -9,6 +9,7 @@ from pathlib import Path
 from string import Template
 
 from pyfiglet import Figlet
+from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws
@@ -16,11 +17,6 @@ from nsidc.metgen import config
 from nsidc.metgen import constants
 from nsidc.metgen import netcdf_reader
 
-
-@dataclasses.dataclass
-class Granule:
-    id: str
-    data_files: list[str]
 
 def banner():
     """
@@ -123,33 +119,72 @@ def fn_process(configuration):
     results = [process_work(w) for w in work]
     summary = summarize_results(results)
 
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
+
 @dataclasses.dataclass
 class Result:
-    granule: Granule
     success: bool
+    message: str
 
 @dataclasses.dataclass
 class Action:
-    granule: Granule
     name: str
     fn: Callable[[], Result]
+    complete: bool
 
 @dataclasses.dataclass
-class GranuleWork:
-    granule: Granule
+class Granule:
+    id: str
+    data_filenames: list[str]
+    ummg_filenames: list[str]
     actions: list[Action]
+    results: list[Result]
 
-def granule_work(granule):
-    return GranuleWork(granule, [
-            Action(granule, 'foo', lambda: True),
-            Action(granule, 'bar', lambda: True),
-    ])
+# -------------------------------------------------------------------
 
-def process_work(work):
-    return [Result(a.granule, a.fn()) for a in work.actions]
+def fn_process(configuration: config.Config) -> None:
+    gs = granules(Path(configuration.data_dir))
+    gs = [granule_actions(g) for g in gs]
+    gs = [process_actions(g) for g in gs]
+    summarize_results(gs)
 
-def summarize_results(results):
-    [print(r) for r in results]
+def granules(data_dir: Path) -> list[Granule]:
+    paths = data_dir.glob('*.nc')
+    return [Granule(p.name, [str(p)], [], [], []) for p in paths]
+
+def granule_actions(granule: Granule) -> Granule:
+    return Granule(
+            granule.id, 
+            granule.data_filenames,
+            granule.ummg_filenames,
+            [
+                Action('create_ummg', lambda: Result(True, ''), False),
+                Action('stage_files', lambda: Result(True, ''), False),
+                Action('create_cnms', lambda: Result(True, ''), False),
+                Action('publish_cnms', lambda: Result(True, ''), False),
+            ],
+            []
+    )
+
+def process_actions(granule: Granule) -> Granule:
+    return Granule(
+            granule.id,
+            granule.data_filenames,
+            granule.ummg_filenames,
+            granule.actions,
+            [a.fn() for a in granule.actions]
+    )
+
+def summarize_results(granules: list[Granule]) -> None:
+    for g in granules:
+        print(f"{g.id}:")
+        action_results = zip(g.actions, g.results)
+        for action, result in action_results:
+            print(f"  Action: {action.name} Success: {result.success} Message: {result.message}")
+
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
 
 def process(configuration):
     """
@@ -210,10 +245,6 @@ def process(configuration):
 
     print('--------------------------------------------------')
     print(f'Processed {processed_count} source files')
-
-def granules(data_dir):
-    files = data_dir.glob('*.nc')
-    return [Granule(os.path.basename(f), [f]) for f in files]
 
 def granule_paths(data_dir):
     # Returns a list of tuples containing the "producer granule id" and a dict
