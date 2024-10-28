@@ -72,3 +72,22 @@ def test_returns_datetime_range():
     assert 'RangeDateTime' in result
     assert '"BeginningDateTime": "123"' in result
     assert '"EndingDateTime": "456"' in result
+
+def test_s3_object_path_has_no_leading_slash():
+    mapping = {
+        'auth_id': 'ABCD',
+        'version': 2,
+        'uuid': 'abcd-1234',
+    }
+    expected = 'external/ABCD/2/abcd-1234/xyzzy.bin'
+    assert metgen.s3_object_path(mapping, 'xyzzy.bin') == expected
+
+def test_s3_url_simple_case():
+    mapping = {
+        'auth_id': 'ABCD',
+        'version': 2,
+        'uuid': 'abcd-1234',
+        'staging_bucket_name': 'xyzzy-bucket'
+    }
+    expected = 's3://xyzzy-bucket/external/ABCD/2/abcd-1234/xyzzy.bin'
+    assert metgen.s3_url(mapping, 'xyzzy.bin') == expected
