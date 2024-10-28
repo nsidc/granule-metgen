@@ -106,4 +106,6 @@ def ensure_iso(datetime_str):
     Parse ISO-standard datetime strings without a timezone identifier.
     """
     iso_obj = parse(datetime_str)
-    return iso_obj.replace(tzinfo=timezone.utc).isoformat(timespec='milliseconds')
+    return iso_obj.replace(tzinfo=timezone.utc) \
+        .isoformat(timespec='milliseconds') \
+        .replace("+00:00", "Z")
