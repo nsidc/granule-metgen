@@ -161,27 +161,37 @@ class Granule:
 # -------------------------------------------------------------------
 
 def process(configuration: config.Config) -> None:
-    gs = granules(Path(configuration.data_dir))
+    gs = granules(Path(configuration.data_dir), configuration.number)
     gs = [granule_actions(g) for g in gs]
     gs = [process_actions(g) for g in gs]
     summarize_results(gs)
 
-def granules(data_dir: Path) -> list[Granule]:
+def granules(data_dir: Path, number: int) -> list[Granule]:
+    logger = logging.getLogger("metgenc")
     paths = data_dir.glob('*.nc')
-    return [Granule(p.name, [str(p)], '', [], []) for p in paths]
+    gs = [Granule(p.name, [str(p)], '', [], []) for p in paths]
+    logger.info(f'Found {len(gs)} granules to process')
+    if number < 1 or number >= len(gs):
+        logger.info('Processing all available granules')
+    else:
+        logger.info(f'Processing the first {number} granule(s)')
+        gs = gs[:number]
+    logger.info('')
+    return gs
 
 def granule_actions(granule: Granule) -> Granule:
+    actions = [ 
+        Action('create_ummg', lambda: Result(True, ''), False),
+        Action('stage_files', lambda: Result(True, ''), False),
+        Action('create_cnms', lambda: Result(True, ''), False),
+        Action('publish_cnms', lambda: Result(True, ''), False), 
+    ]
     return Granule(
             granule.id, 
             granule.data_filenames,
             granule.ummg_filename,
-            [
-                Action('create_ummg', lambda: Result(True, ''), False),
-                Action('stage_files', lambda: Result(True, ''), False),
-                Action('create_cnms', lambda: Result(True, ''), False),
-                Action('publish_cnms', lambda: Result(True, ''), False),
-            ],
-            []
+            actions,
+            [],
     )
 
 def process_actions(granule: Granule) -> Granule:
@@ -196,7 +206,7 @@ def process_actions(granule: Granule) -> Granule:
 def summarize_results(granules: list[Granule]) -> None:
     logger = logging.getLogger("metgenc")
     for g in granules:
-        print(f"{g.id}:")
+        logger.info(f"{g.id}:")
         action_results = zip(g.actions, g.results)
         for action, result in action_results:
             logger.info(f"  Action: {action.name} Success: {result.success} Message: {result.message}")
