@@ -288,13 +288,13 @@ def s3_url(mapping, name):
     """
     bucket_name = mapping['staging_bucket_name']
     object_path = s3_object_path(mapping, name)
-    return f's3://{bucket_name}{object_path}'
+    return f's3://{bucket_name}/{object_path}'
 
 def s3_object_path(mapping, name):
     """
     Returns the full s3 object path for the given file name.
     """
-    template = Template('/external/${auth_id}/${version}/${uuid}/')
+    template = Template('external/${auth_id}/${version}/${uuid}/')
     return(template.safe_substitute(mapping) + name)
 
 def ummg_body_template():

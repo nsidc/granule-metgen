@@ -120,7 +120,7 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
     assert result == "xyzzy-uat-stream"
 
 @pytest.mark.parametrize("section,option,expected", [
-        ("Destination", "kinesis_stream_name", f"nsidc-cumulus-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-ciss_notification"),
+        ("Destination", "kinesis_stream_name", f"nsidc-cumulus-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-external_notification"),
         ("Destination", "staging_bucket_name", f"nsidc-cumulus-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-ingest-staging"),
         ("Destination", "write_cnm_file", constants.DEFAULT_WRITE_CNM_FILE),
         ("Settings", "checksum_type", constants.DEFAULT_CHECKSUM_TYPE),
