@@ -160,7 +160,7 @@ class Granule:
 
 # -------------------------------------------------------------------
 
-def fn_process(configuration: config.Config) -> None:
+def process(configuration: config.Config) -> None:
     gs = granules(Path(configuration.data_dir))
     gs = [granule_actions(g) for g in gs]
     gs = [process_actions(g) for g in gs]
@@ -204,7 +204,7 @@ def summarize_results(granules: list[Granule]) -> None:
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
 
-def process(configuration):
+def legacy_process(configuration):
     """
     Processes input files by creating UMM-G metadata, staging the science and
     metadata files, and publishing a CNM message.

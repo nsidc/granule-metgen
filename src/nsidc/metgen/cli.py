@@ -50,7 +50,7 @@ def process(config_filename, env, overwrite, write_cnm, number):
     configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
     metgen.init_logging(configuration)
     try:
-        metgen.fn_process(configuration)
+        metgen.process(configuration)
     except Exception as e:
         click.echo("\nUnable to process data: " + str(e))
         exit(1)
