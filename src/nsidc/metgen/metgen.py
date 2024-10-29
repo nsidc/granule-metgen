@@ -3,7 +3,9 @@ import dataclasses
 import functools
 import hashlib
 import json
+import logging
 import os.path
+import sys
 from typing import Callable
 from pathlib import Path
 from string import Template
@@ -17,6 +19,21 @@ from nsidc.metgen import config
 from nsidc.metgen import constants
 from nsidc.metgen import netcdf_reader
 
+
+CONSOLE_FORMAT = "%(message)s"
+LOGFILE_FORMAT = "%(asctime)s|%(levelname)s|%(name)s|%(message)s"
+
+def init_logging(configuration: config.Config):
+    logger = logging.getLogger('metgenc')
+    logger.setLevel(logging.INFO)
+
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
+    logger.addHandler(console_handler)
+
+    logfile_handler = logging.FileHandler("metgenc.log", "w")
+    logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
+    logger.addHandler(logfile_handler)
 
 def banner():
     """
@@ -177,11 +194,12 @@ def process_actions(granule: Granule) -> Granule:
     )
 
 def summarize_results(granules: list[Granule]) -> None:
+    logger = logging.getLogger("metgenc")
     for g in granules:
         print(f"{g.id}:")
         action_results = zip(g.actions, g.results)
         for action, result in action_results:
-            print(f"  Action: {action.name} Success: {result.success} Message: {result.message}")
+            logger.info(f"  Action: {action.name} Success: {result.success} Message: {result.message}")
 
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------

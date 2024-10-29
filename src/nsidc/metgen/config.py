@@ -9,8 +9,6 @@ from nsidc.metgen import aws
 from nsidc.metgen import constants
 
 
-LOGGER = logging.getLogger('metgenc')
-
 @dataclasses.dataclass
 class Config:
     environment: str
@@ -29,6 +27,7 @@ class Config:
 
     def show(self):
         # TODO add section headings in the right spot (if we think we need them in the output)
+        LOGGER = logging.getLogger('metgenc')
         LOGGER.info('')
         LOGGER.info('Using configuration:')
         for k,v in self.__dict__.items():

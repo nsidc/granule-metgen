@@ -30,6 +30,7 @@ def info(config_filename):
     """Summarizes the contents of a configuration file."""
     click.echo(metgen.banner())
     configuration = config.configuration(config.config_parser_factory(config_filename), {})
+    metgen.init_logging(configuration)
     configuration.show()
 
 @cli.command()
@@ -47,6 +48,7 @@ def process(config_filename, env, overwrite, write_cnm, number):
         'number': number
     }
     configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
+    metgen.init_logging(configuration)
     try:
         metgen.fn_process(configuration)
     except Exception as e:
