@@ -1,6 +1,6 @@
 # Default configuration values
 DEFAULT_CUMULUS_ENVIRONMENT = 'uat'
-DEFAULT_STAGING_KINESIS_STREAM = 'nsidc-cumulus-${environment}-ciss_notification'
+DEFAULT_STAGING_KINESIS_STREAM = 'nsidc-cumulus-${environment}-external_notification'
 DEFAULT_STAGING_BUCKET_NAME = 'nsidc-cumulus-${environment}-ingest-staging'
 DEFAULT_WRITE_CNM_FILE = False
 DEFAULT_CHECKSUM_TYPE = 'SHA256'
