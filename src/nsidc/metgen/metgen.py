@@ -1,5 +1,6 @@
 import configparser
 import dataclasses
+from datetime import datetime, timezone
 import functools
 import hashlib
 import json
@@ -9,10 +10,12 @@ import sys
 from typing import Callable
 from pathlib import Path
 from string import Template
+import uuid
 
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
+from toolz import take
 
 from nsidc.metgen import aws
 from nsidc.metgen import config
@@ -151,62 +154,72 @@ class Action:
     complete: bool
 
 @dataclasses.dataclass
+class Collection:
+    auth_id: str
+    version: int
+
+@dataclasses.dataclass
 class Granule:
     id: str
-    data_filenames: list[str]
-    ummg_filename: str
-    actions: list[Action]
-    results: list[Result]
+    collection: Maybe[Collection] = Maybe.empty
+    data_filenames: Maybe[list[str]] = Maybe.empty
+    ummg_filename: Maybe[str] = Maybe.empty
+    actions: Maybe[list[Action]] = Maybe.empty
+    results: Maybe[list[Result]] = Maybe.empty
+    submission_time: Maybe[str] = Maybe.empty
+    uuid: Maybe[str] = Maybe.empty
 
 # -------------------------------------------------------------------
 
 def process(configuration: config.Config) -> None:
-    gs = granules(Path(configuration.data_dir), configuration.number)
+    validate_config(configuration)
+
+    gs = take(configuration.number, granules(configuration.data_dir))
+    gs = [granule_collection(configuration, g) for g in gs]
     gs = [granule_actions(g) for g in gs]
     gs = [process_actions(g) for g in gs]
+    gs = [log_result(g) for g in gs]
+
     summarize_results(gs)
 
-def granules(data_dir: Path, number: int) -> list[Granule]:
-    logger = logging.getLogger("metgenc")
-    paths = data_dir.glob('*.nc')
-    gs = [Granule(p.name, [str(p)], '', [], []) for p in paths]
-    logger.info(f'Found {len(gs)} granules to process')
-    if number < 1 or number >= len(gs):
-        logger.info('Processing all available granules')
-    else:
-        logger.info(f'Processing the first {number} granule(s)')
-        gs = gs[:number]
-    logger.info('')
-    return gs
+def validate_config(configuration: config.Config):
+    valid, errors = config.validate(configuration)
+    if not valid:
+        for msg in errors:
+            print(" * " + msg)
+        raise Exception('Invalid configuration')
+
+def granules(data_dir: str) -> list[Granule]:
+    paths = Path(data_dir).glob('*.nc')
+    return [Granule(p.name, data_filenames=Maybe([str(p)])) for p in paths]
+
+def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
+    collection = Collection(configuration.auth_id, configuration.version)
+    return dataclasses.replace(granule, collection=collection)
 
 def granule_actions(granule: Granule) -> Granule:
-    actions = [ 
-        Action('create_ummg', lambda: Result(True, ''), False),
-        Action('stage_files', lambda: Result(True, ''), False),
-        Action('create_cnms', lambda: Result(True, ''), False),
-        Action('publish_cnms', lambda: Result(True, ''), False), 
-    ]
-    return Granule(
-            granule.id, 
-            granule.data_filenames,
-            granule.ummg_filename,
-            actions,
-            [],
+    return dataclasses.replace(granule, 
+        actions = [ 
+            Action('create_ummg', lambda: Result(True, ''), False),
+            Action('stage_files', lambda: Result(True, ''), False),
+            Action('create_cnms', lambda: Result(True, ''), False),
+            Action('publish_cnms', lambda: Result(True, ''), False), 
+        ],
+        submission_time=datetime.now(timezone.utc).isoformat(),
+        uuid=str(uuid.uuid4())
     )
 
 def process_actions(granule: Granule) -> Granule:
-    return Granule(
-            granule.id,
-            granule.data_filenames,
-            granule.ummg_filename,
-            granule.actions,
-            [a.fn() for a in granule.actions]
-    )
+    return dataclasses.replace(granule, 
+                               results=[a.fn() for a in granule.actions])
+
+def log_result(granule: Granule) -> Granule:
+    return granule
 
 def summarize_results(granules: list[Granule]) -> None:
     logger = logging.getLogger("metgenc")
     for g in granules:
-        logger.info(f"{g.id}:")
+        logger.info(f"Processing {g.id}:")
         action_results = zip(g.actions, g.results)
         for action, result in action_results:
             logger.info(f"  Action: {action.name} Success: {result.success} Message: {result.message}")

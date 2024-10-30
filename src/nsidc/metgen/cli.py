@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import click
 
@@ -36,7 +37,7 @@ def info(config_filename):
 @cli.command()
 @click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
 @click.option('-e', '--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
-@click.option('-n', '--number', help="Process at most 'count' granules.", metavar='count', required=False, default=-1)
+@click.option('-n', '--number', help="Process at most 'count' granules.", metavar='count', required=False, default=sys.maxsize)
 @click.option('-wc', '--write-cnm', is_flag=True, required=False, default=None, help="Write CNM messages to files.")
 @click.option('-o', '--overwrite', is_flag=True, required=False, default=None, help="Overwrite existing UMM-G files.")
 def process(config_filename, env, overwrite, write_cnm, number):
@@ -49,6 +50,7 @@ def process(config_filename, env, overwrite, write_cnm, number):
     }
     configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
     metgen.init_logging(configuration)
+    configuration.show()
     try:
         metgen.process(configuration)
     except Exception as e:
