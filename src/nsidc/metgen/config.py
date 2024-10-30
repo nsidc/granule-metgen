@@ -20,6 +20,7 @@ class Config:
     kinesis_stream_name: str
     staging_bucket_name: str
     write_cnm_file: bool
+    overwrite_ummg: bool
     checksum_type: str
     number: int
 
@@ -90,6 +91,7 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
         'kinesis_stream_name': constants.DEFAULT_STAGING_KINESIS_STREAM,
         'staging_bucket_name': constants.DEFAULT_STAGING_BUCKET_NAME,
         'write_cnm_file': constants.DEFAULT_WRITE_CNM_FILE,
+        'overwrite_ummg': constants.DEFAULT_OVERWRITE_UMMG,
         'checksum_type': constants.DEFAULT_CHECKSUM_TYPE,
         'number': constants.DEFAULT_NUMBER,
     }
@@ -105,6 +107,7 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
             _get_configuration_value(environment, 'Destination', 'kinesis_stream_name', str, config_parser, overrides),
             _get_configuration_value(environment, 'Destination', 'staging_bucket_name', str, config_parser, overrides),
             _get_configuration_value(environment, 'Destination', 'write_cnm_file', bool, config_parser, overrides),
+            _get_configuration_value(environment, 'Destination', 'overwrite_ummg', bool, config_parser, overrides),
             _get_configuration_value(environment, 'Settings', 'checksum_type', str, config_parser, overrides),
             _get_configuration_value(environment, 'Settings', 'number', int, config_parser, overrides),
         )
@@ -118,7 +121,7 @@ def validate(configuration):
     validations = [
         ['data_dir', lambda dir: os.path.exists(dir), 'The data_dir does not exist.'],
         ['local_output_dir', lambda dir: os.path.exists(dir), 'The local_output_dir does not exist.'],
-        # ['ummg_dir', lambda dir: os.path.exists(dir), 'The ummg_dir does not exist.'],                 ## Not sure what validation to do
+        # ['ummg_dir', lambda dir: os.path.exists(dir), 'The ummg_dir does not exist.'],  ## validate "local_output_dir/ummg_dir" as part of issue-71
         ['kinesis_stream_name', lambda name: aws.kinesis_stream_exists(name), 'The kinesis stream does not exist.'],
         ['staging_bucket_name', lambda name: aws.staging_bucket_exists(name), 'The staging bucket does not exist.'],
     ]

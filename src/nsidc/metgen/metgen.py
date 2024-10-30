@@ -68,15 +68,16 @@ def init_config(configuration_file):
     cfg_parser.add_section(constants.DESTINATION_SECTION_NAME)
     cfg_parser.set(constants.DESTINATION_SECTION_NAME, "local_output_dir", Prompt.ask("Local output directory", default="output"))
     cfg_parser.set(constants.DESTINATION_SECTION_NAME, "ummg_dir", Prompt.ask("Local UMM-G output directory (relative to local output directory)", default="ummg"))
-    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "kinesis_stream_name", Prompt.ask("Kinesis stream name"))
-    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "staging_bucket_name", Prompt.ask("Cumulus s3 bucket name"))
-    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files (True/False)"))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "kinesis_stream_name", Prompt.ask("Kinesis stream name", default=constants.DEFAULT_STAGING_KINESIS_STREAM))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "staging_bucket_name", Prompt.ask("Cumulus s3 bucket name", default=constants.DEFAULT_STAGING_BUCKET_NAME))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files? (True/False)", default=constants.DEFAULT_WRITE_CNM_FILE))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "overwrite_ummg", Prompt.ask("Overwrite existing UMM-G files? (True/False)", default=constants.DEFAULT_overwrite_ummg))
 
     print()
     print(f'{constants.SETTINGS_SECTION_NAME} Parameters')
     print('--------------------------------------------------')
     cfg_parser.add_section(constants.SETTINGS_SECTION_NAME)
-    cfg_parser.set(constants.SETTINGS_SECTION_NAME, "checksum_type", Prompt.ask("Checksum type", default="SHA256"))
+    cfg_parser.set(constants.SETTINGS_SECTION_NAME, "checksum_type", Prompt.ask("Checksum type", default=constants.DEFAULT_CHECKSUM_TYPE))
 
     print()
     print(f'Saving new configuration: {configuration_file}')
@@ -84,6 +85,30 @@ def init_config(configuration_file):
         cfg_parser.write(file)
 
     return configuration_file
+
+def prepare_output_dirs(configuration):
+    """
+    Generate paths to ummg and cnm output directories.
+    Remove any existing UMM-G files if needed.
+    TODO: create local_output_dir, ummg_dir, and cnm subdir if they don't exist
+    """
+    ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
+    cnm_path = Path(configuration.local_output_dir, 'cnm')
+
+    if configuration.overwrite_ummg:
+        scrub_json_files(ummg_path)
+
+    return (ummg_path, cnm_path)
+
+def scrub_json_files(path):
+    print(f'Removing existing files in {path}')
+    for file_path in path.glob('*.json'):
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+
 
 def process(configuration):
     """
@@ -111,8 +136,7 @@ def process(configuration):
         granules = granules[:configuration.number]
     print()
 
-    # TODO: create local_output_dir, ummg_dir, and cnm subdir if they don't exist
-    ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
+    ummg_path, cnm_path = prepare_output_dirs(configuration)
     all_existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
 
     # initialize template content common to all files
@@ -140,7 +164,7 @@ def process(configuration):
         cnm_content = cnms_message(mapping,
                                    body_template=cnms_template,
                                    granule_files=granule_files)
-        publish_cnm(mapping, cnm_content)
+        publish_cnm(mapping, cnm_path, cnm_content)
         print()
 
     print('--------------------------------------------------')
@@ -260,9 +284,9 @@ def cnms_file_json_parts(mapping, file, file_type):
     file_mapping['staging_uri'] = s3_url(mapping, file_name)
     return file_mapping
 
-def publish_cnm(mapping, cnm_message):
+def publish_cnm(mapping, cnm_path, cnm_message):
     if mapping['write_cnm_file']:
-        cnm_file = os.path.join(mapping['local_output_dir'], 'cnm', mapping['producer_granule_id'] + '.cnm.json')
+        cnm_file = os.path.join(cnm_path, mapping['producer_granule_id'] + '.cnm.json')
         with open(cnm_file, "tw") as f:
             print(cnm_message, file=f)
         print(f'Saved CNM message {cnm_message} to {cnm_file}')
