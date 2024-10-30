@@ -6,7 +6,6 @@ import pytest
 
 from nsidc.metgen import config
 from nsidc.metgen import constants
-from nsidc.metgen import metgen
 
 
 # Unit tests for the 'config' module functions.
