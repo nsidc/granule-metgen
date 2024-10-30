@@ -6,7 +6,6 @@ import pytest
 
 from nsidc.metgen import config
 from nsidc.metgen import constants
-from nsidc.metgen import metgen
 
 
 # Unit tests for the 'config' module functions.
@@ -29,6 +28,7 @@ def expected_keys():
                 'kinesis_stream_name',
                 'staging_bucket_name',
                 'write_cnm_file',
+                'overwrite_ummg',
                 'checksum_type',
                 'number'])
 
@@ -95,13 +95,25 @@ def test_config_with_write_cnm(cfg_parser, expected_keys):
     assert cfg.environment == 'uat'
     assert cfg.write_cnm_file == True
 
-def test_enhanced_config():
-    myconfig = config.Config('env', 'data_dir', 'auth_id', 'version',
-                  'provider', 'output_dir', 'ummg_dir', 'stream_name', 'bucket_name',
-                  'write_cnm_file', 'checksum_type', 'number')
+def test_config_with_no_overwrite_ummg(cfg_parser, expected_keys):
+    cfg = config.configuration(cfg_parser, {}, constants.DEFAULT_CUMULUS_ENVIRONMENT)
+
+    config_keys = set(cfg.__dict__)
+    assert len(config_keys - expected_keys) == 0
+    assert not cfg.overwrite_ummg
+
+def test_config_with_overwrite_ummg(cfg_parser, expected_keys):
+    cfg_parser.set("Destination", "overwrite_ummg", 'True')
+    cfg = config.configuration(cfg_parser, {})
+
+    config_keys = set(cfg.__dict__)
+    assert len(config_keys - expected_keys) == 0
+    assert cfg.overwrite_ummg == True
+
+def test_enhanced_config(expected_keys):
+    myconfig = config.Config(*expected_keys)
     enhanced_config = myconfig.enhance('pgid')
-    assert set(['auth_id', 'version', 'producer_granule_id',
-                'submission_time', 'uuid']) <= set(enhanced_config.keys())
+    assert set(myconfig.__dict__.keys()) <= set(enhanced_config.keys())
 
 def test_get_configuration_value(cfg_parser):
     environment = constants.DEFAULT_CUMULUS_ENVIRONMENT

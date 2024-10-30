@@ -89,5 +89,27 @@ def test_process_with_write_cnm(process_mock, configuration_mock, cli_runner):
     assert overrides['write_cnm_file'] == True
     assert result.exit_code == 0
 
+@patch('nsidc.metgen.config.configuration')
+@patch('nsidc.metgen.metgen.process')
+def test_process_with_no_overwrite(process_mock, configuration_mock, cli_runner):
+    result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
+
+    assert configuration_mock.called
+    args = configuration_mock.call_args.args
+    overrides = args[1]
+    assert overrides['overwrite_ummg'] == None
+    assert result.exit_code == 0
+
+@patch('nsidc.metgen.config.configuration')
+@patch('nsidc.metgen.metgen.process')
+def test_process_with_overwrite(process_mock, configuration_mock, cli_runner):
+    result = cli_runner.invoke(cli, ['process', '-o', '--config', './example/modscg.ini'])
+
+    assert configuration_mock.called
+    args = configuration_mock.call_args.args
+    overrides = args[1]
+    assert overrides['overwrite_ummg'] == True
+    assert result.exit_code == 0
+
 # TODO: When process raises an exception, cli handles it and displays a message
 #       and has non-zero exit code

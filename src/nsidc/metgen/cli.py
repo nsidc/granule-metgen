@@ -33,11 +33,13 @@ def info(config_filename):
 @click.option('-e', '--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
 @click.option('-n', '--number', help="Process at most 'count' granules.", metavar='count', required=False, default=-1)
 @click.option('-wc', '--write-cnm', is_flag=True, required=False, default=None, help="Write CNM messages to files.")
-def process(config_filename, env, write_cnm, number):
+@click.option('-o', '--overwrite', is_flag=True, required=False, default=None, help="Overwrite existing UMM-G files.")
+def process(config_filename, env, overwrite, write_cnm, number):
     """Processes science data files based on configuration file contents."""
     click.echo(metgen.banner())
     overrides = {
         'write_cnm_file': write_cnm,
+        'overwrite_ummg': overwrite,
         'number': number
     }
     configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
