@@ -151,7 +151,6 @@ class Result:
 class Action:
     name: str
     fn: Callable[[], Result]
-    complete: bool
 
 @dataclasses.dataclass
 class Collection:
@@ -200,10 +199,10 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
 def granule_actions(granule: Granule) -> Granule:
     return dataclasses.replace(granule, 
         actions = [ 
-            Action('create_ummg', lambda: Result(True, ''), False),
-            Action('stage_files', lambda: Result(True, ''), False),
-            Action('create_cnms', lambda: Result(True, ''), False),
-            Action('publish_cnms', lambda: Result(True, ''), False), 
+            Action('create_ummg', lambda: Result(True, '')),
+            Action('stage_files', lambda: Result(True, '')),
+            Action('create_cnms', lambda: Result(True, '')),
+            Action('publish_cnms', lambda: Result(True, '')),
         ],
         submission_time=datetime.now(timezone.utc).isoformat(),
         uuid=str(uuid.uuid4())
