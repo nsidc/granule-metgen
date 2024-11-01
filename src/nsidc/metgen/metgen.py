@@ -171,8 +171,6 @@ class Granule:
 # -------------------------------------------------------------------
 
 def process(configuration: config.Config) -> None:
-    config.validate(configuration)
-
     # TODO: Prep actions like mkdir, etc
 
     gs = take(configuration.number, granules(configuration.data_dir))

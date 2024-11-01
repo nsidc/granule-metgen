@@ -49,6 +49,7 @@ def process(config_filename, env, overwrite, write_cnm, number):
         'number': number
     }
     configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
+    config.validate(configuration)
     metgen.init_logging(configuration)
     configuration.show()
     try:
