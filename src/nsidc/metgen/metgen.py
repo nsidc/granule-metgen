@@ -12,10 +12,10 @@ from pathlib import Path
 from string import Template
 import uuid
 
+from funcy import take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
-from toolz import take
 
 from nsidc.metgen import aws
 from nsidc.metgen import config
@@ -171,22 +171,18 @@ class Granule:
 # -------------------------------------------------------------------
 
 def process(configuration: config.Config) -> None:
-    validate_config(configuration)
+    config.validate(configuration)
+
+    # TODO: Prep actions like mkdir, etc
 
     gs = take(configuration.number, granules(configuration.data_dir))
     gs = [granule_collection(configuration, g) for g in gs]
+    # TODO: Remove 'Action's and make these explicit fns
     gs = [granule_actions(g) for g in gs]
     gs = [process_actions(g) for g in gs]
     gs = [log_result(g) for g in gs]
 
     summarize_results(gs)
-
-def validate_config(configuration: config.Config):
-    valid, errors = config.validate(configuration)
-    if not valid:
-        for msg in errors:
-            print(" * " + msg)
-        raise Exception('Invalid configuration')
 
 def granules(data_dir: str) -> list[Granule]:
     paths = Path(data_dir).glob('*.nc')

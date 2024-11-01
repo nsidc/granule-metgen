@@ -150,15 +150,14 @@ def test_configuration_has_good_defaults(cfg_parser, section, option, expected):
 @patch('nsidc.metgen.metgen.aws.staging_bucket_exists', return_value = True)
 def test_validate_with_valid_checks(m1, m2, cfg_parser):
     cfg = config.configuration(cfg_parser, {})
-    valid, errors = config.validate(cfg)
+    valid = config.validate(cfg)
     assert valid == True
-    assert len(errors) == 0
 
 @patch('nsidc.metgen.metgen.os.path.exists', return_value = False)
 @patch('nsidc.metgen.metgen.aws.kinesis_stream_exists', return_value = False)
 @patch('nsidc.metgen.metgen.aws.staging_bucket_exists', return_value = False)
 def test_validate_with_invalid_checks(m1, m2, cfg_parser):
     cfg = config.configuration(cfg_parser, {})
-    valid, errors = config.validate(cfg)
-    assert valid == False
-    assert len(errors) == 4
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+    assert len(exc_info.value.errors) == 4

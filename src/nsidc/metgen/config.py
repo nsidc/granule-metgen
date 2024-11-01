@@ -9,6 +9,12 @@ from nsidc.metgen import aws
 from nsidc.metgen import constants
 
 
+class ValidationError(Exception):
+    errors: list[str]
+
+    def __init__(self, errors):
+        self.errors = errors
+
 @dataclasses.dataclass
 class Config:
     environment: str
@@ -128,5 +134,8 @@ def validate(configuration):
         ['staging_bucket_name', lambda name: aws.staging_bucket_exists(name), 'The staging bucket does not exist.'],
     ]
     errors = [msg for name, fn, msg in validations if not fn(getattr(configuration, name))]
-    return len(errors) == 0, errors
+    if len(errors) == 0:
+        return True
+    else:
+        raise ValidationError(errors)
 
