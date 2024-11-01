@@ -12,7 +12,7 @@ from pathlib import Path
 from string import Template
 import uuid
 
-from funcy import take
+from funcy import identity, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
@@ -143,14 +143,10 @@ def fn_process(configuration):
 # -------------------------------------------------------------------
 
 @dataclasses.dataclass
-class Result:
-    success: bool
-    message: str
-
-@dataclasses.dataclass
 class Action:
     name: str
-    fn: Callable[[], Result]
+    success: bool
+    message: str
 
 @dataclasses.dataclass
 class Collection:
@@ -164,7 +160,6 @@ class Granule:
     data_filenames: Maybe[list[str]] = Maybe.empty
     ummg_filename: Maybe[str] = Maybe.empty
     actions: Maybe[list[Action]] = Maybe.empty
-    results: Maybe[list[Result]] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
 
@@ -174,48 +169,59 @@ def process(configuration: config.Config) -> None:
     # TODO: Prep actions like mkdir, etc
 
     gs = take(configuration.number, granules(configuration.data_dir))
-    gs = [granule_collection(configuration, g) for g in gs]
-    # TODO: Remove 'Action's and make these explicit fns
-    gs = [granule_actions(g) for g in gs]
-    gs = [process_actions(g) for g in gs]
-    gs = [log_result(g) for g in gs]
 
-    summarize_results(gs)
+    process_granule = rcompose(
+        partial(granule_collection, configuration),
+        prepare_granule,
+        create_ummg,
+        stage_files,
+        create_cnms,
+        publish_cnms,
+        log_result
+    )
+
+    summarize_results(map(process_granule, gs))
 
 def granules(data_dir: str) -> list[Granule]:
-    paths = Path(data_dir).glob('*.nc')
-    return [Granule(p.name, data_filenames=Maybe([str(p)])) for p in paths]
+    return [Granule(p.name, data_filenames=Maybe([str(p)])) 
+            for p in Path(data_dir).glob('*.nc')]
 
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
-    collection = Collection(configuration.auth_id, configuration.version)
-    return dataclasses.replace(granule, collection=collection)
+    return dataclasses.replace(
+        granule, 
+        collection=Collection(configuration.auth_id, configuration.version)
+    )
 
-def granule_actions(granule: Granule) -> Granule:
-    return dataclasses.replace(granule, 
-        actions = [ 
-            Action('Create UMM-G', lambda: Result(True, '')),
-            Action('Stage Files', lambda: Result(True, '')),
-            Action('Create CNMS', lambda: Result(True, '')),
-            Action('Publish CNMS', lambda: Result(True, '')),
-        ],
+def prepare_granule(granule: Granule) -> Granule:
+    return dataclasses.replace(
+        granule, 
         submission_time=datetime.now(timezone.utc).isoformat(),
         uuid=str(uuid.uuid4())
     )
 
-def process_actions(granule: Granule) -> Granule:
-    return dataclasses.replace(granule, 
-                               results=[a.fn() for a in granule.actions])
+def create_ummg(granule: Granule) -> Granule:
+    return granule
+
+def stage_files(granule: Granule) -> Granule:
+    return granule
+
+def create_cnms(granule: Granule) -> Granule:
+    return granule
+
+def publish_cnms(granule: Granule) -> Granule:
+    return granule
 
 def log_result(granule: Granule) -> Granule:
+    logger = logging.getLogger("metgenc")
+    logger.info(f"{granule.id}")
+    logger.info(f"  * UUID           : {granule.uuid}")
+    logger.info(f"  * Submission time: {granule.submission_time}")
     return granule
 
 def summarize_results(granules: list[Granule]) -> None:
     logger = logging.getLogger("metgenc")
     for g in granules:
-        logger.info(f"Processing {g.id}:")
-        action_results = zip(g.actions, g.results)
-        for action, result in action_results:
-            logger.info(f"  Action: {action.name} Success: {result.success} Message: {result.message}")
+        logger.info(f"{g.id}: <success>")
 
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
@@ -305,9 +311,9 @@ def find_or_create_ummg(mapping, data_file_paths, ummg_path, all_existing_ummg):
     if ummg_file in all_existing_ummg:
         return (ummg_file_path)
     else:
-        return create_ummg(mapping, data_file_paths, ummg_file_path)
+        return _create_ummg(mapping, data_file_paths, ummg_file_path)
 
-def create_ummg(mapping, data_file_paths, ummg_file_path):
+def _create_ummg(mapping, data_file_paths, ummg_file_path):
     """
     Open data file(s) associated with one granule and retrieve metadata.
     """
