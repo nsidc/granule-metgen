@@ -1,5 +1,3 @@
-import sys
-
 # Default configuration values
 DEFAULT_CUMULUS_ENVIRONMENT = 'uat'
 DEFAULT_STAGING_KINESIS_STREAM = 'nsidc-cumulus-${environment}-external_notification'
@@ -7,7 +5,7 @@ DEFAULT_STAGING_BUCKET_NAME = 'nsidc-cumulus-${environment}-ingest-staging'
 DEFAULT_WRITE_CNM_FILE = False
 DEFAULT_OVERWRITE_UMMG = False
 DEFAULT_CHECKSUM_TYPE = 'SHA256'
-DEFAULT_NUMBER = sys.maxsize
+DEFAULT_NUMBER = 1000000
 
 # Configuration sections
 SOURCE_SECTION_NAME = 'Source'
