@@ -12,7 +12,7 @@ from pathlib import Path
 from string import Template
 import uuid
 
-from funcy import identity, partial, rcompose, take
+from funcy import decorator, identity, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
@@ -37,6 +37,11 @@ def init_logging(configuration: config.Config):
     logfile_handler = logging.FileHandler("metgenc.log", "w")
     logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
     logger.addHandler(logfile_handler)
+
+@decorator
+def log(call):
+    logging.getLogger("metgenc").info(call._func.__name__)
+    return call()
 
 def banner():
     """
@@ -190,12 +195,14 @@ def granules(data_dir: str) -> list[Granule]:
     return [Granule(p.name, data_filenames=[str(p)])
             for p in Path(data_dir).glob('*.nc')]
 
+@log
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
     return dataclasses.replace(
         granule, 
         collection=Collection(configuration.auth_id, configuration.version)
     )
 
+@log
 def prepare_granule(configuration: config.Config, granule: Granule) -> Granule:
     return dataclasses.replace(
         granule, 
@@ -203,6 +210,7 @@ def prepare_granule(configuration: config.Config, granule: Granule) -> Granule:
         uuid=str(uuid.uuid4())
     )
 
+@log
 def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
     ummg_file = granule.id + '.json'
@@ -244,6 +252,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         ummg_filename=ummg_file_path
     )
 
+@log
 def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     stuff = granule.data_filenames + [granule.ummg_filename]
     for fn in stuff:
@@ -272,6 +281,7 @@ def s3_object_path(granule, filename):
     })
     return prefix + filename
 
+@log
 def create_cnms(configuration: config.Config, granule: Granule) -> Granule:
     # Break up the JSON string into its components so information about multiple files is
     # easier to add.
@@ -307,6 +317,7 @@ def cnms_file_json_parts(staging_bucket_name, granule, file, file_type):
 
     return file_mapping
 
+@log
 def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
     if configuration.write_cnm_file:
         cnm_file = os.path.join(
