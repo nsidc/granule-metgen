@@ -169,19 +169,22 @@ class Granule:
 def process(configuration: config.Config) -> None:
     # TODO: Prep actions like mkdir, etc
 
+    operations = [partial(fn, configuration) 
+        for fn in [
+            granule_collection,
+            prepare_granule,
+            create_ummg,
+            stage_files,
+            create_cnms,
+            publish_cnms,
+            log_result
+        ]
+    ]
+    granule_operations = rcompose(*operations)
+
     gs = take(configuration.number, granules(configuration.data_dir))
-
-    process_granule = rcompose(
-        partial(granule_collection, configuration),
-        prepare_granule,
-        partial(create_ummg, configuration),
-        partial(stage_files, configuration.staging_bucket_name),
-        partial(create_cnms, configuration),
-        partial(publish_cnms, configuration),
-        log_result
-    )
-
-    summarize_results(map(process_granule, gs))
+    results = map(granule_operations, gs)
+    summarize_results(results)
 
 def granules(data_dir: str) -> list[Granule]:
     return [Granule(p.name, data_filenames=[str(p)])
@@ -193,7 +196,7 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
         collection=Collection(configuration.auth_id, configuration.version)
     )
 
-def prepare_granule(granule: Granule) -> Granule:
+def prepare_granule(configuration: config.Config, granule: Granule) -> Granule:
     return dataclasses.replace(
         granule, 
         submission_time=datetime.now(timezone.utc).isoformat(),
@@ -241,13 +244,13 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         ummg_filename=ummg_file_path
     )
 
-def stage_files(staging_bucket_name: str, granule: Granule) -> Granule:
+def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     stuff = granule.data_filenames + [granule.ummg_filename]
     for fn in stuff:
         filename = os.path.basename(fn)
         bucket_path = s3_object_path(granule, filename)
         with open(fn, 'rb') as f:
-            aws.stage_file(staging_bucket_name, bucket_path, file=f)
+            aws.stage_file(configuration.staging_bucket_name, bucket_path, file=f)
 
     return granule
 
@@ -317,11 +320,11 @@ def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
     aws.post_to_kinesis(stream_name, granule.cnm_message)
     return granule
 
-def log_result(granule: Granule) -> Granule:
+def log_result(configuration: config.Config, granule: Granule) -> Granule:
     logger = logging.getLogger("metgenc")
-    logger.info(f"{granule.id}")
-    logger.info(f"  * UUID           : {granule.uuid}")
-    logger.info(f"  * Submission time: {granule.submission_time}")
+    logger.info(f"  {granule.id}")
+    logger.info(f"    * UUID           : {granule.uuid}")
+    logger.info(f"    * Submission time: {granule.submission_time}")
     return granule
 
 def summarize_results(granules: list[Granule]) -> None:
