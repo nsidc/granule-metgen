@@ -95,8 +95,14 @@ def test_s3_url_simple_case():
         'uuid': 'abcd-1234',
         'staging_bucket_name': 'xyzzy-bucket'
     }
+    staging_bucket_name = 'xyzzy-bucket'
+    granule = metgen.Granule(
+        'foo',
+        metgen.Collection('ABCD', 2),
+        uuid='abcd-1234'
+    )
     expected = 's3://xyzzy-bucket/external/ABCD/2/abcd-1234/xyzzy.bin'
-    assert metgen.s3_url(mapping, 'xyzzy.bin') == expected
+    assert metgen.s3_url(staging_bucket_name, granule, 'xyzzy.bin') == expected
 
 @patch('nsidc.metgen.metgen.scrub_json_files')
 def test_does_scrub_ummg(scrub_mock, fake_config):

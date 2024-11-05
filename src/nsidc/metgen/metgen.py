@@ -162,6 +162,7 @@ class Granule:
     actions: list[Action] = dataclasses.field(default_factory=list)
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
+    cnm_message: Maybe[str] = Maybe.empty
 
 # -------------------------------------------------------------------
 
@@ -175,8 +176,8 @@ def process(configuration: config.Config) -> None:
         prepare_granule,
         partial(create_ummg, configuration),
         partial(stage_files, configuration.staging_bucket_name),
-        create_cnms,
-        publish_cnms,
+        partial(create_cnms, configuration),
+        partial(publish_cnms, configuration),
         log_result
     )
 
@@ -225,31 +226,39 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     summary['temporal_extent'] = populate_temporal(summary['temporal'])
 
     # Populate the body template
-    body = ummg_body_template().safe_substitute(dataclasses.asdict(granule) | dataclasses.asdict(granule.collection) | summary)
+    body = ummg_body_template().safe_substitute(
+        dataclasses.asdict(granule) 
+        | dataclasses.asdict(granule.collection) 
+        | summary
+    )
 
     # Save it all in a file.
     with open(ummg_file_path, "tw") as f:
         print(body, file=f)
 
-    print(f'Created ummg file {ummg_file_path}')
-    return ummg_file_path
-
     return dataclasses.replace(
         granule,
-        ummg_file=ummg_file
+        ummg_filename=ummg_file_path
     )
 
 def stage_files(staging_bucket_name: str, granule: Granule) -> Granule:
     stuff = granule.data_filenames + [granule.ummg_filename]
     for fn in stuff:
-        file_name = os.path.basename(file_path)
-        bucket_path = s3_object_path(mapping, file_name)
-        with open(file_path, 'rb') as f:
+        filename = os.path.basename(fn)
+        bucket_path = s3_object_path(granule, filename)
+        with open(fn, 'rb') as f:
             aws.stage_file(staging_bucket_name, bucket_path, file=f)
 
     return granule
 
-def s3_object_path(granule):
+def s3_url(staging_bucket_name, granule, filename):
+    """
+    Returns the full s3 URL for the given file name.
+    """
+    object_path = s3_object_path(granule, filename)
+    return f's3://{staging_bucket_name}/{object_path}'
+
+def s3_object_path(granule, filename):
     """
     Returns the full s3 object path for the granule
     """
@@ -258,12 +267,54 @@ def s3_object_path(granule):
         'version': granule.collection.version,
         'uuid': granule.uuid
     })
-    return prefix + granule.id
+    return prefix + filename
 
-def create_cnms(granule: Granule) -> Granule:
-    return granule
+def create_cnms(configuration: config.Config, granule: Granule) -> Granule:
+    # Break up the JSON string into its components so information about multiple files is
+    # easier to add.
+    body_template = cnms_body_template()
+    body_content = body_template.safe_substitute(dataclasses.asdict(granule))
+    body_json = json.loads(body_content)
 
-def publish_cnms(granule: Granule) -> Granule:
+    file_template = cnms_files_template()
+
+    granule_files = {
+        'data': granule.data_filenames,
+        'metadata': [granule.ummg_filename]
+    }
+    for type, files in granule_files.items():
+        for file in files:
+            values = cnms_file_json_parts(configuration.staging_bucket_name, granule, file, type)
+            file_json = file_template.safe_substitute(values)
+            body_json['product']['files'].append(json.loads(file_json))
+
+    return dataclasses.replace(
+        granule,
+        cnm_message=json.dumps(body_json)
+    )
+
+def cnms_file_json_parts(staging_bucket_name, granule, file, file_type):
+    file_mapping = dict()
+    file_name = os.path.basename(file)
+    file_mapping['file_size'] = os.path.getsize(file)
+    file_mapping['file_type'] = file_type
+    file_mapping['checksum'] = checksum(file)
+    file_mapping['file_name'] = file_name
+    file_mapping['staging_uri'] = s3_url(staging_bucket_name, granule, file_name)
+
+    return file_mapping
+
+def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
+    if configuration.write_cnm_file:
+        cnm_file = os.path.join(
+            configuration.local_output_dir, 
+            'cnm', 
+            granule.id + '.cnm.json'
+        )
+        with open(cnm_file, "tw") as f:
+            print(granule.cnm_message, file=f)
+    stream_name = configuration.kinesis_stream_name
+    aws.post_to_kinesis(stream_name, granule.cnm_message)
     return granule
 
 def log_result(granule: Granule) -> Granule:
@@ -332,7 +383,7 @@ def legacy_process(configuration):
         processed_count += 1
 
         stage(mapping, granule_files=granule_files)
-        cnm_content = cnms_message(mapping,
+        cnm_content = _cnms_message(mapping,
                                    body_template=cnms_template,
                                    granule_files=granule_files)
         publish_cnm(mapping, cnm_path, cnm_content)
@@ -428,7 +479,7 @@ def stage(mapping, granule_files={}):
                 aws.stage_file(bucket_name, bucket_path, file=f)
                 print(f'Staged {file_name} to bucket {bucket_name}{bucket_path}')
 
-def cnms_message(mapping, body_template='', granule_files={}):
+def _cnms_message(mapping, body_template='', granule_files={}):
 
     # Break up the JSON string into its components so information about multiple files is
     # easier to add.
@@ -439,20 +490,20 @@ def cnms_message(mapping, body_template='', granule_files={}):
 
     for type, files in granule_files.items():
         for file in files:
-            file_json = file_template.safe_substitute(cnms_file_json_parts(mapping, file, type))
+            file_json = file_template.safe_substitute(_cnms_file_json_parts(mapping, file, type))
             body_json['product']['files'].append(json.loads(file_json))
 
     # Serialize the populated values back to JSON
     return json.dumps(body_json)
 
-def cnms_file_json_parts(mapping, file, file_type):
+def _cnms_file_json_parts(mapping, file, file_type):
     file_mapping = dict(mapping)
     file_name = os.path.basename(file)
     file_mapping['file_size'] = os.path.getsize(file)
     file_mapping['file_type'] = file_type
     file_mapping['checksum'] = checksum(file)
     file_mapping['file_name'] = file_name
-    file_mapping['staging_uri'] = s3_url(mapping, file_name)
+    file_mapping['staging_uri'] = _s3_url(mapping, file_name)
     return file_mapping
 
 def publish_cnm(mapping, cnm_path, cnm_message):
@@ -477,7 +528,7 @@ def checksum(file):
 
     return sha256.hexdigest()
 
-def s3_url(mapping, name):
+def _s3_url(mapping, name):
     """
     Returns the full s3 URL for the given file name.
     """

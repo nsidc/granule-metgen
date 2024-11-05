@@ -95,7 +95,8 @@ def test_process_with_write_cnm(mock_validate, process_mock, configuration_mock,
 
 @patch('nsidc.metgen.config.configuration')
 @patch('nsidc.metgen.metgen.process')
-def test_process_with_no_overwrite(process_mock, configuration_mock, cli_runner):
+@patch('nsidc.metgen.config.validate')
+def test_process_with_no_overwrite(mock_validate, process_mock, configuration_mock, cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
 
     assert configuration_mock.called
@@ -106,7 +107,8 @@ def test_process_with_no_overwrite(process_mock, configuration_mock, cli_runner)
 
 @patch('nsidc.metgen.config.configuration')
 @patch('nsidc.metgen.metgen.process')
-def test_process_with_overwrite(process_mock, configuration_mock, cli_runner):
+@patch('nsidc.metgen.config.validate')
+def test_process_with_overwrite(mock_validate, process_mock, configuration_mock, cli_runner):
     result = cli_runner.invoke(cli, ['process', '-o', '--config', './example/modscg.ini'])
 
     assert configuration_mock.called
