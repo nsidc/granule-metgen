@@ -86,7 +86,7 @@ def test_s3_object_path_has_no_leading_slash():
         'uuid': 'abcd-1234',
     }
     expected = 'external/ABCD/2/abcd-1234/xyzzy.bin'
-    assert metgen.s3_object_path(mapping, 'xyzzy.bin') == expected
+    assert metgen._s3_object_path(mapping, 'xyzzy.bin') == expected
 
 def test_s3_url_simple_case():
     mapping = {

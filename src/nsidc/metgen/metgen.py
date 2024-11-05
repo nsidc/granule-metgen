@@ -157,9 +157,9 @@ class Collection:
 class Granule:
     id: str
     collection: Maybe[Collection] = Maybe.empty
-    data_filenames: Maybe[list[str]] = Maybe.empty
+    data_filenames: list[str] = dataclasses.field(default_factory=list)
     ummg_filename: Maybe[str] = Maybe.empty
-    actions: Maybe[list[Action]] = Maybe.empty
+    actions: list[Action] = dataclasses.field(default_factory=list)
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
 
@@ -173,8 +173,8 @@ def process(configuration: config.Config) -> None:
     process_granule = rcompose(
         partial(granule_collection, configuration),
         prepare_granule,
-        create_ummg,
-        stage_files,
+        partial(create_ummg, configuration),
+        partial(stage_files, configuration.staging_bucket_name),
         create_cnms,
         publish_cnms,
         log_result
@@ -183,7 +183,7 @@ def process(configuration: config.Config) -> None:
     summarize_results(map(process_granule, gs))
 
 def granules(data_dir: str) -> list[Granule]:
-    return [Granule(p.name, data_filenames=Maybe([str(p)])) 
+    return [Granule(p.name, data_filenames=[str(p)])
             for p in Path(data_dir).glob('*.nc')]
 
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
@@ -199,11 +199,66 @@ def prepare_granule(granule: Granule) -> Granule:
         uuid=str(uuid.uuid4())
     )
 
-def create_ummg(granule: Granule) -> Granule:
+def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
+    ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
+    ummg_file = granule.id + '.json'
+    ummg_file_path = os.path.join(ummg_path, ummg_file)
+
+    metadata_details = {}
+
+    # Populated metadata_details dict looks like:
+    # {
+    #   data_file: {
+    #       'size_in_bytes' => integer,
+    #       'production_date_time'  => iso datetime string,
+    #       'temporal' => an array of one (data represent a single point in time)
+    #                     or two (data cover a time range) datetime strings
+    #       'geometry' => { 'points': a string representation of one or more lat/lon pairs }
+    #   }
+    # }
+    for data_file in granule.data_filenames:
+        metadata_details[data_file] = netcdf_reader.extract_metadata(data_file)
+
+    # Collapse information about (possibly) multiple files into a granule summary.
+    summary = metadata_summary(metadata_details)
+    summary['spatial_extent'] = populate_spatial(summary['geometry'])
+    summary['temporal_extent'] = populate_temporal(summary['temporal'])
+
+    # Populate the body template
+    body = ummg_body_template().safe_substitute(dataclasses.asdict(granule) | dataclasses.asdict(granule.collection) | summary)
+
+    # Save it all in a file.
+    with open(ummg_file_path, "tw") as f:
+        print(body, file=f)
+
+    print(f'Created ummg file {ummg_file_path}')
+    return ummg_file_path
+
+    return dataclasses.replace(
+        granule,
+        ummg_file=ummg_file
+    )
+
+def stage_files(staging_bucket_name: str, granule: Granule) -> Granule:
+    stuff = granule.data_filenames + [granule.ummg_filename]
+    for fn in stuff:
+        file_name = os.path.basename(file_path)
+        bucket_path = s3_object_path(mapping, file_name)
+        with open(file_path, 'rb') as f:
+            aws.stage_file(staging_bucket_name, bucket_path, file=f)
+
     return granule
 
-def stage_files(granule: Granule) -> Granule:
-    return granule
+def s3_object_path(granule):
+    """
+    Returns the full s3 object path for the granule
+    """
+    prefix = Template('external/${auth_id}/${version}/${uuid}/').safe_substitute({
+        'auth_id': granule.collection.auth_id,
+        'version': granule.collection.version,
+        'uuid': granule.uuid
+    })
+    return prefix + granule.id
 
 def create_cnms(granule: Granule) -> Granule:
     return granule
@@ -367,7 +422,7 @@ def stage(mapping, granule_files={}):
     for file_type, file_paths in granule_files.items():
         for file_path in file_paths:
             file_name = os.path.basename(file_path)
-            bucket_path = s3_object_path(mapping, file_name)
+            bucket_path = _s3_object_path(mapping, file_name)
             with open(file_path, 'rb') as f:
                 bucket_name = mapping['staging_bucket_name']
                 aws.stage_file(bucket_name, bucket_path, file=f)
@@ -427,10 +482,10 @@ def s3_url(mapping, name):
     Returns the full s3 URL for the given file name.
     """
     bucket_name = mapping['staging_bucket_name']
-    object_path = s3_object_path(mapping, name)
+    object_path = _s3_object_path(mapping, name)
     return f's3://{bucket_name}/{object_path}'
 
-def s3_object_path(mapping, name):
+def _s3_object_path(mapping, name):
     """
     Returns the full s3 object path for the given file name.
     """
