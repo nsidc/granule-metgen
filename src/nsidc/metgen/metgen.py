@@ -173,7 +173,10 @@ class Granule:
 
 def process(configuration: config.Config) -> None:
     # TODO: Prep actions like mkdir, etc
+    # ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
+    # all_existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
 
+    # TODO: Add conditional operation to create ummg -- or is conditional in the operation?
     operations = [partial(fn, configuration) 
         for fn in [
             granule_collection,
@@ -181,6 +184,7 @@ def process(configuration: config.Config) -> None:
             create_ummg,
             stage_files,
             create_cnms,
+            write_cnms,
             publish_cnms,
             log_result
         ]
@@ -318,6 +322,15 @@ def cnms_file_json_parts(staging_bucket_name, granule, file, file_type):
     return file_mapping
 
 @log
+def write_cnms(configuration: config.Config, granule: Granule) -> Granule:
+    if config.write_cnm_file:
+        cnm_file = os.path.join(config.local_output_dir, 'cnm', config.producer_granule_id + '.cnm.json')
+        with open(cnm_file, "tw") as f:
+            print(granule.cnm_message, file=f)
+        print(f'Saved CNM message {granule.cnm_message} to {cnm_file}')
+    return granule
+
+@log
 def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
     if configuration.write_cnm_file:
         cnm_file = os.path.join(
@@ -358,6 +371,7 @@ def legacy_process(configuration):
 
     valid, errors = config.validate(configuration)
     if not valid:
+        # TODO: Move this logging to ... ?
         print("The configuration is invalid:")
         for msg in errors:
             print(" * " + msg)
