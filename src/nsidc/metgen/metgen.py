@@ -27,13 +27,15 @@ LOGFILE_FORMAT = "%(asctime)s|%(levelname)s|%(name)s|%(message)s"
 
 def init_logging(configuration: config.Config):
     logger = logging.getLogger('metgenc')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
     logger.addHandler(console_handler)
 
     logfile_handler = logging.FileHandler("metgenc.log", "w")
+    logfile_handler.setLevel(logging.DEBUG)
     logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
     logger.addHandler(logfile_handler)
 
@@ -393,6 +395,12 @@ def log_record(record: Record) -> Record:
     logger.info(f"    * Successful     : {record.successful}")
     logger.info(f"    * Start          : {record.startDatetime}")
     logger.info(f"    * End            : {record.endDatetime}")
+    logger.debug(f"    * Actions:")
+    for a in record.actions:
+        logger.debug(f"        + Name: {a.name}")
+        logger.debug(f"          Start     : {a.startDatetime}")
+        logger.debug(f"          End       : {a.endDatetime}")
+        logger.debug(f"          Successful: {a.successful}")
     return record
 
 def summarize_results(records: list[Record]) -> None:
