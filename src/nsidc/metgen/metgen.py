@@ -146,7 +146,6 @@ def fn_process(configuration):
     summary = summarize_results(results)
 
 # -------------------------------------------------------------------
-# -------------------------------------------------------------------
 
 @dataclasses.dataclass
 class Collection:
@@ -389,18 +388,18 @@ def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
 
 def log_record(record: Record) -> Record:
     logger = logging.getLogger("metgenc")
-    logger.info(f"  {record.granule.id}")
-    logger.info(f"    * UUID           : {record.granule.uuid}")
-    logger.info(f"    * Submission time: {record.granule.submission_time}")
-    logger.info(f"    * Successful     : {record.successful}")
-    logger.info(f"    * Start          : {record.startDatetime}")
-    logger.info(f"    * End            : {record.endDatetime}")
-    logger.debug(f"    * Actions:")
+    logger.info(f"Granule: {record.granule.id}")
+    logger.info(f"  * UUID           : {record.granule.uuid}")
+    logger.info(f"  * Submission time: {record.granule.submission_time}")
+    logger.info(f"  * Start          : {record.startDatetime}")
+    logger.info(f"  * End            : {record.endDatetime}")
+    logger.info(f"  * Successful     : {record.successful}")
+    logger.debug(f"  * Actions:")
     for a in record.actions:
-        logger.debug(f"        + Name: {a.name}")
-        logger.debug(f"          Start     : {a.startDatetime}")
-        logger.debug(f"          End       : {a.endDatetime}")
-        logger.debug(f"          Successful: {a.successful}")
+        logger.debug(f"      + Name: {a.name}")
+        logger.debug(f"        Start     : {a.startDatetime}")
+        logger.debug(f"        End       : {a.endDatetime}")
+        logger.debug(f"        Successful: {a.successful}")
     return record
 
 def summarize_results(records: list[Record]) -> None:
@@ -409,11 +408,11 @@ def summarize_results(records: list[Record]) -> None:
     logger = logging.getLogger("metgenc")
     logger.info("Processing Summary")
     logger.info("==================")
-    logger.info(f"Granules: {len(records)}")
-    logger.info(f"Start: {records[0].startDatetime}")
-    logger.info(f"End: {records[-1].endDatetime}")
+    logger.info(f"Granules  : {len(records)}")
+    logger.info(f"Start     : {records[0].startDatetime}")
+    logger.info(f"End       : {records[-1].endDatetime}")
     logger.info(f"Successful: {successful_count}")
-    logger.info(f"Failed: {failed_count}")
+    logger.info(f"Failed    : {failed_count}")
 
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
