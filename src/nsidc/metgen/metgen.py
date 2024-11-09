@@ -1,7 +1,6 @@
 import configparser
 import dataclasses
-from datetime import datetime, timezone
-import functools
+import datetime as dt
 import hashlib
 import json
 import logging
@@ -12,7 +11,7 @@ from pathlib import Path
 from string import Template
 import uuid
 
-from funcy import decorator, identity, partial, rcompose, take
+from funcy import all, decorator, filter, identity, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
@@ -148,12 +147,6 @@ def fn_process(configuration):
 # -------------------------------------------------------------------
 
 @dataclasses.dataclass
-class Action:
-    name: str
-    success: bool
-    message: str
-
-@dataclasses.dataclass
 class Collection:
     auth_id: str
     version: int
@@ -164,10 +157,25 @@ class Granule:
     collection: Maybe[Collection] = Maybe.empty
     data_filenames: list[str] = dataclasses.field(default_factory=list)
     ummg_filename: Maybe[str] = Maybe.empty
-    actions: list[Action] = dataclasses.field(default_factory=list)
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
     cnm_message: Maybe[str] = Maybe.empty
+
+@dataclasses.dataclass
+class Action:
+    name: str
+    successful: bool
+    message: str
+    startDatetime: Maybe[dt.datetime] = Maybe.empty
+    endDatetime: Maybe[dt.datetime] = Maybe.empty
+
+@dataclasses.dataclass
+class Record:
+    granule: Granule
+    actions: list[Action] = dataclasses.field(default_factory=list)
+    successful: bool = False
+    startDatetime: Maybe[dt.datetime] = Maybe.empty
+    endDatetime: Maybe[dt.datetime] = Maybe.empty
 
 # -------------------------------------------------------------------
 
@@ -177,8 +185,7 @@ def process(configuration: config.Config) -> None:
     # all_existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
 
     # TODO: Add conditional operation to create ummg -- or is conditional in the operation?
-    operations = [partial(fn, configuration) 
-        for fn in [
+    operations = [
             granule_collection,
             prepare_granule,
             create_ummg,
@@ -186,35 +193,74 @@ def process(configuration: config.Config) -> None:
             create_cnms,
             write_cnms,
             publish_cnms,
-            log_result
         ]
-    ]
-    granule_operations = rcompose(*operations)
+
+    configured_operations = [partial(fn, configuration) for fn in operations]
+    recorded_operations = [partial(recorder, fn) for fn in configured_operations]
+    pipeline = rcompose(
+        start_record, 
+        *recorded_operations, 
+        end_record, 
+        log_record
+    )
 
     gs = take(configuration.number, granules(configuration.data_dir))
-    results = map(granule_operations, gs)
+    results = [pipeline(Record(g)) for g in gs]
+
     summarize_results(results)
 
 def granules(data_dir: str) -> list[Granule]:
     return [Granule(p.name, data_filenames=[str(p)])
             for p in Path(data_dir).glob('*.nc')]
 
-@log
+def recorder(fn: Callable[[Granule], Granule], record: Record) -> Record:
+    start = dt.datetime.now()
+    new_granule = fn(record.granule)
+    end = dt.datetime.now()
+
+    new_actions = record.actions.copy()
+    new_actions.append(
+            Action(
+                fn.func.__name__,
+                successful=True,
+                message=None,
+                startDatetime=start,
+                endDatetime=end
+            )
+        )
+
+    return dataclasses.replace(
+        record,
+        granule=new_granule,
+        actions=new_actions
+    )
+
+def start_record(record: Record) -> Record:
+    return dataclasses.replace(
+        record,
+        startDatetime=dt.datetime.now()
+    )
+
+def end_record(record: Record) -> Record:
+    return dataclasses.replace(
+        record,
+        endDatetime=dt.datetime.now(),
+        successful=all([a.successful for a in record.actions])
+    )
+
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
     return dataclasses.replace(
         granule, 
         collection=Collection(configuration.auth_id, configuration.version)
     )
 
-@log
 def prepare_granule(configuration: config.Config, granule: Granule) -> Granule:
     return dataclasses.replace(
         granule, 
-        submission_time=datetime.now(timezone.utc).isoformat(),
+        submission_time=dt.datetime.now(dt.timezone.utc).isoformat(),
         uuid=str(uuid.uuid4())
     )
 
-@log
 def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
     ummg_file = granule.id + '.json'
@@ -256,7 +302,6 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         ummg_filename=ummg_file_path
     )
 
-@log
 def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     stuff = granule.data_filenames + [granule.ummg_filename]
     for fn in stuff:
@@ -285,7 +330,6 @@ def s3_object_path(granule, filename):
     })
     return prefix + filename
 
-@log
 def create_cnms(configuration: config.Config, granule: Granule) -> Granule:
     # Break up the JSON string into its components so information about multiple files is
     # easier to add.
@@ -321,16 +365,13 @@ def cnms_file_json_parts(staging_bucket_name, granule, file, file_type):
 
     return file_mapping
 
-@log
 def write_cnms(configuration: config.Config, granule: Granule) -> Granule:
-    if config.write_cnm_file:
-        cnm_file = os.path.join(config.local_output_dir, 'cnm', config.producer_granule_id + '.cnm.json')
+    if configuration.write_cnm_file:
+        cnm_file = os.path.join(configuration.local_output_dir, 'cnm', granule.id + '.cnm.json')
         with open(cnm_file, "tw") as f:
             print(granule.cnm_message, file=f)
-        print(f'Saved CNM message {granule.cnm_message} to {cnm_file}')
     return granule
 
-@log
 def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
     if configuration.write_cnm_file:
         cnm_file = os.path.join(
@@ -344,17 +385,27 @@ def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
     aws.post_to_kinesis(stream_name, granule.cnm_message)
     return granule
 
-def log_result(configuration: config.Config, granule: Granule) -> Granule:
+def log_record(record: Record) -> Record:
     logger = logging.getLogger("metgenc")
-    logger.info(f"  {granule.id}")
-    logger.info(f"    * UUID           : {granule.uuid}")
-    logger.info(f"    * Submission time: {granule.submission_time}")
-    return granule
+    logger.info(f"  {record.granule.id}")
+    logger.info(f"    * UUID           : {record.granule.uuid}")
+    logger.info(f"    * Submission time: {record.granule.submission_time}")
+    logger.info(f"    * Successful     : {record.successful}")
+    logger.info(f"    * Start          : {record.startDatetime}")
+    logger.info(f"    * End            : {record.endDatetime}")
+    return record
 
-def summarize_results(granules: list[Granule]) -> None:
+def summarize_results(records: list[Record]) -> None:
+    successful_count = len(list(filter(lambda r: r.successful, records)))
+    failed_count = len(list(filter(lambda r: not r.successful, records)))
     logger = logging.getLogger("metgenc")
-    for g in granules:
-        logger.info(f"{g.id}: <success>")
+    logger.info("Processing Summary")
+    logger.info("==================")
+    logger.info(f"Granules: {len(records)}")
+    logger.info(f"Start: {records[0].startDatetime}")
+    logger.info(f"End: {records[-1].endDatetime}")
+    logger.info(f"Successful: {successful_count}")
+    logger.info(f"Failed: {failed_count}")
 
 # -------------------------------------------------------------------
 # -------------------------------------------------------------------
