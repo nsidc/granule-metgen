@@ -80,21 +80,15 @@ def test_returns_datetime_range():
     assert '"EndingDateTime": "456"' in result
 
 def test_s3_object_path_has_no_leading_slash():
-    mapping = {
-        'auth_id': 'ABCD',
-        'version': 2,
-        'uuid': 'abcd-1234',
-    }
+    granule = metgen.Granule(
+        'foo',
+        metgen.Collection('ABCD', 2),
+        uuid='abcd-1234'
+    )
     expected = 'external/ABCD/2/abcd-1234/xyzzy.bin'
-    assert metgen._s3_object_path(mapping, 'xyzzy.bin') == expected
+    assert metgen.s3_object_path(granule, 'xyzzy.bin') == expected
 
 def test_s3_url_simple_case():
-    mapping = {
-        'auth_id': 'ABCD',
-        'version': 2,
-        'uuid': 'abcd-1234',
-        'staging_bucket_name': 'xyzzy-bucket'
-    }
     staging_bucket_name = 'xyzzy-bucket'
     granule = metgen.Granule(
         'foo',
