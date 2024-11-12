@@ -268,13 +268,13 @@ def cnms_message(mapping, body_template='', files_template = '', granule_files={
 
     for type, files in granule_files.items():
         for file in files:
-            populated_file_templates.append(files_template.safe_substitute(cnms_file_template_parts(mapping, file, type)))
+            populated_file_templates.append(files_template.safe_substitute(cnms_json_fields(mapping, file, type)))
 
     return(body_template.safe_substitute(mapping | { 'file_content': str(populated_file_templates),
                                                      'cnm_schema_version': constants.CNM_JSON_SCHEMA_VERSION }))
 
 
-def cnms_file_template_parts(mapping, file, file_type):
+def cnms_json_fields(mapping, file, file_type):
     file_mapping = dict(mapping)
     file_name = os.path.basename(file)
     file_mapping['file_size'] = os.path.getsize(file)

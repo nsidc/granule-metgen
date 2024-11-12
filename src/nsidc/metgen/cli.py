@@ -29,9 +29,9 @@ def info(config_filename):
     configuration.show()
 
 @cli.command()
-@click.option('-c', '--config', 'config_filename', help='Path to configuration file with file location', required=True)
+@click.option('-c', '--config', 'config_filename', help='Path to configuration file specifying CNM file location', required=True)
 def validate_cnm(config_filename):
-    """Validates the contents of existing JSON files."""
+    """Validates the contents of existing CNM JSON files."""
     click.echo(metgen.banner())
     configuration = config.configuration(config.config_parser_factory(config_filename), {})
     metgen.validate_cnm(configuration)
