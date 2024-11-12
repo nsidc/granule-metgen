@@ -72,7 +72,7 @@ def init_config(configuration_file):
     cfg_parser.set(constants.DESTINATION_SECTION_NAME, "kinesis_stream_name", Prompt.ask("Kinesis stream name", default=constants.DEFAULT_STAGING_KINESIS_STREAM))
     cfg_parser.set(constants.DESTINATION_SECTION_NAME, "staging_bucket_name", Prompt.ask("Cumulus s3 bucket name", default=constants.DEFAULT_STAGING_BUCKET_NAME))
     cfg_parser.set(constants.DESTINATION_SECTION_NAME, "write_cnm_file", Prompt.ask("Write CNM messages to files? (True/False)", default=constants.DEFAULT_WRITE_CNM_FILE))
-    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "overwrite_ummg", Prompt.ask("Overwrite existing UMM-G files? (True/False)", default=constants.DEFAULT_overwrite_ummg))
+    cfg_parser.set(constants.DESTINATION_SECTION_NAME, "overwrite_ummg", Prompt.ask("Overwrite existing UMM-G files? (True/False)", default=constants.DEFAULT_OVERWRITE_UMMG))
 
     print()
     print(f'{constants.SETTINGS_SECTION_NAME} Parameters')
