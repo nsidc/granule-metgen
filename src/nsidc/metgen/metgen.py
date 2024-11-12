@@ -1,6 +1,7 @@
 import configparser
 import hashlib
 import json
+import jsonschema
 import os.path
 from pathlib import Path
 from string import Template
@@ -92,8 +93,8 @@ def prepare_output_dirs(configuration):
     Remove any existing UMM-G files if needed.
     TODO: create local_output_dir, ummg_dir, and cnm subdir if they don't exist
     """
-    ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
-    cnm_path = Path(configuration.local_output_dir, 'cnm')
+    ummg_path = configuration.ummg_path()
+    cnm_path = configuration.cnm_path()
 
     if configuration.overwrite_ummg:
         scrub_json_files(ummg_path)
@@ -140,7 +141,8 @@ def process(configuration):
     all_existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
 
     # initialize template content common to all files
-    cnms_template = cnms_body_template()
+    cnms_body_template = cnms_body_template()
+    cnms_files_template = cnms_files_template()
     processed_count = 0
 
     for producer_granule_id, granule_files in granules:
@@ -162,7 +164,8 @@ def process(configuration):
 
         stage(mapping, granule_files=granule_files)
         cnm_content = cnms_message(mapping,
-                                   body_template=cnms_template,
+                                   body_template=cnms_body_template,
+                                   files_template=cnms_files_template,
                                    granule_files=granule_files)
         publish_cnm(mapping, cnm_path, cnm_content)
         print()
@@ -257,24 +260,21 @@ def stage(mapping, granule_files={}):
                 aws.stage_file(bucket_name, bucket_path, file=f)
                 print(f'Staged {file_name} to bucket {bucket_name}{bucket_path}')
 
-def cnms_message(mapping, body_template='', granule_files={}):
-
-    # Break up the JSON string into its components so information about multiple files is
-    # easier to add.
-    body_content = body_template.safe_substitute(mapping)
-    body_json = json.loads(body_content)
-
-    file_template = cnms_files_template()
+def cnms_message(mapping, body_template='', files_template = '', granule_files={}):
+    """
+    Generate CNM content from the files making up a granule
+    """
+    populated_file_templates = []
 
     for type, files in granule_files.items():
         for file in files:
-            file_json = file_template.safe_substitute(cnms_file_json_parts(mapping, file, type))
-            body_json['product']['files'].append(json.loads(file_json))
+            populated_file_templates.append(files_template.safe_substitute(cnms_file_template_parts(mapping, file, type)))
 
-    # Serialize the populated values back to JSON
-    return json.dumps(body_json)
+    return(body_template.safe_substitute(mapping | { 'file_content': str(populated_file_templates),
+                                                     'cnm_schema_version': constants.CNM_JSON_SCHEMA_VERSION }))
 
-def cnms_file_json_parts(mapping, file, file_type):
+
+def cnms_file_template_parts(mapping, file, file_type):
     file_mapping = dict(mapping)
     file_name = os.path.basename(file)
     file_mapping['file_size'] = os.path.getsize(file)
@@ -344,6 +344,38 @@ def initialize_template(file):
         template_str = template_file.read()
 
     return Template(template_str)
+
+def validate_cnm(configuration):
+    """
+    Validate exist CNM output files using JSON schema
+    """
+    cnm_path = configuration.cnm_path()
+
+    print(f'Validating files in {cnm_path}...')
+    with open(constants.CNM_JSON_SCHEMA) as schema_file:
+        schema = json.load(schema_file)
+
+        # loop through all files and validate each one
+        for json_file in cnm_path.glob('*.json'):
+            validate(schema, json_file)
+
+    print('Done with validations.')
+    return True
+
+def validate(schema, json_file):
+    json_error = False
+    with open(json_file) as jf:
+        json_content = json.load(jf)
+        try:
+            jsonschema.validate(instance=json_content, schema=schema)
+            print(f'Validated {json_file}')
+        except jsonschema.exceptions.ValidationError as err:
+            json_error = err
+
+    if json_error:
+        print(f'Validation failed for "{json_error.validator}" in {json_file}: {json_error.validator_value}')
+
+    return True
 
 # TODO: Use the GranuleSpatialRepresentation value in the collection metadata
 # to determine the expected spatial type. See Issue #15. For now, default to

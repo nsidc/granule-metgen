@@ -29,6 +29,14 @@ def info(config_filename):
     configuration.show()
 
 @cli.command()
+@click.option('-c', '--config', 'config_filename', help='Path to configuration file with file location', required=True)
+def validate_cnm(config_filename):
+    """Validates the contents of existing JSON files."""
+    click.echo(metgen.banner())
+    configuration = config.configuration(config.config_parser_factory(config_filename), {})
+    metgen.validate_cnm(configuration)
+
+@cli.command()
 @click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
 @click.option('-e', '--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
 @click.option('-n', '--number', help="Process at most 'count' granules.", metavar='count', required=False, default=-1)

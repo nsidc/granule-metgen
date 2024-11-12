@@ -16,6 +16,9 @@ rich = "^13.7.1"
 boto3 = "^1.35.22"
 xarray = "^2024.09.0"
 pyproj = "^3.7.0"
+jsonschema = "^4.23.0"
+check-jsonschema = "^0.29.4"
+podaac-cloud-notification-message-schema = "^1.6.1"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.2"

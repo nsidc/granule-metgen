@@ -2,6 +2,7 @@ import configparser
 import dataclasses
 from datetime import datetime, timezone
 import os.path
+from pathlib import Path
 import uuid
 
 from nsidc.metgen import aws
@@ -42,6 +43,12 @@ class Config:
         mapping['uuid'] = str(uuid.uuid4())
 
         return mapping
+
+    def ummg_path(self):
+        return Path(self.local_output_dir, self.ummg_dir)
+
+    def cnm_path(self):
+        return Path(self.local_output_dir, 'cnm')
 
     # Is the right place for this function?
     def collection_from_cmr(self, mapping):
