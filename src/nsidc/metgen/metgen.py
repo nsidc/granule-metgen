@@ -198,9 +198,9 @@ def process(configuration: config.Config) -> None:
             find_existing_ummg,
             create_ummg,
             stage_files,
-            create_cnms,
-            write_cnms,
-            publish_cnms,
+            create_cnm,
+            write_cnm,
+            publish_cnm,
         ]
 
     # Bind the configuration to each operation
@@ -218,21 +218,16 @@ def process(configuration: config.Config) -> None:
         log_ledger
     )
 
-    # Execute the pipeline on each of the first 'number' granules as specified
-    # in the configuration.
-    results = [pipeline(g) 
-               for g in take(configuration.number, granules(configuration.data_dir))]
+    # Find all of the input granule files, limit the size of the list based
+    # on the configuration, and execute the pipeline on each of the granules.
+    candidate_granules = [Granule(p.name, data_filenames=[str(p)])
+                          for p in Path(configuration.data_dir).glob('*.nc')]
+    granules = take(configuration.number, candidate_granules)
+    results = [pipeline(g) for g in granules]
 
     summarize_results(results)
 
 # -------------------------------------------------------------------
-
-def granules(data_dir: str) -> list[Granule]:
-    """
-    Returns a list of Granules by searching for data files.
-    """
-    return [Granule(p.name, data_filenames=[str(p)])
-            for p in Path(data_dir).glob('*.nc')]
 
 def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
     """
@@ -240,7 +235,7 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
     Ledger, will execute the function on the Ledger's granule, record the
     results, and return the resulting new Ledger.
     """
-    # Execute the operation and record the times
+    # Execute the operation and record the result
     successful = True
     message = ''
     start = dt.datetime.now()
@@ -254,14 +249,14 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
     # Store the result in the Ledger
     new_actions = ledger.actions.copy()
     new_actions.append(
-            Action(
-                fn.func.__name__,
-                successful=successful,
-                message=message,
-                startDatetime=start,
-                endDatetime=end
-            )
+        Action(
+            fn.func.__name__,
+            successful=successful,
+            message=message,
+            startDatetime=start,
+            endDatetime=end
         )
+    )
 
     return dataclasses.replace(
         ledger,
@@ -271,7 +266,7 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
 
 def start_ledger(granule: Granule) -> Ledger:
     """
-    Start a new Ledger of the operations on a Granule.
+    Start a new Ledger of the operations on the given Granule.
     """
     return Ledger(
         granule,
@@ -280,7 +275,7 @@ def start_ledger(granule: Granule) -> Ledger:
 
 def end_ledger(ledger: Ledger) -> Ledger:
     """
-    Finalize the Ledger of operations on a Granule.
+    Finalize the Ledger of operations on its Granule.
     """
     return dataclasses.replace(
         ledger,
@@ -303,7 +298,7 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
 
 def prepare_granule(configuration: config.Config, granule: Granule) -> Granule:
     """
-    Prepare the Granule for submission.
+    Prepare the Granule for creating metadata and submitting it.
     """
     return dataclasses.replace(
         granule, 
@@ -327,8 +322,10 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     """
     Create the UMM-G file for the Granule.
     """
-    # TODO: Guard clause: return if we are not overwriting ummg and we 
-    #       already have one.
+    # TODO: Implement guard clause: return if we are not overwriting ummg
+    #       and we already have one.
+    if granule.ummg_filename != Maybe.empty:
+        pass
 
     ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
     ummg_file = granule.producer_granule_id + '.json'
@@ -382,8 +379,7 @@ def stage_files(configuration: config.Config, granule: Granule) -> Granule:
 
     return granule
 
-
-def create_cnms(configuration: config.Config, granule: Granule) -> Granule:
+def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
     """
     Create a CNM submission message for the Granule.
     """
@@ -414,7 +410,7 @@ def create_cnms(configuration: config.Config, granule: Granule) -> Granule:
         cnm_message=json.dumps(body_json)
     )
 
-def write_cnms(configuration: config.Config, granule: Granule) -> Granule:
+def write_cnm(configuration: config.Config, granule: Granule) -> Granule:
     """
     Write a CNM message to a file.
     """
@@ -424,7 +420,7 @@ def write_cnms(configuration: config.Config, granule: Granule) -> Granule:
             print(granule.cnm_message, file=f)
     return granule
 
-def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
+def publish_cnm(configuration: config.Config, granule: Granule) -> Granule:
     """
     Publish a CNM message to a Kinesis stream.
     """
