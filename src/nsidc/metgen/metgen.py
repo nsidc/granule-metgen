@@ -159,7 +159,7 @@ class Collection:
 
 @dataclasses.dataclass
 class Granule:
-    id: str
+    producer_granule_id: str
     collection: Maybe[Collection] = Maybe.empty
     data_filenames: list[str] = dataclasses.field(default_factory=list)
     ummg_filename: Maybe[str] = Maybe.empty
@@ -311,7 +311,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     Create the UMM-G file for the Granule.
     """
     ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
-    ummg_file = granule.id + '.json'
+    ummg_file = granule.producer_granule_id + '.json'
     ummg_file_path = os.path.join(ummg_path, ummg_file)
 
     metadata_details = {}
@@ -371,7 +371,11 @@ def create_cnms(configuration: config.Config, granule: Granule) -> Granule:
     # Break up the JSON string into its components so information about multiple files is
     # easier to add.
     body_template = cnms_body_template()
-    body_content = body_template.safe_substitute(dataclasses.asdict(granule))
+    body_content = body_template.safe_substitute(
+            dataclasses.asdict(granule) 
+            | dataclasses.asdict(granule.collection)
+            | dataclasses.asdict(configuration)
+            )
     body_json = json.loads(body_content)
 
     file_template = cnms_files_template()
@@ -396,7 +400,7 @@ def write_cnms(configuration: config.Config, granule: Granule) -> Granule:
     Write a CNM message to a file.
     """
     if configuration.write_cnm_file:
-        cnm_file = os.path.join(configuration.local_output_dir, 'cnm', granule.id + '.cnm.json')
+        cnm_file = os.path.join(configuration.local_output_dir, 'cnm', granule.producer_granule_id + '.cnm.json')
         with open(cnm_file, "tw") as f:
             print(granule.cnm_message, file=f)
     return granule
@@ -409,7 +413,7 @@ def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
         cnm_file = os.path.join(
             configuration.local_output_dir, 
             'cnm', 
-            granule.id + '.cnm.json'
+            granule.producer_granule_id + '.cnm.json'
         )
         with open(cnm_file, "tw") as f:
             print(granule.cnm_message, file=f)
@@ -424,7 +428,7 @@ def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
 def log_record(record: Record) -> Record:
     """Log a Record of the operations performed on a Granule."""
     logger = logging.getLogger("metgenc")
-    logger.info(f"Granule: {record.granule.id}")
+    logger.info(f"Granule: {record.granule.producer_granule_id}")
     logger.info(f"  * UUID           : {record.granule.uuid}")
     logger.info(f"  * Submission time: {record.granule.submission_time}")
     logger.info(f"  * Start          : {record.startDatetime}")
