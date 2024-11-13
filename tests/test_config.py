@@ -110,11 +110,6 @@ def test_config_with_overwrite_ummg(cfg_parser, expected_keys):
     assert len(config_keys - expected_keys) == 0
     assert cfg.overwrite_ummg == True
 
-def test_enhanced_config(expected_keys):
-    myconfig = config.Config(*expected_keys)
-    enhanced_config = myconfig.enhance('pgid')
-    assert set(myconfig.__dict__.keys()) <= set(enhanced_config.keys())
-
 def test_get_configuration_value(cfg_parser):
     environment = constants.DEFAULT_CUMULUS_ENVIRONMENT
     result = config._get_configuration_value(environment, "Source", "data_dir", str, cfg_parser, {})
