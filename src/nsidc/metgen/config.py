@@ -39,28 +39,6 @@ class Config:
         for k,v in self.__dict__.items():
             LOGGER.info(f'  + {k}: {v}')
 
-    def enhance(self, producer_granule_id):
-        mapping = dataclasses.asdict(self)
-        collection_details = self.collection_from_cmr(mapping)
-
-        mapping['auth_id'] = collection_details['auth_id']
-        mapping['version'] = collection_details['version']
-        mapping['producer_granule_id'] = producer_granule_id
-        mapping['submission_time'] = datetime.now(timezone.utc).isoformat()
-        mapping['uuid'] = str(uuid.uuid4())
-
-        return mapping
-
-    # Is the right place for this function?
-    def collection_from_cmr(self, mapping):
-        # TODO: Use auth_id and version from mapping object to retrieve collection
-        # metadata from CMR, including formatted version number, temporal range, and
-        # spatial coverage.
-        return {
-            'auth_id': mapping['auth_id'],
-            'version': mapping['version']
-        }
-
 def config_parser_factory(configuration_file):
     """
     Returns a ConfigParser by reading the specified file.
