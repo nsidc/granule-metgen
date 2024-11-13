@@ -149,7 +149,7 @@ def fn_process(configuration):
     summary = summarize_results(results)
 
 # -------------------------------------------------------------------
-# Data structures for processing Granules and Recording results
+# Data structures for processing Granules and recording results
 # -------------------------------------------------------------------
 
 @dataclasses.dataclass
@@ -176,7 +176,7 @@ class Action:
     endDatetime: Maybe[dt.datetime] = Maybe.empty
 
 @dataclasses.dataclass
-class Record:
+class Ledger:
     granule: Granule
     actions: list[Action] = dataclasses.field(default_factory=list)
     successful: bool = False
@@ -189,16 +189,13 @@ def process(configuration: config.Config) -> None:
     """
     Process all Granules and record the results and summary.
     """
-    # TODO: Prep actions like mkdir, etc
-    # ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
-    # all_existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
-
-    # TODO: Add conditional operation to create ummg -- or is conditional in the operation?
+    # TODO: Do any prep actions, like mkdir, etc
 
     # Ordered list of operations to perform on each granule
     operations = [
             granule_collection,
             prepare_granule,
+            find_existing_ummg,
             create_ummg,
             stage_files,
             create_cnms,
@@ -212,13 +209,13 @@ def process(configuration: config.Config) -> None:
     # Wrap each operation with a 'recorder' function
     recorded_operations = [partial(recorder, fn) for fn in configured_operations]
 
-    # The complete pipeline of actions initializes a Record, performs all the
-    # operations, finalizes a Record, and logs the details of the Record.
+    # The complete pipeline of actions initializes a Ledger, performs all the
+    # operations, finalizes a Ledger, and logs the details of the Ledger.
     pipeline = rcompose(
-        start_record, 
+        start_ledger, 
         *recorded_operations, 
-        end_record, 
-        log_record
+        end_ledger, 
+        log_ledger
     )
 
     # Execute the pipeline on each of the first 'number' granules as specified
@@ -237,50 +234,58 @@ def granules(data_dir: str) -> list[Granule]:
     return [Granule(p.name, data_filenames=[str(p)])
             for p in Path(data_dir).glob('*.nc')]
 
-def recorder(fn: Callable[[Granule], Granule], record: Record) -> Record:
+def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
     """
-    Executes an operation on a granule and records the results.
+    Higher-order function that, given a granule operation function and a
+    Ledger, will execute the function on the Ledger's granule, record the
+    results, and return the resulting new Ledger.
     """
     # Execute the operation and record the times
+    successful = True
+    message = ''
     start = dt.datetime.now()
-    new_granule = fn(record.granule)
+    try:
+        new_granule = fn(ledger.granule)
+    except Exception as e:
+        successful = False
+        message = str(e)
     end = dt.datetime.now()
 
-    # Store the result in the Record
-    new_actions = record.actions.copy()
+    # Store the result in the Ledger
+    new_actions = ledger.actions.copy()
     new_actions.append(
             Action(
                 fn.func.__name__,
-                successful=True,
-                message=None,
+                successful=successful,
+                message=message,
                 startDatetime=start,
                 endDatetime=end
             )
         )
 
     return dataclasses.replace(
-        record,
+        ledger,
         granule=new_granule,
         actions=new_actions
     )
 
-def start_record(granule: Granule) -> Record:
+def start_ledger(granule: Granule) -> Ledger:
     """
-    Start a new Record of the operations on a Granule.
+    Start a new Ledger of the operations on a Granule.
     """
-    return Record(
+    return Ledger(
         granule,
         startDatetime=dt.datetime.now()
     )
 
-def end_record(record: Record) -> Record:
+def end_ledger(ledger: Ledger) -> Ledger:
     """
-    Finalize the Record of operations on a Granule.
+    Finalize the Ledger of operations on a Granule.
     """
     return dataclasses.replace(
-        record,
+        ledger,
         endDatetime=dt.datetime.now(),
-        successful=all([a.successful for a in record.actions])
+        successful=all([a.successful for a in ledger.actions])
     )
 
 # -------------------------------------------------------------------
@@ -306,15 +311,28 @@ def prepare_granule(configuration: config.Config, granule: Granule) -> Granule:
         uuid=str(uuid.uuid4())
     )
 
+def find_existing_ummg(configuration: config.Config, granule: Granule) -> Granule:
+    ummg_filename = Path(
+        configuration.local_output_dir, 
+        configuration.ummg_dir, 
+        granule.producer_granule_id + '.json'
+    )
+
+    if ummg_filename.exists():
+        return dataclasses.replace(granule, ummg_filename=ummg_filename)
+    else:
+        return granule
+
 def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     """
     Create the UMM-G file for the Granule.
     """
+    # TODO: Guard clause: return if we are not overwriting ummg and we 
+    #       already have one.
+
     ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
     ummg_file = granule.producer_granule_id + '.json'
     ummg_file_path = os.path.join(ummg_path, ummg_file)
-
-    metadata_details = {}
 
     # Populated metadata_details dict looks like:
     # {
@@ -326,6 +344,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     #       'geometry' => { 'points': a string representation of one or more lat/lon pairs }
     #   }
     # }
+    metadata_details = {}
     for data_file in granule.data_filenames:
         metadata_details[data_file] = netcdf_reader.extract_metadata(data_file)
 
@@ -425,35 +444,35 @@ def publish_cnms(configuration: config.Config, granule: Granule) -> Granule:
 # Logging functions
 # -------------------------------------------------------------------
 
-def log_record(record: Record) -> Record:
-    """Log a Record of the operations performed on a Granule."""
+def log_ledger(ledger: Ledger) -> Ledger:
+    """Log a Ledger of the operations performed on a Granule."""
     logger = logging.getLogger("metgenc")
-    logger.info(f"Granule: {record.granule.producer_granule_id}")
-    logger.info(f"  * UUID           : {record.granule.uuid}")
-    logger.info(f"  * Submission time: {record.granule.submission_time}")
-    logger.info(f"  * Start          : {record.startDatetime}")
-    logger.info(f"  * End            : {record.endDatetime}")
-    logger.info(f"  * Successful     : {record.successful}")
+    logger.info(f"Granule: {ledger.granule.producer_granule_id}")
+    logger.info(f"  * UUID           : {ledger.granule.uuid}")
+    logger.info(f"  * Submission time: {ledger.granule.submission_time}")
+    logger.info(f"  * Start          : {ledger.startDatetime}")
+    logger.info(f"  * End            : {ledger.endDatetime}")
+    logger.info(f"  * Successful     : {ledger.successful}")
     logger.debug(f"  * Actions:")
-    for a in record.actions:
+    for a in ledger.actions:
         logger.debug(f"      + Name: {a.name}")
         logger.debug(f"        Start     : {a.startDatetime}")
         logger.debug(f"        End       : {a.endDatetime}")
         logger.debug(f"        Successful: {a.successful}")
-    return record
+    return ledger
 
-def summarize_results(records: list[Record]) -> None:
+def summarize_results(ledgers: list[Ledger]) -> None:
     """
     Log a summary of the operations performed on all Granules.
     """
-    successful_count = len(list(filter(lambda r: r.successful, records)))
-    failed_count = len(list(filter(lambda r: not r.successful, records)))
+    successful_count = len(list(filter(lambda r: r.successful, ledgers)))
+    failed_count = len(list(filter(lambda r: not r.successful, ledgers)))
     logger = logging.getLogger("metgenc")
     logger.info("Processing Summary")
     logger.info("==================")
-    logger.info(f"Granules  : {len(records)}")
-    logger.info(f"Start     : {records[0].startDatetime}")
-    logger.info(f"End       : {records[-1].endDatetime}")
+    logger.info(f"Granules  : {len(ledgers)}")
+    logger.info(f"Start     : {ledgers[0].startDatetime}")
+    logger.info(f"End       : {ledgers[-1].endDatetime}")
     logger.info(f"Successful: {successful_count}")
     logger.info(f"Failed    : {failed_count}")
 
