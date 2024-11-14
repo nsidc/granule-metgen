@@ -47,14 +47,21 @@ def process(config_filename, env, overwrite, write_cnm, number):
         'overwrite_ummg': overwrite,
         'number': number
     }
-    configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
-    config.validate(configuration)
-    metgen.init_logging(configuration)
-    configuration.show()
     try:
+        configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
+        metgen.init_logging(configuration)
+        configuration.show()
+        config.validate(configuration)
         metgen.process(configuration)
+    except config.ValidationError as e:
+        logger = logging.getLogger('metgenc')
+        logger.error("\nThe configuration is invalid:")
+        for error in e.errors:
+            logger.error(f"  * {error}")
+        exit(1)
     except Exception as e:
-        click.echo("\nUnable to process data: " + str(e))
+        logger = logging.getLogger('metgenc')
+        logger.error("\nUnable to process data: " + str(e))
         exit(1)
     click.echo(f'Processing complete')
 
