@@ -11,7 +11,7 @@ from pathlib import Path
 from string import Template
 import uuid
 
-from funcy import all, filter, identity, partial, rcompose, take
+from funcy import all, filter, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
