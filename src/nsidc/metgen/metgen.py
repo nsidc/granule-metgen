@@ -154,11 +154,13 @@ def fn_process(configuration):
 
 @dataclasses.dataclass
 class Collection:
+    """Collection info required to ingest a granule"""
     auth_id: str
     version: int
 
 @dataclasses.dataclass
 class Granule:
+    """Granule to ingest"""
     producer_granule_id: str
     collection: Maybe[Collection] = Maybe.empty
     data_filenames: list[str] = dataclasses.field(default_factory=list)
@@ -169,6 +171,7 @@ class Granule:
 
 @dataclasses.dataclass
 class Action:
+    """An audit of a single action performed on a Granule"""
     name: str
     successful: bool
     message: str
@@ -177,6 +180,7 @@ class Action:
 
 @dataclasses.dataclass
 class Ledger:
+    """An audit of the Actions performed on a Granule"""
     granule: Granule
     actions: list[Action] = dataclasses.field(default_factory=list)
     successful: bool = False

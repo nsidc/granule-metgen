@@ -1,4 +1,5 @@
 from configparser import ConfigParser
+import datetime as dt
 from unittest.mock import patch
 
 import pytest
@@ -115,3 +116,44 @@ def test_builds_output_paths(scrub_mock, fake_config):
     ummg_path, cnm_path = metgen.prepare_output_dirs(fake_config)
     assert str(ummg_path) == '/'.join([fake_config.local_output_dir, fake_config.ummg_dir])
     assert str(cnm_path) == '/'.join([fake_config.local_output_dir, 'cnm'])
+
+@patch("nsidc.metgen.metgen.dt.datetime")
+def test_start_ledger(mock_datetime):
+    now = dt.datetime(2099, 7, 4, 10, 11, 12)
+    mock_datetime.now.return_value = now
+    granule = metgen.Granule('abcd-1234')
+
+    actual = metgen.start_ledger(granule)
+
+    assert actual.granule == granule
+    assert actual.startDatetime == now
+
+@patch("nsidc.metgen.metgen.dt.datetime")
+def test_end_ledger(mock_datetime):
+    now = dt.datetime(2099, 7, 4, 10, 11, 12)
+    mock_datetime.now.return_value = now
+    granule = metgen.Granule('abcd-1234')
+    ledger = metgen.Ledger(granule, [metgen.Action('foo', True, '')], startDatetime = now)
+
+    actual = metgen.end_ledger(ledger)
+
+    assert actual.granule == granule
+    assert actual.successful == True
+    assert actual.startDatetime == now
+    assert actual.endDatetime == now
+
+@patch("nsidc.metgen.metgen.dt.datetime")
+def test_end_ledger_with_unsuccessful_actions(mock_datetime):
+    now = dt.datetime(2099, 7, 4, 10, 11, 12)
+    mock_datetime.now.return_value = now
+    granule = metgen.Granule('abcd-1234')
+    ledger = metgen.Ledger(granule,
+                           [metgen.Action('foo', False, ''), metgen.Action('bar', False, 'Oops')],
+                           startDatetime = now)
+
+    actual = metgen.end_ledger(ledger)
+
+    assert actual.granule == granule
+    assert actual.successful == False
+    assert actual.startDatetime == now
+    assert actual.endDatetime == now
