@@ -5,7 +5,7 @@ DEFAULT_STAGING_BUCKET_NAME = 'nsidc-cumulus-${environment}-ingest-staging'
 DEFAULT_WRITE_CNM_FILE = False
 DEFAULT_OVERWRITE_UMMG = False
 DEFAULT_CHECKSUM_TYPE = 'SHA256'
-DEFAULT_NUMBER = -1
+DEFAULT_NUMBER = 1000000
 
 # Configuration sections
 SOURCE_SECTION_NAME = 'Source'

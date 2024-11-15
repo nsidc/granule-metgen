@@ -1,12 +1,19 @@
 import configparser
 import dataclasses
 from datetime import datetime, timezone
+import logging
 import os.path
 import uuid
 
 from nsidc.metgen import aws
 from nsidc.metgen import constants
 
+
+class ValidationError(Exception):
+    errors: list[str]
+
+    def __init__(self, errors):
+        self.errors = errors
 
 @dataclasses.dataclass
 class Config:
@@ -26,32 +33,11 @@ class Config:
 
     def show(self):
         # TODO add section headings in the right spot (if we think we need them in the output)
-        print()
-        print('Using configuration:')
+        LOGGER = logging.getLogger('metgenc')
+        LOGGER.info('')
+        LOGGER.info('Using configuration:')
         for k,v in self.__dict__.items():
-            print(f'  + {k}: {v}')
-
-    def enhance(self, producer_granule_id):
-        mapping = dataclasses.asdict(self)
-        collection_details = self.collection_from_cmr(mapping)
-
-        mapping['auth_id'] = collection_details['auth_id']
-        mapping['version'] = collection_details['version']
-        mapping['producer_granule_id'] = producer_granule_id
-        mapping['submission_time'] = datetime.now(timezone.utc).isoformat()
-        mapping['uuid'] = str(uuid.uuid4())
-
-        return mapping
-
-    # Is the right place for this function?
-    def collection_from_cmr(self, mapping):
-        # TODO: Use auth_id and version from mapping object to retrieve collection
-        # metadata from CMR, including formatted version number, temporal range, and
-        # spatial coverage.
-        return {
-            'auth_id': mapping['auth_id'],
-            'version': mapping['version']
-        }
+            LOGGER.info(f'  + {k}: {v}')
 
 def config_parser_factory(configuration_file):
     """
@@ -126,5 +112,8 @@ def validate(configuration):
         ['staging_bucket_name', lambda name: aws.staging_bucket_exists(name), 'The staging bucket does not exist.'],
     ]
     errors = [msg for name, fn, msg in validations if not fn(getattr(configuration, name))]
-    return len(errors) == 0, errors
+    if len(errors) == 0:
+        return True
+    else:
+        raise ValidationError(errors)
 
