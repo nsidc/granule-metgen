@@ -110,6 +110,18 @@ def scrub_json_files(path):
         except Exception as e:
             print('Failed to delete %s: %s' % (file_path, e))
 
+def cnm_changes(configuration):
+    ummg_path, cnm_path = prepare_output_dirs(configuration)
+    all_existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
+
+    # initialize template content common to all files
+    cnms_body = cnms_body_template()
+    cnms_files = cnms_files_template()
+    cnm_content = cnms_message(mapping,
+                                   body_template=cnms_body,
+                                   files_template=cnms_files,
+                                   granule_files=granule_files)
+    publish_cnm(mapping, cnm_path, cnm_content)
 
 def process(configuration):
     """
