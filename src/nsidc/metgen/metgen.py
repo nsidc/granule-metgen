@@ -141,8 +141,8 @@ def process(configuration):
     all_existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
 
     # initialize template content common to all files
-    cnms_body_template = cnms_body_template()
-    cnms_files_template = cnms_files_template()
+    cnms_body = cnms_body_template()
+    cnms_files = cnms_files_template()
     processed_count = 0
 
     for producer_granule_id, granule_files in granules:
@@ -164,8 +164,8 @@ def process(configuration):
 
         stage(mapping, granule_files=granule_files)
         cnm_content = cnms_message(mapping,
-                                   body_template=cnms_body_template,
-                                   files_template=cnms_files_template,
+                                   body_template=cnms_body,
+                                   files_template=cnms_files,
                                    granule_files=granule_files)
         publish_cnm(mapping, cnm_path, cnm_content)
         print()
@@ -268,9 +268,9 @@ def cnms_message(mapping, body_template='', files_template = '', granule_files={
 
     for type, files in granule_files.items():
         for file in files:
-            populated_file_templates.append(files_template.safe_substitute(cnms_json_fields(mapping, file, type)))
+            populated_file_templates.append(json.loads(files_template.safe_substitute(cnms_json_fields(mapping, file, type))))
 
-    return(body_template.safe_substitute(mapping | { 'file_content': str(populated_file_templates),
+    return(body_template.safe_substitute(mapping | { 'file_content': json.dumps(populated_file_templates),
                                                      'cnm_schema_version': constants.CNM_JSON_SCHEMA_VERSION }))
 
 
