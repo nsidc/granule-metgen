@@ -226,7 +226,7 @@ def create_ummg(mapping, data_file_paths, ummg_file_path):
     summary['temporal_extent'] = populate_temporal(summary['temporal'])
 
     # Populate the body template
-    body = ummg_body_template().safe_substitute(mapping | summary)
+    body = ummg_body_template().safe_substitute(mapping | summary | { 'ummg_schema_version': constants.UMMG_JSON_SCHEMA_VERSION })
 
     # Save it all in a file.
     with open(ummg_file_path, "tw") as f:
@@ -367,6 +367,8 @@ def file_type_path(configuration, content_type):
     match content_type:
         case 'cnm':
             return configuration.cnm_path()
+        case 'ummg':
+            return configuration.ummg_path()
         case _:
             return ''
 
@@ -374,6 +376,8 @@ def schema_file_path(content_type):
     match content_type:
         case 'cnm':
             return constants.CNM_JSON_SCHEMA
+        case 'ummg':
+            return constants.UMMG_JSON_SCHEMA
         case _:
             return ''
 
@@ -381,6 +385,8 @@ def apply_schema(schema, json_file):
     json_error = False
     with open(json_file) as jf:
         json_content = json.load(jf)
+        json_content["ProviderDates"] = [{"Date": "2000", "Type": "Create"}]
+        json_content["GranuleUR"] = "FakeUR"
         try:
             jsonschema.validate(instance=json_content, schema=schema)
             print(f'Validated {json_file}')

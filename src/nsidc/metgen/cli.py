@@ -30,7 +30,7 @@ def info(config_filename):
 
 @cli.command()
 @click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
-@click.option('-t', '--type', 'content_type', help='JSON content type', default='cnm', show_default=True)
+@click.option('-t', '--type', 'content_type', help='JSON content type (cnm or ummg)', default='cnm', show_default=True)
 def validate(config_filename, content_type):
     """Validates the contents of local JSON files."""
     click.echo(metgen.banner())
