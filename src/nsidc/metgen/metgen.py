@@ -345,24 +345,39 @@ def initialize_template(file):
 
     return Template(template_str)
 
-def validate_cnm(configuration):
+def validate(configuration, content_type):
     """
-    Validate exist CNM output files using JSON schema
+    Validate local JSON files
     """
-    cnm_path = configuration.cnm_path()
+    output_file_path = file_type_path(configuration, content_type)
+    schema_file = schema_file_path(content_type)
 
-    print(f'Validating files in {cnm_path}...')
-    with open(constants.CNM_JSON_SCHEMA) as schema_file:
-        schema = json.load(schema_file)
+    print(f'Validating files in {output_file_path}...')
+    with open(schema_file) as sf:
+        schema = json.load(sf)
 
         # loop through all files and validate each one
-        for json_file in cnm_path.glob('*.json'):
-            validate(schema, json_file)
+        for json_file in output_file_path.glob('*.json'):
+            apply_schema(schema, json_file)
 
     print('Done with validations.')
     return True
 
-def validate(schema, json_file):
+def file_type_path(configuration, content_type):
+    match content_type:
+        case 'cnm':
+            return configuration.cnm_path()
+        case _:
+            return ''
+
+def schema_file_path(content_type):
+    match content_type:
+        case 'cnm':
+            return constants.CNM_JSON_SCHEMA
+        case _:
+            return ''
+
+def apply_schema(schema, json_file):
     json_error = False
     with open(json_file) as jf:
         json_content = json.load(jf)

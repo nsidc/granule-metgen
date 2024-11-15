@@ -29,12 +29,13 @@ def info(config_filename):
     configuration.show()
 
 @cli.command()
-@click.option('-c', '--config', 'config_filename', help='Path to configuration file specifying CNM file location', required=True)
-def validate_cnm(config_filename):
-    """Validates the contents of existing CNM JSON files."""
+@click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
+@click.option('-t', '--type', 'content_type', help='JSON content type', default='cnm', show_default=True)
+def validate(config_filename, content_type):
+    """Validates the contents of local JSON files."""
     click.echo(metgen.banner())
     configuration = config.configuration(config.config_parser_factory(config_filename), {})
-    metgen.validate_cnm(configuration)
+    metgen.validate(configuration, content_type)
 
 @cli.command()
 @click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)

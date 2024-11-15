@@ -2,9 +2,9 @@
   <img alt="NSIDC logo" src="https://nsidc.org/themes/custom/nsidc/logo.svg" width="150" />
 </p>
 
-# nsidc-metgen
+# MetGenC
 
-`nsidc-metgen` enables data producers as well as Operations staff managing the
+`MetGenC` enables data producers as well as Operations staff managing the
 data ingest workflow to create metadata files conforming to
 NASA's Common Metadata Repository UMM-G specification."
 
@@ -158,6 +158,14 @@ for the details.
         # Source the AWS profile (once) before running 'process'-- use 'default' or a named profile
         $ source scripts/env.sh default
         $ metgenc process --config example/modscg.ini
+
+* Validate JSON output
+
+        $ metgenc validate -c example/modscg.ini -t cnm
+
+  The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file:
+
+        $ check-jsonschema --schemafile <path to schema file> <path to CNM file>
 
 * Exit the Poetry shell:
 
