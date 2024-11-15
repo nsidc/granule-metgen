@@ -243,6 +243,7 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
     successful = True
     message = ''
     start = dt.datetime.now()
+    new_granule = None
     try:
         new_granule = fn(ledger.granule)
     except Exception as e:
@@ -252,9 +253,10 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
 
     # Store the result in the Ledger
     new_actions = ledger.actions.copy()
+    fn_name = fn.func.__name__ if hasattr(fn, 'func') else fn.__name__
     new_actions.append(
         Action(
-            fn.func.__name__,
+            fn_name,
             successful=successful,
             message=message,
             startDatetime=start,
@@ -264,7 +266,7 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
 
     return dataclasses.replace(
         ledger,
-        granule=new_granule,
+        granule=new_granule if new_granule else ledger.granule,
         actions=new_actions
     )
 
@@ -295,6 +297,8 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
     """
     Find the Granule's Collection and add it to the Granule.
     """
+    # TODO: When we start querying CMR, don't do this operation repeatedly;
+    #       we only need to get a Collection once.
     return dataclasses.replace(
         granule, 
         collection=Collection(configuration.auth_id, configuration.version)

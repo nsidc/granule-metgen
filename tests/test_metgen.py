@@ -2,6 +2,7 @@ from configparser import ConfigParser
 import datetime as dt
 from unittest.mock import patch
 
+from funcy import identity, partial
 import pytest
 
 from nsidc.metgen import config
@@ -157,3 +158,24 @@ def test_end_ledger_with_unsuccessful_actions(mock_datetime):
     assert actual.successful == False
     assert actual.startDatetime == now
     assert actual.endDatetime == now
+
+def test_recorder():
+    granule = metgen.Granule('abcd-1234')
+    ledger = metgen.start_ledger(granule)
+
+    new_ledger = partial(metgen.recorder, identity)(ledger)
+
+    assert new_ledger.granule == ledger.granule
+    assert len(new_ledger.actions) == 1
+
+def test_recorder_with_failing_operation():
+    granule = metgen.Granule('abcd-1234')
+    ledger = metgen.start_ledger(granule)
+    def failing_op():
+        raise Exception()
+
+    new_ledger = partial(metgen.recorder, failing_op)(ledger)
+
+    assert new_ledger.granule == ledger.granule
+    assert len(new_ledger.actions) == 1
+    assert new_ledger.actions[0].successful == False
