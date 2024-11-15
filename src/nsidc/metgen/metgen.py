@@ -463,6 +463,8 @@ def log_ledger(ledger: Ledger) -> Ledger:
         logger.debug(f"        Start     : {a.startDatetime}")
         logger.debug(f"        End       : {a.endDatetime}")
         logger.debug(f"        Successful: {a.successful}")
+        if not a.successful:
+            logger.debug(f"        Reason    : {a.message}")
     return ledger
 
 def summarize_results(ledgers: list[Ledger]) -> None:
