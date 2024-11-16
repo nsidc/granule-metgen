@@ -143,19 +143,6 @@ def scrub_json_files(path):
         except Exception as e:
             print('Failed to delete %s: %s' % (file_path, e))
 
-def cnm_changes(configuration):
-    ummg_path, cnm_path = prepare_output_dirs(configuration)
-    all_existing_ummg = [os.path.basename(i) for i in ummg_path.glob('*.json')]
-
-    # initialize template content common to all files
-    cnms_body = cnms_body_template()
-    cnms_files = cnms_files_template()
-    cnm_content = cnms_message(mapping,
-                                   body_template=cnms_body,
-                                   files_template=cnms_files,
-                                   granule_files=granule_files)
-    publish_cnm(mapping, cnm_path, cnm_content)
-
 def fn_process(configuration):
     gs = granules(Path(configuration.data_dir))
     work = [granule_work(g) for g in gs]
@@ -405,17 +392,9 @@ def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
     """
     Create a CNM submission message for the Granule.
     """
-    # Break up the JSON string into its components so information about multiple files is
-    # easier to add.
+    files_template = cnms_files_template()
     body_template = cnms_body_template()
-    body_content = body_template.safe_substitute(
-            dataclasses.asdict(granule) 
-            | dataclasses.asdict(granule.collection)
-            | dataclasses.asdict(configuration)
-            )
-    body_json = json.loads(body_content)
-
-    file_template = cnms_files_template()
+    populated_file_templates = []
 
     granule_files = {
         'data': granule.data_filenames,
@@ -423,13 +402,21 @@ def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
     }
     for type, files in granule_files.items():
         for file in files:
-            values = cnms_file_json_parts(configuration.staging_bucket_name, granule, file, type)
-            file_json = file_template.safe_substitute(values)
-            body_json['product']['files'].append(json.loads(file_json))
+            populated_file_templates.append(json.loads(files_template.safe_substitute(
+                cnms_file_json_parts(configuration.staging_bucket_name,
+                                     granule,
+                                     file,
+                                     type))))
 
     return dataclasses.replace(
         granule,
-        cnm_message=json.dumps(body_json)
+        cnm_message = body_template.safe_substitute(
+                dataclasses.asdict(granule)
+                | dataclasses.asdict(granule.collection)
+                | dataclasses.asdict(configuration)
+                | { 'file_content': json.dumps(populated_file_templates),
+                    'cnm_schema_version': constants.CNM_JSON_SCHEMA_VERSION }
+                )
     )
 
 def write_cnm(configuration: config.Config, granule: Granule) -> Granule:
@@ -437,7 +424,11 @@ def write_cnm(configuration: config.Config, granule: Granule) -> Granule:
     Write a CNM message to a file.
     """
     if configuration.write_cnm_file:
-        cnm_file = os.path.join(configuration.local_output_dir, 'cnm', granule.producer_granule_id + '.cnm.json')
+        cnm_file = os.path.join(
+            configuration.local_output_dir,
+            'cnm',
+            granule.producer_granule_id + '.cnm.json'
+        )
         with open(cnm_file, "tw") as f:
             print(granule.cnm_message, file=f)
     return granule
@@ -446,14 +437,6 @@ def publish_cnm(configuration: config.Config, granule: Granule) -> Granule:
     """
     Publish a CNM message to a Kinesis stream.
     """
-    if configuration.write_cnm_file:
-        cnm_file = os.path.join(
-            configuration.local_output_dir, 
-            'cnm', 
-            granule.producer_granule_id + '.cnm.json'
-        )
-        with open(cnm_file, "tw") as f:
-            print(granule.cnm_message, file=f)
     stream_name = configuration.kinesis_stream_name
     aws.post_to_kinesis(stream_name, granule.cnm_message)
     return granule
