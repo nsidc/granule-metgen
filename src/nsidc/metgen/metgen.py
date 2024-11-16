@@ -120,29 +120,6 @@ def init_config(configuration_file):
 
     return configuration_file
 
-def prepare_output_dirs(configuration):
-    """
-    Generate paths to ummg and cnm output directories.
-    Remove any existing UMM-G files if needed.
-    TODO: create local_output_dir, ummg_dir, and cnm subdir if they don't exist
-    """
-    ummg_path = configuration.ummg_path()
-    cnm_path = configuration.cnm_path()
-
-    if configuration.overwrite_ummg:
-        scrub_json_files(ummg_path)
-
-    return (ummg_path, cnm_path)
-
-def scrub_json_files(path):
-    print(f'Removing existing files in {path}')
-    for file_path in path.glob('*.json'):
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-        except Exception as e:
-            print('Failed to delete %s: %s' % (file_path, e))
-
 def fn_process(configuration):
     gs = granules(Path(configuration.data_dir))
     work = [granule_work(g) for g in gs]
@@ -298,8 +275,9 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
     """
     Find the Granule's Collection and add it to the Granule.
     """
-    # TODO: When we start querying CMR, don't do this operation repeatedly;
-    #       we only need to get a Collection once.
+    # TODO: When we start querying CMR, refactor the pipeline to retrieve
+    # collection information from CMR once, then associate it with each
+    # granule.
     return dataclasses.replace(
         granule, 
         collection=Collection(configuration.auth_id, configuration.version)
@@ -316,11 +294,7 @@ def prepare_granule(configuration: config.Config, granule: Granule) -> Granule:
     )
 
 def find_existing_ummg(configuration: config.Config, granule: Granule) -> Granule:
-    ummg_filename = Path(
-        configuration.local_output_dir, 
-        configuration.ummg_dir, 
-        granule.producer_granule_id + '.json'
-    )
+    ummg_filename = configuration.ummg_path().joinpath(granule.producer_granule_id + '.json')
 
     if ummg_filename.exists():
         return dataclasses.replace(granule, ummg_filename=ummg_filename)
@@ -331,14 +305,11 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     """
     Create the UMM-G file for the Granule.
     """
-    # TODO: Implement guard clause: return if we are not overwriting ummg
-    #       and we already have one.
-    if granule.ummg_filename != Maybe.empty:
-        pass
+    # Return if we are not overwriting UMM-G and it already exists.
+    if granule.ummg_filename != Maybe.empty and not configuration.overwrite_ummg:
+        return granule
 
-    ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
-    ummg_file = granule.producer_granule_id + '.json'
-    ummg_file_path = os.path.join(ummg_path, ummg_file)
+    ummg_file_path = configuration.ummg_path().joinpath(granule.producer_granule_id + '.json')
 
     # Populated metadata_details dict looks like:
     # {
@@ -424,11 +395,7 @@ def write_cnm(configuration: config.Config, granule: Granule) -> Granule:
     Write a CNM message to a file.
     """
     if configuration.write_cnm_file:
-        cnm_file = os.path.join(
-            configuration.local_output_dir,
-            'cnm',
-            granule.producer_granule_id + '.cnm.json'
-        )
+        cnm_file = configuration.cnm_path().joinpath(granule.producer_granule_id + '.cnm.json')
         with open(cnm_file, "tw") as f:
             print(granule.cnm_message, file=f)
     return granule
