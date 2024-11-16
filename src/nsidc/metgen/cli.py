@@ -1,9 +1,13 @@
+import logging
+
 import click
 
 from nsidc.metgen import config
 from nsidc.metgen import metgen
 from nsidc.metgen import constants
 
+
+LOGGER = logging.getLogger('metgenc')
 
 @click.group(epilog="For detailed help on each command, run: metgenc COMMAND --help")
 def cli():
@@ -26,6 +30,7 @@ def info(config_filename):
     """Summarizes the contents of a configuration file."""
     click.echo(metgen.banner())
     configuration = config.configuration(config.config_parser_factory(config_filename), {})
+    metgen.init_logging(configuration)
     configuration.show()
 
 @cli.command()
@@ -40,7 +45,7 @@ def validate(config_filename, content_type):
 @cli.command()
 @click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
 @click.option('-e', '--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
-@click.option('-n', '--number', help="Process at most 'count' granules.", metavar='count', required=False, default=-1)
+@click.option('-n', '--number', help="Process at most 'count' granules.", metavar='count', required=False, default=constants.DEFAULT_NUMBER)
 @click.option('-wc', '--write-cnm', is_flag=True, required=False, default=None, help="Write CNM messages to files.")
 @click.option('-o', '--overwrite', is_flag=True, required=False, default=None, help="Overwrite existing UMM-G files.")
 def process(config_filename, env, overwrite, write_cnm, number):
@@ -51,11 +56,21 @@ def process(config_filename, env, overwrite, write_cnm, number):
         'overwrite_ummg': overwrite,
         'number': number
     }
-    configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
     try:
+        configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
+        metgen.init_logging(configuration)
+        configuration.show()
+        config.validate(configuration)
         metgen.process(configuration)
+    except config.ValidationError as e:
+        logger = logging.getLogger('metgenc')
+        logger.error("\nThe configuration is invalid:")
+        for error in e.errors:
+            logger.error(f"  * {error}")
+        exit(1)
     except Exception as e:
-        print("\nUnable to process data: " + str(e))
+        logger = logging.getLogger('metgenc')
+        logger.error("\nUnable to process data: " + str(e))
         exit(1)
     click.echo(f'Processing complete')
 

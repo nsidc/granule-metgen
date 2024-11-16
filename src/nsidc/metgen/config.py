@@ -1,6 +1,7 @@
 import configparser
 import dataclasses
 from datetime import datetime, timezone
+import logging
 import os.path
 from pathlib import Path
 import uuid
@@ -8,6 +9,12 @@ import uuid
 from nsidc.metgen import aws
 from nsidc.metgen import constants
 
+
+class ValidationError(Exception):
+    errors: list[str]
+
+    def __init__(self, errors):
+        self.errors = errors
 
 @dataclasses.dataclass
 class Config:
@@ -27,10 +34,11 @@ class Config:
 
     def show(self):
         # TODO add section headings in the right spot (if we think we need them in the output)
-        print()
-        print('Using configuration:')
+        LOGGER = logging.getLogger('metgenc')
+        LOGGER.info('')
+        LOGGER.info('Using configuration:')
         for k,v in self.__dict__.items():
-            print(f'  + {k}: {v}')
+            LOGGER.info(f'  + {k}: {v}')
 
     def ummg_path(self):
         return Path(self.local_output_dir, self.ummg_dir)
@@ -112,5 +120,8 @@ def validate(configuration):
         ['staging_bucket_name', lambda name: aws.staging_bucket_exists(name), 'The staging bucket does not exist.'],
     ]
     errors = [msg for name, fn, msg in validations if not fn(getattr(configuration, name))]
-    return len(errors) == 0, errors
+    if len(errors) == 0:
+        return True
+    else:
+        raise ValidationError(errors)
 

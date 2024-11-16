@@ -1,6 +1,8 @@
 from configparser import ConfigParser
+import datetime as dt
 from unittest.mock import patch
 
+from funcy import identity, partial
 import pytest
 
 from nsidc.metgen import config
@@ -80,23 +82,23 @@ def test_returns_datetime_range():
     assert '"EndingDateTime": "456"' in result
 
 def test_s3_object_path_has_no_leading_slash():
-    mapping = {
-        'auth_id': 'ABCD',
-        'version': 2,
-        'uuid': 'abcd-1234',
-    }
+    granule = metgen.Granule(
+        'foo',
+        metgen.Collection('ABCD', 2),
+        uuid='abcd-1234'
+    )
     expected = 'external/ABCD/2/abcd-1234/xyzzy.bin'
-    assert metgen.s3_object_path(mapping, 'xyzzy.bin') == expected
+    assert metgen.s3_object_path(granule, 'xyzzy.bin') == expected
 
 def test_s3_url_simple_case():
-    mapping = {
-        'auth_id': 'ABCD',
-        'version': 2,
-        'uuid': 'abcd-1234',
-        'staging_bucket_name': 'xyzzy-bucket'
-    }
+    staging_bucket_name = 'xyzzy-bucket'
+    granule = metgen.Granule(
+        'foo',
+        metgen.Collection('ABCD', 2),
+        uuid='abcd-1234'
+    )
     expected = 's3://xyzzy-bucket/external/ABCD/2/abcd-1234/xyzzy.bin'
-    assert metgen.s3_url(mapping, 'xyzzy.bin') == expected
+    assert metgen.s3_url(staging_bucket_name, granule, 'xyzzy.bin') == expected
 
 @patch('nsidc.metgen.metgen.scrub_json_files')
 def test_does_scrub_ummg(scrub_mock, fake_config):
@@ -115,3 +117,65 @@ def test_builds_output_paths(scrub_mock, fake_config):
     ummg_path, cnm_path = metgen.prepare_output_dirs(fake_config)
     assert str(ummg_path) == '/'.join([fake_config.local_output_dir, fake_config.ummg_dir])
     assert str(cnm_path) == '/'.join([fake_config.local_output_dir, 'cnm'])
+
+@patch("nsidc.metgen.metgen.dt.datetime")
+def test_start_ledger(mock_datetime):
+    now = dt.datetime(2099, 7, 4, 10, 11, 12)
+    mock_datetime.now.return_value = now
+    granule = metgen.Granule('abcd-1234')
+
+    actual = metgen.start_ledger(granule)
+
+    assert actual.granule == granule
+    assert actual.startDatetime == now
+
+@patch("nsidc.metgen.metgen.dt.datetime")
+def test_end_ledger(mock_datetime):
+    now = dt.datetime(2099, 7, 4, 10, 11, 12)
+    mock_datetime.now.return_value = now
+    granule = metgen.Granule('abcd-1234')
+    ledger = metgen.Ledger(granule, [metgen.Action('foo', True, '')], startDatetime = now)
+
+    actual = metgen.end_ledger(ledger)
+
+    assert actual.granule == granule
+    assert actual.successful == True
+    assert actual.startDatetime == now
+    assert actual.endDatetime == now
+
+@patch("nsidc.metgen.metgen.dt.datetime")
+def test_end_ledger_with_unsuccessful_actions(mock_datetime):
+    now = dt.datetime(2099, 7, 4, 10, 11, 12)
+    mock_datetime.now.return_value = now
+    granule = metgen.Granule('abcd-1234')
+    ledger = metgen.Ledger(granule,
+                           [metgen.Action('foo', False, ''), metgen.Action('bar', False, 'Oops')],
+                           startDatetime = now)
+
+    actual = metgen.end_ledger(ledger)
+
+    assert actual.granule == granule
+    assert actual.successful == False
+    assert actual.startDatetime == now
+    assert actual.endDatetime == now
+
+def test_recorder():
+    granule = metgen.Granule('abcd-1234')
+    ledger = metgen.start_ledger(granule)
+
+    new_ledger = partial(metgen.recorder, identity)(ledger)
+
+    assert new_ledger.granule == ledger.granule
+    assert len(new_ledger.actions) == 1
+
+def test_recorder_with_failing_operation():
+    granule = metgen.Granule('abcd-1234')
+    ledger = metgen.start_ledger(granule)
+    def failing_op():
+        raise Exception()
+
+    new_ledger = partial(metgen.recorder, failing_op)(ledger)
+
+    assert new_ledger.granule == ledger.granule
+    assert len(new_ledger.actions) == 1
+    assert new_ledger.actions[0].successful == False

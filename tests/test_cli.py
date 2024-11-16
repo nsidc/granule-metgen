@@ -38,11 +38,11 @@ def test_info_with_config(cli_runner):
     result = cli_runner.invoke(cli, ['info', '--config', './example/modscg.ini'])
     assert result.exit_code == 0
 
-def test_info_with_config_summarizes(cli_runner):
+@patch('nsidc.metgen.config.Config.show')
+def test_info_with_config_summarizes(mock, cli_runner):
     result = cli_runner.invoke(cli, ['info', '--config', './example/modscg.ini'])
-
-    for key in ['auth_id', 'data_dir', 'environment', 'local_output_dir', 'kinesis_stream_name', 'provider', 'ummg_dir', 'version']:
-        assert key in result.output
+    assert mock.called
+    assert result.exit_code == 0
 
 @patch('nsidc.metgen.metgen.process')
 def test_process_requires_config(mock, cli_runner):
@@ -50,18 +50,20 @@ def test_process_requires_config(mock, cli_runner):
     assert not mock.called
     assert result.exit_code != 0
 
+@patch('nsidc.metgen.config.validate')
 @patch('nsidc.metgen.metgen.process')
-def test_process_with_config_calls_process(mock, cli_runner):
+def test_process_with_config_calls_process(mock_validate, mock_process, cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
-    assert mock.called
+    assert mock_process.called
 
+@patch('nsidc.metgen.config.validate')
 @patch('nsidc.metgen.metgen.process')
-def test_process_with_granule_limit(process_mock, cli_runner):
+def test_process_with_granule_limit(mock_validate, mock_process, cli_runner):
     number_files = 2
     result = cli_runner.invoke(cli, ['process', '-n', str(number_files), '--config', './example/modscg.ini'])
 
-    assert process_mock.called
-    args = process_mock.call_args.args
+    assert mock_process.called
+    args = mock_process.call_args.args
     assert len(args) == 1
     configuration = args[0]
     assert configuration.number == number_files
@@ -69,7 +71,8 @@ def test_process_with_granule_limit(process_mock, cli_runner):
 
 @patch('nsidc.metgen.config.configuration')
 @patch('nsidc.metgen.metgen.process')
-def test_process_with_no_write_cnm(process_mock, configuration_mock, cli_runner):
+@patch('nsidc.metgen.config.validate')
+def test_process_with_no_write_cnm(mock_validate, process_mock, configuration_mock, cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
 
     assert configuration_mock.called
@@ -80,7 +83,8 @@ def test_process_with_no_write_cnm(process_mock, configuration_mock, cli_runner)
 
 @patch('nsidc.metgen.config.configuration')
 @patch('nsidc.metgen.metgen.process')
-def test_process_with_write_cnm(process_mock, configuration_mock, cli_runner):
+@patch('nsidc.metgen.config.validate')
+def test_process_with_write_cnm(mock_validate, process_mock, configuration_mock, cli_runner):
     result = cli_runner.invoke(cli, ['process', '-wc', '--config', './example/modscg.ini'])
 
     assert configuration_mock.called
@@ -91,7 +95,8 @@ def test_process_with_write_cnm(process_mock, configuration_mock, cli_runner):
 
 @patch('nsidc.metgen.config.configuration')
 @patch('nsidc.metgen.metgen.process')
-def test_process_with_no_overwrite(process_mock, configuration_mock, cli_runner):
+@patch('nsidc.metgen.config.validate')
+def test_process_with_no_overwrite(mock_validate, process_mock, configuration_mock, cli_runner):
     result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
 
     assert configuration_mock.called
@@ -102,7 +107,8 @@ def test_process_with_no_overwrite(process_mock, configuration_mock, cli_runner)
 
 @patch('nsidc.metgen.config.configuration')
 @patch('nsidc.metgen.metgen.process')
-def test_process_with_overwrite(process_mock, configuration_mock, cli_runner):
+@patch('nsidc.metgen.config.validate')
+def test_process_with_overwrite(mock_validate, process_mock, configuration_mock, cli_runner):
     result = cli_runner.invoke(cli, ['process', '-o', '--config', './example/modscg.ini'])
 
     assert configuration_mock.called
