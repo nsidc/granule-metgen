@@ -330,10 +330,9 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     """
     Create the UMM-G file for the Granule.
     """
-    # TODO: Implement guard clause: return if we are not overwriting ummg
-    #       and we already have one.
-    if granule.ummg_filename != Maybe.empty:
-        pass
+    # Return if we are not overwriting UMM-G and it already exists.
+    if granule.ummg_filename != Maybe.empty and not configuration.overwrite_ummg:
+        return granule
 
     ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
     ummg_file = granule.producer_granule_id + '.json'
