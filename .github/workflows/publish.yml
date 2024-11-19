@@ -44,6 +44,9 @@ jobs:
 
       - run: poetry build
 
+      - uses: actions/upload-artifact@v4
+        path: dist
+
   publish:
     if: github.ref_type == 'tag'
     name: Publish to PyPI
