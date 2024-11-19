@@ -43,7 +43,7 @@ def init_logging(configuration: config.Config):
     console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
     logger.addHandler(console_handler)
 
-    logfile_handler = logging.FileHandler("metgenc.log", "w")
+    logfile_handler = logging.FileHandler("metgenc.log", "a")
     logfile_handler.setLevel(logging.DEBUG)
     logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
     logger.addHandler(logfile_handler)
@@ -551,7 +551,9 @@ def validate(configuration, content_type):
     output_file_path = file_type_path(configuration, content_type)
     schema_file = schema_file_path(content_type)
 
-    print(f'Validating files in {output_file_path}...')
+    logger = logging.getLogger('metgenc')
+    logger.info('')
+    logger.info(f"Validating files in {output_file_path}...")
     with open(schema_file) as sf:
         schema = json.load(sf)
 
@@ -559,7 +561,7 @@ def validate(configuration, content_type):
         for json_file in output_file_path.glob('*.json'):
             apply_schema(schema, json_file)
 
-    print('Done with validations.')
+    logger.info("Validations complete.")
     return True
 
 def file_type_path(configuration, content_type):
@@ -577,17 +579,14 @@ def schema_file_path(content_type):
             return ''
 
 def apply_schema(schema, json_file):
-    json_error = False
+    logger = logging.getLogger('metgenc')
     with open(json_file) as jf:
         json_content = json.load(jf)
         try:
             jsonschema.validate(instance=json_content, schema=schema)
-            print(f'Validated {json_file}')
+            logger.info(f"Validated {json_file}")
         except jsonschema.exceptions.ValidationError as err:
-            json_error = err
-
-    if json_error:
-        print(f'Validation failed for "{json_error.validator}" in {json_file}: {json_error.validator_value}')
+            logger.error(f'Validation failed for "{err.validator}" in {json_file}: {err.validator_value}')
 
     return True
 

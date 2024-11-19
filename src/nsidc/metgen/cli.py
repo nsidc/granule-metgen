@@ -40,6 +40,7 @@ def validate(config_filename, content_type):
     """Validates the contents of local JSON files."""
     click.echo(metgen.banner())
     configuration = config.configuration(config.config_parser_factory(config_filename), {})
+    metgen.init_logging(configuration)
     metgen.validate(configuration, content_type)
 
 @cli.command()
