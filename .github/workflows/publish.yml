@@ -47,7 +47,7 @@ jobs:
   publish:
     if: github.ref_type == 'tag'
     name: Publish to PyPI
-    needs: [dist]
+    needs: [build]
     environment:
       name: PyPI
       url: https://pypi.org/p/nsidc-metgenc
