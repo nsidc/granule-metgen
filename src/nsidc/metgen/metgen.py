@@ -142,12 +142,6 @@ def scrub_json_files(path):
         except Exception as e:
             print('Failed to delete %s: %s' % (file_path, e))
 
-def fn_process(configuration):
-    gs = granules(Path(configuration.data_dir))
-    work = [granule_work(g) for g in gs]
-    results = [process_work(w) for w in work]
-    summary = summarize_results(results)
-
 # -------------------------------------------------------------------
 # Data structures for processing Granules and recording results
 # -------------------------------------------------------------------
