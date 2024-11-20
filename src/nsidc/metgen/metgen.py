@@ -466,12 +466,19 @@ def summarize_results(ledgers: list[Ledger]) -> None:
     """
     successful_count = len(list(filter(lambda r: r.successful, ledgers)))
     failed_count = len(list(filter(lambda r: not r.successful, ledgers)))
+    if len(ledgers) > 0:
+        start = ledgers[0].startDatetime
+        end = ledgers[-1].endDatetime
+    else:
+        start = dt.datetime.now()
+        end = dt.datetime.now()
+
     logger = logging.getLogger("metgenc")
     logger.info("Processing Summary")
     logger.info("==================")
     logger.info(f"Granules  : {len(ledgers)}")
-    logger.info(f"Start     : {ledgers[0].startDatetime}")
-    logger.info(f"End       : {ledgers[-1].endDatetime}")
+    logger.info(f"Start     : {start}")
+    logger.info(f"End       : {end}")
     logger.info(f"Successful: {successful_count}")
     logger.info(f"Failed    : {failed_count}")
 
