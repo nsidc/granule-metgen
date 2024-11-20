@@ -110,6 +110,7 @@ def validate(configuration):
         # ['ummg_dir', lambda dir: os.path.exists(dir), 'The ummg_dir does not exist.'],  ## validate "local_output_dir/ummg_dir" as part of issue-71
         ['kinesis_stream_name', lambda name: aws.kinesis_stream_exists(name), 'The kinesis stream does not exist.'],
         ['staging_bucket_name', lambda name: aws.staging_bucket_exists(name), 'The staging bucket does not exist.'],
+        ['number', lambda number: 0 < number, 'The number of granules to process must be positive.'],
     ]
     errors = [msg for name, fn, msg in validations if not fn(getattr(configuration, name))]
     if len(errors) == 0:
