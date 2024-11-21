@@ -4,9 +4,11 @@
 
 # nsidc-metgen
 
-`nsidc-metgen` enables data producers as well as Operations staff managing the
-data ingest workflow to create metadata files conforming to
-NASA's Common Metadata Repository UMM-G specification."
+`nsidc-metgen` via the MetGenC utility, enables Operations staff and data
+producers to create metadata files conforming to NASA's Common Metadata Repository UMM-G
+specification and ingest data directly to NASA EOSDIS’s Cumulus archive. Cumulus is an
+open source cloud-based data ingest, archive, distribution, and management framework
+developed for NASA's Earth Science data.
 
 ## Level of Support
 
@@ -44,14 +46,16 @@ instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide
 ## Assumptions
 
 - Checksums are all SHA256
-- The global attribute "date_modified" exists and will be used to represent
+- In the data files to be ingested:
+  - The global attribute "date_modified" exists and will be used to represent
   the production date and time.
-- Global attributes "time_coverage_start" and "time_coverage_end" exist and
+  - Global attributes "time_coverage_start" and "time_coverage_end" exist and
   will be used for the time range metadata values.
-- Only one coordinate system is used by all variables (i.e. only one grid_mapping)
-- (x[0],y[0]) represents the upper left corner of the spatial coverage.
-- x,y coordinates represent the center of the pixel. The pixel size in the
-  GeoTransform attribute is used to determine the padding added to x and y values.
+  - Only one coordinate system is used by all variables (i.e. only one grid mapping variable is present in a file)
+  - (x[0],y[0]) represents the upper left corner of the spatial coverage.
+  - x,y coordinates represent the center of the pixel
+  - The grid mapping variable contains a GeoTransform attribute (which defines the pixel size ), and
+  can be used to determine the padding added to x and y values.
 - Date/time strings can be parsed using `datetime.fromisoformat`
 
 ## Installation
@@ -74,7 +78,8 @@ Enter the `granule-metgen` directory and run Poetry to have it install the `gran
     $ poetry install
     $ poetry shell
 
-With the Poetry shell running, start the metgenc tool and verify that it’s working by requesting its usage options and having them returned:
+With the Poetry shell running, start the metgenc tool just to verify that it’s working by requesting its usage options and having them
+returned (there’s more to do—explained in the **Usage** section below—before MetGenC can be run successfully to create ummg, cnm, and stage data!)::
 
     $ metgenc --help
     Usage: metgenc [OPTIONS] COMMAND [ARGS]...
@@ -90,9 +95,9 @@ With the Poetry shell running, start the metgenc tool and verify that it’s wor
 ## AWS Credentials
 
 In order to process science data and stage it for Cumulus, you must first create & setup your AWS
-credentials. Several options for doing this are given here:
+credentials. Two options for doing this are detailed here:
 
-### Manually Creating Configuration Files
+### Option 1: Manually Creating Configuration Files
 
 First, create a directory in your user's home directory to store the AWS configuration:
 
@@ -117,7 +122,7 @@ Finally, restrict the permissions of the directory and files:
 When you obtain the AWS key pair (not covered here), edit the `~/.aws/credentials` file
 and replace `TBD` with the public and secret key values.
 
-### Using the AWS CLI
+### Option 2: Using the AWS CLI to Create Configuration Files
 
 You may install (or already have it installed) the AWS Command Line Interface on the
 machine where you are running the tool. Follow the 
@@ -140,14 +145,47 @@ documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-fi
 for the details.
 
 ## Usage
+When you have data files, a Cumulus Collection and its Rules established in the Cumulus Dashboard, you’re ready to run
+MetGenC to generate umm-g files, cnm messages, and kick off data ingest directly to Cumulus! Note: MetGenC can be run without
+a Cumulus Collection ready, it will only function to output umm-g metadata files and cnm messages.
+
+### Familiarizing Yourself with MetGenC
 
 * Show the help text:
 
         $ metgenc --help
+```
+  Usage: metgenc [OPTIONS] COMMAND [ARGS]...
 
-* Show the help text for an individual command:
+  The metgenc utility allows users to create granule-level metadata, stage
+  granule files and their associated metadata to Cumulus, and post CNM
+  messages.
 
-        $ metgenc init --help
+Options:
+  --help  Show this message and exit.`
+
+Commands:
+  info     Summarizes the contents of a configuration file.
+  init     Populates a configuration file based on user input.
+  process  Processes science data files based on configuration file...
+```
+
+  For detailed help on each command, run: metgenc <command> --help`, for example:
+
+        $ metgenc process --help
+  ```
+  Usage: metgenc process [OPTIONS]
+
+  Processes science data files based on configuration file contents.
+
+Options:
+  -c, --config TEXT   Path to configuration file  [required]
+  -e, --env TEXT      environment  [default: uat]
+  -n, --number count  Process at most 'count' granules.
+  -wc, --write-cnm    Write CNM messages to files.
+  -o, --overwrite     Overwrite existing UMM-G files.
+  --help              Show this message and exit.
+  ```
 
 * Show summary information about an `metgenc` configuration file. Here we use the example configuration file provided in the repo:
 
