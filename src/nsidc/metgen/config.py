@@ -46,6 +46,8 @@ def config_parser_factory(configuration_file):
     if configuration_file is None or not os.path.exists(configuration_file):
         raise ValueError(f'Unable to find configuration file {configuration_file}')
     cfg_parser = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+    # If the config parser gets no value (empty string), interpret it as False
+    cfg_parser.BOOLEAN_STATES |= [('', False)]
     cfg_parser.read(configuration_file)
     return cfg_parser
 
