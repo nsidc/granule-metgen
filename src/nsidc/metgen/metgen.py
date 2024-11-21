@@ -120,11 +120,28 @@ def init_config(configuration_file):
 
     return configuration_file
 
-def fn_process(configuration):
-    gs = granules(Path(configuration.data_dir))
-    work = [granule_work(g) for g in gs]
-    results = [process_work(w) for w in work]
-    summary = summarize_results(results)
+def prepare_output_dirs(configuration):
+    """
+    Generate paths to ummg and cnm output directories.
+    Remove any existing UMM-G files if needed.
+    TODO: create local_output_dir, ummg_dir, and cnm subdir if they don't exist
+    """
+    ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
+    cnm_path = Path(configuration.local_output_dir, 'cnm')
+
+    if configuration.overwrite_ummg:
+        scrub_json_files(ummg_path)
+
+    return (ummg_path, cnm_path)
+
+def scrub_json_files(path):
+    print(f'Removing existing files in {path}')
+    for file_path in path.glob('*.json'):
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+        except Exception as e:
+            print('Failed to delete %s: %s' % (file_path, e))
 
 # -------------------------------------------------------------------
 # Data structures for processing Granules and recording results
@@ -437,12 +454,19 @@ def summarize_results(ledgers: list[Ledger]) -> None:
     """
     successful_count = len(list(filter(lambda r: r.successful, ledgers)))
     failed_count = len(list(filter(lambda r: not r.successful, ledgers)))
+    if len(ledgers) > 0:
+        start = ledgers[0].startDatetime
+        end = ledgers[-1].endDatetime
+    else:
+        start = dt.datetime.now()
+        end = dt.datetime.now()
+
     logger = logging.getLogger("metgenc")
     logger.info("Processing Summary")
     logger.info("==================")
     logger.info(f"Granules  : {len(ledgers)}")
-    logger.info(f"Start     : {ledgers[0].startDatetime}")
-    logger.info(f"End       : {ledgers[-1].endDatetime}")
+    logger.info(f"Start     : {start}")
+    logger.info(f"End       : {end}")
     logger.info(f"Successful: {successful_count}")
     logger.info(f"Failed    : {failed_count}")
 
