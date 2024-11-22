@@ -7,6 +7,9 @@ DEFAULT_OVERWRITE_UMMG = False
 DEFAULT_CHECKSUM_TYPE = 'SHA256'
 DEFAULT_NUMBER = 1000000
 
+# Logging
+ROOT_LOGGER = 'metgenc'
+
 # JSON schema locations and versions
 CNM_JSON_SCHEMA = 'src/nsidc/metgen/json-schema/cumulus_sns_schema.json'
 CNM_JSON_SCHEMA_VERSION = '1.6.1'

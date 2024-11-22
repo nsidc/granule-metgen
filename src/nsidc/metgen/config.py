@@ -34,7 +34,7 @@ class Config:
 
     def show(self):
         # TODO add section headings in the right spot (if we think we need them in the output)
-        LOGGER = logging.getLogger('metgenc')
+        LOGGER = logging.getLogger(constants.ROOT_LOGGER)
         LOGGER.info('')
         LOGGER.info('Using configuration:')
         for k,v in self.__dict__.items():

@@ -56,7 +56,64 @@ instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide
   - x,y coordinates represent the center of the pixel
   - The grid mapping variable contains a GeoTransform attribute (which defines the pixel size ), and
   can be used to determine the padding added to x and y values.
+- Only one coordinate system is used by all variables (i.e. only one grid_mapping)
+- (x[0],y[0]) represents the upper left corner of the spatial coverage.
+- x,y coordinates represent the center of the pixel.
 - Date/time strings can be parsed using `datetime.fromisoformat`
+
+https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3
+https://cfconventions.org/Data/cf-conventions/cf-conventions-1.11/cf-conventions.html
+
+**Required** required
+**R+** highly or strongly recommended
+**R** recommended
+**S** suggested
+
+| Attribute (location)         | ACDD | CF Conventions | NSIDC Guidelines | Comments |
+| ---------------------------- | ---- | -------------- | ---------------- | -------- |
+| date_modified (global)       | S    |                | R                | 6        |
+| time_coverage_start (global) | R    |                | R                | 7
+| time_coverage_end (global)   | R    |                | R                | 7
+| standard_name (variable)     | R+   | R+             |                  |
+| grid_mapping (data variable) |      | Required       |                  | 2 |
+| grid_mapping_name (variable) |      | Required       | R+               | 2 
+| crs_wkt (variable)           |      |                | R                | 5
+| GeoTransform (variable)      |      |                | R                | 1 |
+| var with standard_name of projection_x_coordinate  | | | R | 3
+| var with standard_name of projection_y_coordinate  | | | R | 4 
+| Conventions (global)         | R+   | Required | R | Not currently used by metgenc |
+
+Notes
+1. Associated with variable having grid_mapping_name attribute. Used to determine pixel size and padding added to x and y values.
+2. Required for declaring horizontal coordinate reference system
+3. currently assuming variable name x
+4. currently assuming variable name y
+5. Associated with grid_mapping_name variable
+6. used to represent the production date and time.
+7. Global attributes "time_coverage_start" and "time_coverage_end" exist and
+  will be used for the time range metadata values.
+
+use data from x and y coordinate variables
+
+TODO:
+x.data (need to change current assumption of x variable to look for variable with standard_name projection_x_coordinate or axis attribute)
+y.data (need to change current assumption of y variable to look for variable with standard_name projection_y_coordinate)
+
+
+R+ highly or strongly recommended
+R recommended
+S suggested
+Required required
+
+
+CF conventions
+file has extension `.nc`
+include discussion of units? time coordinate must have units
+axis attribute identifies X and Y
+
+NetCDF Users Guide
+Groups and scoping in netCDF files -- not considered in our current handling
+
 
 ## Installation
 
