@@ -52,7 +52,7 @@ def cfg_parser():
     }
     cp['Settings'] = {
         'checksum_type': 'SHA256',
-        'number': -1
+        'number': 1
     }
     return cp
 
@@ -65,6 +65,14 @@ def test_config_parser_without_filename():
 def test_config_parser_return_type(mock):
     result = config.config_parser_factory('foo.ini')
     assert isinstance(result, ConfigParser)
+
+@patch('nsidc.metgen.metgen.os.path.exists', return_value = True)
+def test_config_parser_handles_empty_strings_for_booleans(mock):
+    cp = config.config_parser_factory('foo.ini')
+    cp['foo'] = {
+        'success': ''
+    }
+    assert cp.getboolean('foo', 'success') == False
 
 def test_config_from_config_parser(cfg_parser):
     cfg = config.configuration(cfg_parser, {}, constants.DEFAULT_CUMULUS_ENVIRONMENT)
@@ -143,7 +151,7 @@ def test_configuration_has_good_defaults(cfg_parser, section, option, expected):
 @patch('nsidc.metgen.metgen.os.path.exists', return_value = True)
 @patch('nsidc.metgen.metgen.aws.kinesis_stream_exists', return_value = True)
 @patch('nsidc.metgen.metgen.aws.staging_bucket_exists', return_value = True)
-def test_validate_with_valid_checks(m1, m2, cfg_parser):
+def test_validate_with_valid_checks(m1, m2, m3, cfg_parser):
     cfg = config.configuration(cfg_parser, {})
     valid = config.validate(cfg)
     assert valid == True
@@ -151,7 +159,7 @@ def test_validate_with_valid_checks(m1, m2, cfg_parser):
 @patch('nsidc.metgen.metgen.os.path.exists', return_value = False)
 @patch('nsidc.metgen.metgen.aws.kinesis_stream_exists', return_value = False)
 @patch('nsidc.metgen.metgen.aws.staging_bucket_exists', return_value = False)
-def test_validate_with_invalid_checks(m1, m2, cfg_parser):
+def test_validate_with_invalid_checks(m1, m2, m3, cfg_parser):
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)

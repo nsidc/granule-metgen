@@ -54,6 +54,8 @@ def config_parser_factory(configuration_file):
     if configuration_file is None or not os.path.exists(configuration_file):
         raise ValueError(f'Unable to find configuration file {configuration_file}')
     cfg_parser = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+    # If the config parser gets no value (empty string), interpret it as False
+    cfg_parser.BOOLEAN_STATES |= [('', False)]
     cfg_parser.read(configuration_file)
     return cfg_parser
 
@@ -118,6 +120,7 @@ def validate(configuration):
         # ['ummg_dir', lambda dir: os.path.exists(dir), 'The ummg_dir does not exist.'],  ## validate "local_output_dir/ummg_dir" as part of issue-71
         ['kinesis_stream_name', lambda name: aws.kinesis_stream_exists(name), 'The kinesis stream does not exist.'],
         ['staging_bucket_name', lambda name: aws.staging_bucket_exists(name), 'The staging bucket does not exist.'],
+        ['number', lambda number: 0 < number, 'The number of granules to process must be positive.'],
     ]
     errors = [msg for name, fn, msg in validations if not fn(getattr(configuration, name))]
     if len(errors) == 0:
