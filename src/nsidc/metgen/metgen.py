@@ -2,6 +2,7 @@ import configparser
 import dataclasses
 import datetime as dt
 import hashlib
+from importlib.resources import open_text
 import json
 import jsonschema
 import logging
@@ -562,8 +563,8 @@ def cnms_body_template():
 def cnms_files_template():
     return initialize_template(constants.CNM_FILES_TEMPLATE)
 
-def initialize_template(file):
-    with open(file) as template_file:
+def initialize_template(resource_location):
+    with open_text(*resource_location) as template_file:
         template_str = template_file.read()
 
     return Template(template_str)
@@ -573,12 +574,12 @@ def validate(configuration, content_type):
     Validate local JSON files
     """
     output_file_path = file_type_path(configuration, content_type)
-    schema_file = schema_file_path(content_type)
+    schema_resource_location = schema_file_path(content_type)
 
     logger = logging.getLogger('metgenc')
     logger.info('')
     logger.info(f"Validating files in {output_file_path}...")
-    with open(schema_file) as sf:
+    with open_text(*schema_resource_location) as sf:
         schema = json.load(sf)
 
         # loop through all files and validate each one
