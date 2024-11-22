@@ -3,6 +3,7 @@ import dataclasses
 from datetime import datetime, timezone
 import logging
 import os.path
+from pathlib import Path
 import uuid
 
 from nsidc.metgen import aws
@@ -38,6 +39,13 @@ class Config:
         LOGGER.info('Using configuration:')
         for k,v in self.__dict__.items():
             LOGGER.info(f'  + {k}: {v}')
+
+    def ummg_path(self):
+        return Path(self.local_output_dir, self.ummg_dir)
+
+    def cnm_path(self):
+        return Path(self.local_output_dir, 'cnm')
+
 
 def config_parser_factory(configuration_file):
     """

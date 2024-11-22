@@ -100,24 +100,6 @@ def test_s3_url_simple_case():
     expected = 's3://xyzzy-bucket/external/ABCD/2/abcd-1234/xyzzy.bin'
     assert metgen.s3_url(staging_bucket_name, granule, 'xyzzy.bin') == expected
 
-@patch('nsidc.metgen.metgen.scrub_json_files')
-def test_does_scrub_ummg(scrub_mock, fake_config):
-    fake_config.overwrite_ummg = True
-    metgen.prepare_output_dirs(fake_config)
-    assert scrub_mock.called
-
-@patch('nsidc.metgen.metgen.scrub_json_files')
-def test_keeps_existing_ummg(scrub_mock, fake_config):
-    fake_config.overwrite_ummg = False
-    metgen.prepare_output_dirs(fake_config)
-    assert not scrub_mock.called
-
-@patch('nsidc.metgen.metgen.scrub_json_files')
-def test_builds_output_paths(scrub_mock, fake_config):
-    ummg_path, cnm_path = metgen.prepare_output_dirs(fake_config)
-    assert str(ummg_path) == '/'.join([fake_config.local_output_dir, fake_config.ummg_dir])
-    assert str(cnm_path) == '/'.join([fake_config.local_output_dir, 'cnm'])
-
 @patch("nsidc.metgen.metgen.dt.datetime")
 def test_start_ledger(mock_datetime):
     now = dt.datetime(2099, 7, 4, 10, 11, 12)

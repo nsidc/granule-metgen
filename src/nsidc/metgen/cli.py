@@ -35,6 +35,16 @@ def info(config_filename):
 
 @cli.command()
 @click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
+@click.option('-t', '--type', 'content_type', help='JSON content type', default='cnm', show_default=True)
+def validate(config_filename, content_type):
+    """Validates the contents of local JSON files."""
+    click.echo(metgen.banner())
+    configuration = config.configuration(config.config_parser_factory(config_filename), {})
+    metgen.init_logging(configuration)
+    metgen.validate(configuration, content_type)
+
+@cli.command()
+@click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
 @click.option('-e', '--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
 @click.option('-n', '--number', help="Process at most 'count' granules.", metavar='count', required=False, default=constants.DEFAULT_NUMBER)
 @click.option('-wc', '--write-cnm', is_flag=True, required=False, default=None, help="Write CNM messages to files.")

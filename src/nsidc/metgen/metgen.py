@@ -3,6 +3,7 @@ import dataclasses
 import datetime as dt
 import hashlib
 import json
+import jsonschema
 import logging
 import os.path
 import sys
@@ -42,7 +43,7 @@ def init_logging(configuration: config.Config):
     console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
     logger.addHandler(console_handler)
 
-    logfile_handler = logging.FileHandler("metgenc.log", "w")
+    logfile_handler = logging.FileHandler("metgenc.log", "a")
     logfile_handler.setLevel(logging.DEBUG)
     logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
     logger.addHandler(logfile_handler)
@@ -291,8 +292,9 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
     """
     Find the Granule's Collection and add it to the Granule.
     """
-    # TODO: When we start querying CMR, don't do this operation repeatedly;
-    #       we only need to get a Collection once.
+    # TODO: When we start querying CMR, refactor the pipeline to retrieve
+    # collection information from CMR once, then associate it with each
+    # granule.
     return dataclasses.replace(
         granule, 
         collection=Collection(configuration.auth_id, configuration.version)
@@ -309,11 +311,7 @@ def prepare_granule(configuration: config.Config, granule: Granule) -> Granule:
     )
 
 def find_existing_ummg(configuration: config.Config, granule: Granule) -> Granule:
-    ummg_filename = Path(
-        configuration.local_output_dir, 
-        configuration.ummg_dir, 
-        granule.producer_granule_id + '.json'
-    )
+    ummg_filename = configuration.ummg_path().joinpath(granule.producer_granule_id + '.json')
 
     if ummg_filename.exists():
         return dataclasses.replace(granule, ummg_filename=ummg_filename)
@@ -328,9 +326,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     if granule.ummg_filename != Maybe.empty and not configuration.overwrite_ummg:
         return granule
 
-    ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
-    ummg_file = granule.producer_granule_id + '.json'
-    ummg_file_path = os.path.join(ummg_path, ummg_file)
+    ummg_file_path = configuration.ummg_path().joinpath(granule.producer_granule_id + '.json')
 
     # Populated metadata_details dict looks like:
     # {
@@ -384,17 +380,9 @@ def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
     """
     Create a CNM submission message for the Granule.
     """
-    # Break up the JSON string into its components so information about multiple files is
-    # easier to add.
+    files_template = cnms_files_template()
     body_template = cnms_body_template()
-    body_content = body_template.safe_substitute(
-            dataclasses.asdict(granule) 
-            | dataclasses.asdict(granule.collection)
-            | dataclasses.asdict(configuration)
-            )
-    body_json = json.loads(body_content)
-
-    file_template = cnms_files_template()
+    populated_file_templates = []
 
     granule_files = {
         'data': granule.data_filenames,
@@ -402,13 +390,21 @@ def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
     }
     for type, files in granule_files.items():
         for file in files:
-            values = cnms_file_json_parts(configuration.staging_bucket_name, granule, file, type)
-            file_json = file_template.safe_substitute(values)
-            body_json['product']['files'].append(json.loads(file_json))
+            populated_file_templates.append(json.loads(files_template.safe_substitute(
+                cnms_file_json_parts(configuration.staging_bucket_name,
+                                     granule,
+                                     file,
+                                     type))))
 
     return dataclasses.replace(
         granule,
-        cnm_message=json.dumps(body_json)
+        cnm_message = body_template.safe_substitute(
+                dataclasses.asdict(granule)
+                | dataclasses.asdict(granule.collection)
+                | dataclasses.asdict(configuration)
+                | { 'file_content': json.dumps(populated_file_templates),
+                    'cnm_schema_version': constants.CNM_JSON_SCHEMA_VERSION }
+                )
     )
 
 def write_cnm(configuration: config.Config, granule: Granule) -> Granule:
@@ -416,7 +412,7 @@ def write_cnm(configuration: config.Config, granule: Granule) -> Granule:
     Write a CNM message to a file.
     """
     if configuration.write_cnm_file:
-        cnm_file = os.path.join(configuration.local_output_dir, 'cnm', granule.producer_granule_id + '.cnm.json')
+        cnm_file = configuration.cnm_path().joinpath(granule.producer_granule_id + '.cnm.json')
         with open(cnm_file, "tw") as f:
             print(granule.cnm_message, file=f)
     return granule
@@ -425,14 +421,6 @@ def publish_cnm(configuration: config.Config, granule: Granule) -> Granule:
     """
     Publish a CNM message to a Kinesis stream.
     """
-    if configuration.write_cnm_file:
-        cnm_file = os.path.join(
-            configuration.local_output_dir, 
-            'cnm', 
-            granule.producer_granule_id + '.cnm.json'
-        )
-        with open(cnm_file, "tw") as f:
-            print(granule.cnm_message, file=f)
     stream_name = configuration.kinesis_stream_name
     aws.post_to_kinesis(stream_name, granule.cnm_message)
     return granule
@@ -579,3 +567,50 @@ def initialize_template(file):
         template_str = template_file.read()
 
     return Template(template_str)
+
+def validate(configuration, content_type):
+    """
+    Validate local JSON files
+    """
+    output_file_path = file_type_path(configuration, content_type)
+    schema_file = schema_file_path(content_type)
+
+    logger = logging.getLogger('metgenc')
+    logger.info('')
+    logger.info(f"Validating files in {output_file_path}...")
+    with open(schema_file) as sf:
+        schema = json.load(sf)
+
+        # loop through all files and validate each one
+        for json_file in output_file_path.glob('*.json'):
+            apply_schema(schema, json_file)
+
+    logger.info("Validations complete.")
+    return True
+
+def file_type_path(configuration, content_type):
+    match content_type:
+        case 'cnm':
+            return configuration.cnm_path()
+        case _:
+            return ''
+
+def schema_file_path(content_type):
+    match content_type:
+        case 'cnm':
+            return constants.CNM_JSON_SCHEMA
+        case _:
+            return ''
+
+def apply_schema(schema, json_file):
+    logger = logging.getLogger('metgenc')
+    with open(json_file) as jf:
+        json_content = json.load(jf)
+        try:
+            jsonschema.validate(instance=json_content, schema=schema)
+            logger.info(f"Validated {json_file}")
+        except jsonschema.exceptions.ValidationError as err:
+            logger.error(f'Validation failed for "{err.validator}" in {json_file}: {err.validator_value}')
+
+    return True
+
