@@ -2,12 +2,14 @@
   <img alt="NSIDC logo" src="https://nsidc.org/themes/custom/nsidc/logo.svg" width="150" />
 </p>
 
-# Badges
+# MetGenC
+
+-----------------
 
 ![push workflow](https://github.com/nsidc/granule-metgen/actions/workflows/push.yml/badge.svg)
 ![workflow workflow](https://github.com/nsidc/granule-metgen/actions/workflows/workflow.yml/badge.svg)
 
-# MetGenC
+-----------------
 
 The `MetGenC` toolkit enables Operations staff and data
 producers to create metadata files conforming to NASA's Common Metadata Repository UMM-G
