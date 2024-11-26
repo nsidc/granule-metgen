@@ -4,8 +4,8 @@
 
 # Badges
 
-![push workflow](https://github.com/github/docs/actions/workflows/push.yml/badge.svg)
-![workflow workflow](https://github.com/github/docs/actions/workflows/workflow.yml/badge.svg)
+![push workflow](https://github.com/nsidc/granule-metgen/actions/workflows/push.yml/badge.svg)
+![workflow workflow](https://github.com/nsidc/granule-metgen/actions/workflows/workflow.yml/badge.svg)
 
 # MetGenC
 
