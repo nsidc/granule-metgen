@@ -238,12 +238,13 @@ TBD
 
 * On the [GitHub repository](https://github.com/nsidc/granule-metgen), click
   'Releases' and follow the steps documented on the 
-  [GitHub Released page](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release)
-  by drafting a new Release using the version tag just created above. After you
-  have published the release, the MetGenC Publish GHA workflow will be started.
-  Check that the workflow succeeds on the [MetGenC Actions page], and verify
-  that the new package version is
-  [available on PyPI](https://pypi.org/project/nsidc-metgenc/).
+  [GitHub Releases page](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release).
+  Draft a new Release using the version tag created above. After you have
+  published the release, the MetGenC Publish GHA workflow will be started.
+  Check that the workflow succeeds on the
+  [MetGenC Actions page](https://github.com/nsidc/granule-metgen/actions),
+  and verify that the 
+  [new MetGenC release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
 
 ## Credit
 
