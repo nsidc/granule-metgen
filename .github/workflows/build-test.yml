@@ -1,10 +1,10 @@
+name: Build & test
 on:
   push:
-    branches: [main]
   pull_request:
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
