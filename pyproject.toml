@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "nsidc-metgenc"
 version = "0.4.0"
-description = "The nsidc-metgen package enables data producers as well as Operations staff managing the data ingest workflow to create metadata files conforming to NASA's Common Metadata Repository UMM-G specification."
+description = "The nsidc-metgenc package enables data producers as well as Operations staff managing the data ingest workflow to create metadata files conforming to NASA's Common Metadata Repository UMM-G specification."
 authors = ["National Snow and Ice Data Center (NSIDC) <nsidc@nsidc.org>"]
 readme = "README.md"
 package-mode = true
