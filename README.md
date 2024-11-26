@@ -2,6 +2,11 @@
   <img alt="NSIDC logo" src="https://nsidc.org/themes/custom/nsidc/logo.svg" width="150" />
 </p>
 
+# Badges
+
+![push workflow](https://github.com/github/docs/actions/workflows/push.yml/badge.svg)
+![workflow workflow](https://github.com/github/docs/actions/workflows/workflow.yml/badge.svg)
+
 # MetGenC
 
 The `MetGenC` toolkit enables Operations staff and data
