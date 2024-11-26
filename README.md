@@ -31,16 +31,7 @@ or
 
     $ python3 --version
 
-Next, install [Poetry](https://python-poetry.org/) by using the [official
-installer](https://python-poetry.org/docs/#installing-with-the-official-installer)
-if you’re comfortable with the instructions, or by installing it using a package
-manager (like Homebrew) if this is more familiar to you. When successfully
-installed, you should be able to run:
-
-    $ poetry --version
-    Poetry (version 1.8.3)
-
-Finally, install the AWS commandline interface (CLI) by [following the appropriate
+Next, install the AWS commandline interface (CLI) by [following the appropriate
 instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
 ## Assumptions
@@ -60,26 +51,11 @@ instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide
 
 ## Installation
 
-Make a local directory (i.e., on your computer), and then `cd` into that
-directory. Clone the `granule-metgen` repository using ssh if you have [added
-ssh keys to your GitHub
-account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
-or https if you have not:
+MetGenC can be installed from [PyPI](https://pypi.org/)
 
-    $ mkdir -p ~/my-projects; cd ~/my-projects
-    # Install using ssh:
-    $ git clone git@github.com:nsidc/granule-metgen.git
-    # Install using https:
-    $ git clone https://github.com/nsidc/granule-metgen.git
+    $ pip install nsidc-metgenc
 
-Enter the `granule-metgen` directory and run Poetry to have it install the `granule-metgen` dependencies. Then start a new shell in which you can run the tool:
-
-    $ cd granule-metgen
-    $ poetry install
-    $ poetry shell
-
-With the Poetry shell running, start the metgenc tool just to verify that it’s working by requesting its usage options and having them
-returned (there’s more to do—explained in the **Usage** section below—before MetGenC can be run successfully to create ummg, cnm, and stage data!)::
+That's it! Now we're ready to run MetGenC and see what it can do:
 
     $ metgenc --help
     Usage: metgenc [OPTIONS] COMMAND [ARGS]...
@@ -230,13 +206,32 @@ TBD
 
         $ poetry install
 
-### Run tests:
+### Run tests
 
         $ poetry run pytest
 
 ### Run tests when source changes (uses [pytest-watcher](https://github.com/olzhasar/pytest-watcher)):
 
         $ poetry run ptw . --now --clear
+
+### Releasing
+
+* Update the CHANGELOG to reflect the latest version and the
+  changes included in the release.
+
+* Show the current version and the possible next versions:
+
+        $ bump-my-version show-bump
+        0.3.0 ── bump ─┬─ major ─ 1.0.0
+                       ├─ minor ─ 0.4.0
+                       ╰─ patch ─ 0.3.1
+
+* Bump the version to the desired number:
+
+        $ bump-my-version bump minor
+
+  You will see the latest commit & tag by looking at `git log`. You
+  can then push these to GitHub to trigger the CI/CD workflow.
 
 ## Credit
 
