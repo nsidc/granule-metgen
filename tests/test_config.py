@@ -30,7 +30,8 @@ def expected_keys():
                 'write_cnm_file',
                 'overwrite_ummg',
                 'checksum_type',
-                'number'])
+                'number',
+                'dry_run',])
 
 @pytest.fixture
 def cfg_parser():

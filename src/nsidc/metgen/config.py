@@ -95,6 +95,7 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
         'overwrite_ummg': constants.DEFAULT_OVERWRITE_UMMG,
         'checksum_type': constants.DEFAULT_CHECKSUM_TYPE,
         'number': constants.DEFAULT_NUMBER,
+        'dry_run': constants.DEFAULT_DRY_RUN,
     }
     try:
         return Config(
@@ -114,7 +115,7 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
             _get_configuration_value(environment, 'Settings', 'dry_run', bool, config_parser, overrides),
         )
     except Exception as e:
-        return Exception('Unable to read the configuration file', e)
+        raise Exception('Unable to read the configuration file', e)
 
 def validate(configuration):
     """

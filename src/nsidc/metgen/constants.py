@@ -6,6 +6,7 @@ DEFAULT_WRITE_CNM_FILE = False
 DEFAULT_OVERWRITE_UMMG = False
 DEFAULT_CHECKSUM_TYPE = 'SHA256'
 DEFAULT_NUMBER = 1000000
+DEFAULT_DRY_RUN = False
 
 # JSON schema locations and versions
 CNM_JSON_SCHEMA = 'src/nsidc/metgen/json-schema/cumulus_sns_schema.json'
