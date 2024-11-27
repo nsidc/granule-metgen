@@ -442,7 +442,7 @@ def log_ledger(ledger: Ledger) -> Ledger:
     logger.info(f"  * Start          : {ledger.startDatetime}")
     logger.info(f"  * End            : {ledger.endDatetime}")
     logger.info(f"  * Successful     : {ledger.successful}")
-    logger.debug(f"  * Actions:")
+    logger.debug("  * Actions:")
     for a in ledger.actions:
         logger.debug(f"      + Name: {a.name}")
         logger.debug(f"        Start     : {a.startDatetime}")

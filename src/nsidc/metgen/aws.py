@@ -12,7 +12,7 @@ def kinesis_stream_exists(stream_name):
     try:
         summary = client.describe_stream_summary(StreamName=stream_name)
         return True
-    except Exception as e:
+    except Exception:
         return False
 
 def post_to_kinesis(stream_name, cnm_message):
@@ -37,7 +37,7 @@ def staging_bucket_exists(bucket_name):
     try:
         client.head_bucket(Bucket=bucket_name)
         return True
-    except Exception as e:
+    except Exception:
         return False
 
 def stage_file(s3_bucket_name, object_name, *, data=None, file=None):

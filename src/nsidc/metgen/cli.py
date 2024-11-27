@@ -81,7 +81,7 @@ def process(config_filename, dry_run, env, number, write_cnm, overwrite):
         logger = logging.getLogger('metgenc')
         logger.error("\nUnable to process data: " + str(e))
         exit(1)
-    click.echo(f'Processing complete')
+    click.echo('Processing complete')
 
 
 if __name__ == "__main__":

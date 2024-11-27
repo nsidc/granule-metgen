@@ -1,7 +1,6 @@
 import json
 import os
 from tempfile import TemporaryFile
-from unittest.mock import mock_open, patch, Mock
 
 import boto3
 from moto import mock_aws

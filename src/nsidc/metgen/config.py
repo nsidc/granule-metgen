@@ -1,10 +1,8 @@
 import configparser
 import dataclasses
-from datetime import datetime, timezone
 import logging
 import os.path
 from pathlib import Path
-import uuid
 
 from nsidc.metgen import aws
 from nsidc.metgen import constants
