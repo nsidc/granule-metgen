@@ -73,7 +73,7 @@ def test_config_parser_handles_empty_strings_for_booleans(mock):
     cp['foo'] = {
         'success': ''
     }
-    assert cp.getboolean('foo', 'success') == False
+    assert not cp.getboolean('foo', 'success')
 
 def test_config_from_config_parser(cfg_parser):
     cfg = config.configuration(cfg_parser, {}, constants.DEFAULT_CUMULUS_ENVIRONMENT)
@@ -102,7 +102,7 @@ def test_config_with_write_cnm(cfg_parser, expected_keys):
     assert cfg.auth_id == 'DATA-0001'
     assert cfg.kinesis_stream_name == 'xyzzy-uat-stream'
     assert cfg.environment == 'uat'
-    assert cfg.write_cnm_file == True
+    assert cfg.write_cnm_file
 
 def test_config_with_no_overwrite_ummg(cfg_parser, expected_keys):
     cfg = config.configuration(cfg_parser, {}, constants.DEFAULT_CUMULUS_ENVIRONMENT)
@@ -117,7 +117,7 @@ def test_config_with_overwrite_ummg(cfg_parser, expected_keys):
 
     config_keys = set(cfg.__dict__)
     assert len(config_keys - expected_keys) == 0
-    assert cfg.overwrite_ummg == True
+    assert cfg.overwrite_ummg
 
 def test_get_configuration_value(cfg_parser):
     environment = constants.DEFAULT_CUMULUS_ENVIRONMENT
@@ -155,7 +155,7 @@ def test_configuration_has_good_defaults(cfg_parser, section, option, expected):
 def test_validate_with_valid_checks(m1, m2, m3, cfg_parser):
     cfg = config.configuration(cfg_parser, {})
     valid = config.validate(cfg)
-    assert valid == True
+    assert valid
 
 @patch('nsidc.metgen.metgen.os.path.exists', return_value = False)
 @patch('nsidc.metgen.metgen.aws.kinesis_stream_exists', return_value = False)

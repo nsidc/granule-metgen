@@ -57,7 +57,7 @@ def s3(aws_credentials):
 def s3_bucket(s3):
     """Create an S3 buket and return the bucket name."""
     bucket_name = "duck-test-bucket"
-    response = s3.create_bucket(
+    s3.create_bucket(
             Bucket=bucket_name,
             CreateBucketConfiguration={
                 'LocationConstraint': 'us-west-2'

@@ -10,7 +10,7 @@ def kinesis_stream_exists(stream_name):
     """
     client = boto3.client("kinesis")
     try:
-        summary = client.describe_stream_summary(StreamName=stream_name)
+        client.describe_stream_summary(StreamName=stream_name)
         return True
     except Exception:
         return False

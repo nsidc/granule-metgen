@@ -53,7 +53,7 @@ def test_process_requires_config(mock, cli_runner):
 @patch('nsidc.metgen.config.validate')
 @patch('nsidc.metgen.metgen.process')
 def test_process_with_config_calls_process(mock_validate, mock_process, cli_runner):
-    result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
+    cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
     assert mock_process.called
 
 @patch('nsidc.metgen.config.validate')
@@ -78,7 +78,7 @@ def test_process_with_no_write_cnm(mock_validate, process_mock, configuration_mo
     assert configuration_mock.called
     args = configuration_mock.call_args.args
     overrides = args[1]
-    assert overrides['write_cnm_file'] == None
+    assert overrides['write_cnm_file'] is None
     assert result.exit_code == 0
 
 @patch('nsidc.metgen.config.configuration')
@@ -90,7 +90,7 @@ def test_process_with_write_cnm(mock_validate, process_mock, configuration_mock,
     assert configuration_mock.called
     args = configuration_mock.call_args.args
     overrides = args[1]
-    assert overrides['write_cnm_file'] == True
+    assert overrides['write_cnm_file']
     assert result.exit_code == 0
 
 @patch('nsidc.metgen.config.configuration')
@@ -102,7 +102,7 @@ def test_process_with_no_overwrite(mock_validate, process_mock, configuration_mo
     assert configuration_mock.called
     args = configuration_mock.call_args.args
     overrides = args[1]
-    assert overrides['overwrite_ummg'] == None
+    assert overrides['overwrite_ummg'] is None
     assert result.exit_code == 0
 
 @patch('nsidc.metgen.config.configuration')
@@ -114,7 +114,7 @@ def test_process_with_overwrite(mock_validate, process_mock, configuration_mock,
     assert configuration_mock.called
     args = configuration_mock.call_args.args
     overrides = args[1]
-    assert overrides['overwrite_ummg'] == True
+    assert overrides['overwrite_ummg']
     assert result.exit_code == 0
 
 # TODO: When process raises an exception, cli handles it and displays a message

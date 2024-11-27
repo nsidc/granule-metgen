@@ -120,7 +120,7 @@ def test_end_ledger(mock_datetime):
     actual = metgen.end_ledger(ledger)
 
     assert actual.granule == granule
-    assert actual.successful == True
+    assert actual.successful
     assert actual.startDatetime == now
     assert actual.endDatetime == now
 
@@ -136,7 +136,7 @@ def test_end_ledger_with_unsuccessful_actions(mock_datetime):
     actual = metgen.end_ledger(ledger)
 
     assert actual.granule == granule
-    assert actual.successful == False
+    assert not actual.successful
     assert actual.startDatetime == now
     assert actual.endDatetime == now
 
@@ -159,4 +159,4 @@ def test_recorder_with_failing_operation():
 
     assert new_ledger.granule == ledger.granule
     assert len(new_ledger.actions) == 1
-    assert new_ledger.actions[0].successful == False
+    assert not new_ledger.actions[0].successful
