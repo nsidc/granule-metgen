@@ -3,6 +3,7 @@ import boto3
 
 KINESIS_PARTITION_KEY = "metgenc-duck"
 
+
 def kinesis_stream_exists(stream_name):
     """
     Predicate which determines if a Kinesis stream with the given name exists
@@ -15,18 +16,18 @@ def kinesis_stream_exists(stream_name):
     except Exception:
         return False
 
+
 def post_to_kinesis(stream_name, cnm_message):
     """
     Posts a message to a Kinesis stream.
     """
     client = boto3.client("kinesis")
     result = client.put_record(
-        StreamName=stream_name,
-        Data=cnm_message,
-        PartitionKey=KINESIS_PARTITION_KEY
+        StreamName=stream_name, Data=cnm_message, PartitionKey=KINESIS_PARTITION_KEY
     )
 
-    return result['ShardId']
+    return result["ShardId"]
+
 
 def staging_bucket_exists(bucket_name):
     """
@@ -39,6 +40,7 @@ def staging_bucket_exists(bucket_name):
         return True
     except Exception:
         return False
+
 
 def stage_file(s3_bucket_name, object_name, *, data=None, file=None):
     """
