@@ -2,10 +2,7 @@ import logging
 
 import click
 
-from nsidc.metgen import config
-from nsidc.metgen import metgen
-from nsidc.metgen import constants
-
+from nsidc.metgen import config, constants, metgen
 
 LOGGER = logging.getLogger("metgenc")
 

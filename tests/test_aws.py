@@ -3,11 +3,9 @@ import os
 from tempfile import TemporaryFile
 
 import boto3
-from moto import mock_aws
 import pytest
-
+from moto import mock_aws
 from nsidc.metgen import aws
-
 
 # Unit tests for the 'aws' module functions.
 #

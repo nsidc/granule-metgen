@@ -1,10 +1,8 @@
 from unittest.mock import patch
 
-from click.testing import CliRunner
 import pytest
-
+from click.testing import CliRunner
 from nsidc.metgen.cli import cli
-
 
 # Unit tests for the 'cli' module functions.
 #

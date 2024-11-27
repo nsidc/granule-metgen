@@ -2,27 +2,23 @@ import configparser
 import dataclasses
 import datetime as dt
 import hashlib
-from importlib.resources import open_text
 import json
-import jsonschema
 import logging
 import os.path
 import sys
-from typing import Callable
+import uuid
+from importlib.resources import open_text
 from pathlib import Path
 from string import Template
-import uuid
+from typing import Callable
 
+import jsonschema
 from funcy import all, filter, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
-from nsidc.metgen import aws
-from nsidc.metgen import config
-from nsidc.metgen import constants
-from nsidc.metgen import netcdf_reader
-
+from nsidc.metgen import aws, config, constants, netcdf_reader
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"

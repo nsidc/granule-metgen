@@ -1,11 +1,9 @@
 import datetime as dt
 from unittest.mock import patch
 
-from funcy import identity, partial
 import pytest
-
-from nsidc.metgen import config
-from nsidc.metgen import metgen
+from funcy import identity, partial
+from nsidc.metgen import config, metgen
 
 # Unit tests for the 'metgen' module functions.
 #

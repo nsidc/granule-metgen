@@ -4,8 +4,7 @@ import logging
 import os.path
 from pathlib import Path
 
-from nsidc.metgen import aws
-from nsidc.metgen import constants
+from nsidc.metgen import aws, constants
 
 
 class ValidationError(Exception):

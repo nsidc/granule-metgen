@@ -1,6 +1,5 @@
 import boto3
 
-
 KINESIS_PARTITION_KEY = "metgenc-duck"
 
 

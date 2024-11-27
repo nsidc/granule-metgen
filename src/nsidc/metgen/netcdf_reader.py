@@ -1,11 +1,10 @@
 import json
 import os.path
-import xarray as xr
 from datetime import timezone
-from dateutil.parser import parse
 
-from pyproj import CRS
-from pyproj import Transformer
+import xarray as xr
+from dateutil.parser import parse
+from pyproj import CRS, Transformer
 
 from nsidc.metgen import constants
 
