@@ -36,4 +36,11 @@ jobs:
 
       - run: poetry install --no-interaction
 
-      - run: poetry run pytest
+      - name: Check formatting
+        uses: astral-sh/ruff-action@v1
+
+      - name: Lint code
+        uses: astral-sh/ruff-action@v1
+
+      - name: Test
+        run: poetry run pytest
