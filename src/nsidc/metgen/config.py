@@ -31,6 +31,7 @@ class Config:
     overwrite_ummg: bool
     checksum_type: str
     number: int
+    dry_run: bool
 
     def show(self):
         # TODO add section headings in the right spot (if we think we need them in the output)
@@ -39,6 +40,10 @@ class Config:
         LOGGER.info('Using configuration:')
         for k,v in self.__dict__.items():
             LOGGER.info(f'  + {k}: {v}')
+
+        if self.dry_run:
+            LOGGER.info('')
+            LOGGER.info('Note: The dry-run option was included, so no files will be staged and no CNM messages published.')
 
     def ummg_path(self):
         return Path(self.local_output_dir, self.ummg_dir)
@@ -106,6 +111,7 @@ def configuration(config_parser, overrides, environment=constants.DEFAULT_CUMULU
             _get_configuration_value(environment, 'Destination', 'overwrite_ummg', bool, config_parser, overrides),
             _get_configuration_value(environment, 'Settings', 'checksum_type', str, config_parser, overrides),
             _get_configuration_value(environment, 'Settings', 'number', int, config_parser, overrides),
+            _get_configuration_value(environment, 'Settings', 'dry_run', bool, config_parser, overrides),
         )
     except Exception as e:
         return Exception('Unable to read the configuration file', e)
