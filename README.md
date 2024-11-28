@@ -31,17 +31,17 @@ or
 
     $ python3 --version
 
-Next, install [Poetry](https://python-poetry.org/) by using the [official
+Next, you must also install [Poetry](https://python-poetry.org/) either by using the [official
 installer](https://python-poetry.org/docs/#installing-with-the-official-installer)
-if you’re comfortable with the instructions, or by installing it using a package
+if you’re comfortable following the instructions, or by using a package
 manager (like Homebrew) if this is more familiar to you. When successfully
 installed, you should be able to run:
 
     $ poetry --version
     Poetry (version 1.8.3)
 
-Finally, install the AWS commandline interface (CLI) by [following the appropriate
-instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+Lastly, you will need to create & setup AWS credentials for yourself. The ways in which
+this can be accomplished are detailed in the **AWS Credentials** section below.
 
 ## Assumptions
 
@@ -115,17 +115,18 @@ NetCDF Users Guide
 Groups and scoping in netCDF files -- not considered in our current handling
 
 
-## Installation
+## Installation of MetGenC from GitHub
 
 Make a local directory (i.e., on your computer), and then `cd` into that
 directory. Clone the `granule-metgen` repository using ssh if you have [added
 ssh keys to your GitHub
 account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
-or https if you have not:
+or via https if you haven't:
 
     $ mkdir -p ~/my-projects; cd ~/my-projects
     # Install using ssh:
     $ git clone git@github.com:nsidc/granule-metgen.git
+  OR  
     # Install using https:
     $ git clone https://github.com/nsidc/granule-metgen.git
 
@@ -135,8 +136,8 @@ Enter the `granule-metgen` directory and run Poetry to have it install the `gran
     $ poetry install
     $ poetry shell
 
-With the Poetry shell running, start the metgenc tool just to verify that it’s working by requesting its usage options and having them
-returned (there’s more to do—explained in the **Usage** section below—before MetGenC can be run successfully to create ummg, cnm, and stage data!)::
+With the Poetry shell running, start the metgenc tool JUST to verify that it’s working by requesting its usage options and having them
+returned. There’s more to do (detailed in the **Usage** section below) before MetGenC can be run to successfully create ummg files, cnm messages, and stage data to an S3 bucket for ingest!)::
 
     $ metgenc --help
     Usage: metgenc [OPTIONS] COMMAND [ARGS]...
@@ -244,7 +245,7 @@ Options:
   --help              Show this message and exit.
   ```
 
-* Show summary information about an `metgenc` configuration file. Here we use the example configuration file provided in the repo:
+* Show summary information about a `metgenc` configuration file. Here we use the example configuration file provided in the repo:
 
         $ metgenc info --config example/modscg.ini
 
