@@ -1,6 +1,6 @@
 MetGenC Changelog
 
-## UNRELEASED
+## v1.0.0
 
 Test
 
