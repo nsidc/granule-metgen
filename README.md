@@ -199,6 +199,15 @@ TBD
 * [Python](https://www.python.org/) v3.12+
 * [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
 
+You can install [Poetry](https://python-poetry.org/) either by using the [official
+installer](https://python-poetry.org/docs/#installing-with-the-official-installer)
+if you’re comfortable following the instructions, or by using a package
+manager (like Homebrew) if this is more familiar to you. When successfully
+installed, you should be able to run:
+
+    $ poetry --version
+    Poetry (version 1.8.3)
+
 ### Installing Dependencies
 
 * Use Poetry to create and activate a virtual environment
@@ -219,8 +228,10 @@ TBD
 
 ### Releasing
 
-* Update the CHANGELOG to reflect the latest version and the
-  changes included in the release.
+* Update the CHANGELOG to include details of the changes included in the new
+  release. The version should be the string literal 'UNRELEASED' (without 
+  single-quotes). It will be replaced with the actual version number after
+  we bump the version below.
 
 * Show the current version and the possible next versions:
 
