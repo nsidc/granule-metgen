@@ -244,8 +244,9 @@ installed, you should be able to run:
 
         $ bump-my-version bump minor
 
-  You will see the latest commit & tag by looking at `git log`. You
-  can then push these to GitHub to trigger the CI/CD workflow.
+  You will see the latest commit & tag by looking at `git log`. You can then
+  push these to GitHub (`git push --follow-tags`) to trigger the CI/CD
+  workflow.
 
 * On the [GitHub repository](https://github.com/nsidc/granule-metgen), click
   'Releases' and follow the steps documented on the 
