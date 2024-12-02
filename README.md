@@ -37,6 +37,9 @@ or
 Next, install the AWS commandline interface (CLI) by [following the appropriate
 instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
+Lastly, you will need to create & setup AWS credentials for yourself. The ways in which
+this can be accomplished are detailed in the **AWS Credentials** section below.
+
 ## Assumptions
 
 - Checksums are all SHA256
@@ -52,9 +55,9 @@ instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide
   can be used to determine the padding added to x and y values.
 - Date/time strings can be parsed using `datetime.fromisoformat`
 
-## Installation
+## Installation of MetGenC from GitHub
 
-MetGenC can be installed from [PyPI](https://pypi.org/)
+MetGenC can be installed from [PyPI](https://pypi.org/):
 
     $ pip install nsidc-metgenc
 
@@ -166,7 +169,7 @@ Options:
   --help              Show this message and exit.
   ```
 
-* Show summary information about an `metgenc` configuration file. Here we use the example configuration file provided in the repo:
+* Show summary information about a `metgenc` configuration file. Here we use the example configuration file provided in the repo:
 
         $ metgenc info --config example/modscg.ini
 
