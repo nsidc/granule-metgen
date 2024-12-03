@@ -51,7 +51,8 @@ def spatial_values(netcdf):
     crs_4326 = CRS.from_epsg(4326)
     xformer = Transformer.from_crs(data_crs, crs_4326, always_xy=True)
 
-    # Adding padding should give us values that match up to the netcdf.attrs.geospatial_bounds
+    # Adding padding should give us values that match up to the
+    # netcdf.attrs.geospatial_bounds
     pad = abs(float(netcdf.crs.GeoTransform.split()[1])) / 2
     xdata = [x - pad if x < 0 else x + pad for x in netcdf.x.data]
     ydata = [y - pad if y < 0 else y + pad for y in netcdf.y.data]
