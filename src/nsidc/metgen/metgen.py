@@ -196,10 +196,10 @@ def process(configuration: config.Config) -> None:
             prepare_granule,
             find_existing_ummg,
             create_ummg,
-            stage_files,
+            stage_files if not configuration.dry_run else null_operation,
             create_cnm,
             write_cnm,
-            publish_cnm,
+            publish_cnm if not configuration.dry_run else null_operation,
         ]
 
     # Bind the configuration to each operation
@@ -287,6 +287,9 @@ def end_ledger(ledger: Ledger) -> Ledger:
 # -------------------------------------------------------------------
 # Granule Operations
 # -------------------------------------------------------------------
+
+def null_operation(configuration: config.Config, granule: Granule) -> Granule:
+    return granule
 
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
     """

@@ -44,18 +44,26 @@ def validate(config_filename, content_type):
     metgen.validate(configuration, content_type)
 
 @cli.command()
-@click.option('-c', '--config', 'config_filename', help='Path to configuration file', required=True)
-@click.option('-e', '--env', help='environment', default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
-@click.option('-n', '--number', help="Process at most 'count' granules.", metavar='count', required=False, default=constants.DEFAULT_NUMBER)
-@click.option('-wc', '--write-cnm', is_flag=True, required=False, default=None, help="Write CNM messages to files.")
-@click.option('-o', '--overwrite', is_flag=True, required=False, default=None, help="Overwrite existing UMM-G files.")
-def process(config_filename, env, overwrite, write_cnm, number):
+@click.option('-c', '--config', 'config_filename', required=True,
+              help='Path to configuration file')
+@click.option('-d', '--dry-run', is_flag=True, required=False, default=None,
+              help='Don\'t stage files on S3 or publish messages to Kinesis')
+@click.option('-e', '--env', help='environment', 
+              default=constants.DEFAULT_CUMULUS_ENVIRONMENT, show_default=True)
+@click.option('-n', '--number', metavar='count', required=False,
+              default=constants.DEFAULT_NUMBER, help="Process at most 'count' granules.")
+@click.option('-wc', '--write-cnm', is_flag=True, required=False, default=None,
+              help="Write CNM messages to files.")
+@click.option('-o', '--overwrite', is_flag=True, required=False, default=None,
+              help="Overwrite existing UMM-G files.")
+def process(config_filename, dry_run, env, number, write_cnm, overwrite):
     """Processes science data files based on configuration file contents."""
     click.echo(metgen.banner())
     overrides = {
-        'write_cnm_file': write_cnm,
+        'dry_run': dry_run,
+        'number': number,
         'overwrite_ummg': overwrite,
-        'number': number
+        'write_cnm_file': write_cnm,
     }
     try:
         configuration = config.configuration(config.config_parser_factory(config_filename), overrides, env)
