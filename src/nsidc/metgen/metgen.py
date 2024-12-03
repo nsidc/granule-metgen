@@ -58,11 +58,12 @@ def banner():
 # TODO require a non-blank input for elements that have no default value
 def init_config(configuration_file):
     """
-    Prompts the user for configuration values and then creates a valid configuration file.
+    Prompts the user for configuration values and then creates a valid
+    configuration file.
     """
     print(
-        """This utility will create a granule metadata configuration file by prompting """
-        """you for values for each of the configuration parameters."""
+        """This utility will create a granule metadata configuration file by prompting
+        you for values for each of the configuration parameters."""
     )
     print()
     # prompt for config file name if it's not provided
@@ -411,7 +412,8 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     #       'production_date_time'  => iso datetime string,
     #       'temporal' => an array of one (data represent a single point in time)
     #                     or two (data cover a time range) datetime strings
-    #       'geometry' => { 'points': a string representation of one or more lat/lon pairs }
+    #       'geometry' => { 'points': a string representation of one or more
+    #                                 lat/lon pairs }
     #   }
     # }
     metadata_details = {}
@@ -719,7 +721,8 @@ def apply_schema(schema, json_file):
             logger.info(f"Validated {json_file}")
         except jsonschema.exceptions.ValidationError as err:
             logger.error(
-                f'Validation failed for "{err.validator}" in {json_file}: {err.validator_value}'
+                f"""Validation failed for "{err.validator}"\
+                in {json_file}: {err.validator_value}"""
             )
 
     return True
