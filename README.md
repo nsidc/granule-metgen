@@ -233,32 +233,32 @@ installed, you should be able to run:
 
         $ poetry run ruff check
 
-    [The `ruff` tool](https://docs.astral.sh/ruff/linter/) will check
-    the source code for conformity with various style rules. Some of
-    these can be fixed by `ruff` itself, and if so, the output will
-    describe how to automatically fix these issues.
+[The `ruff` tool](https://docs.astral.sh/ruff/linter/) will check
+the source code for conformity with various style rules. Some of
+these can be fixed by `ruff` itself, and if so, the output will
+describe how to automatically fix these issues.
 
-    The CI/CD pipeline will run these checks whenever new commits are
-    pushed to GitHub, and the results will be available in the GitHub
-    Actions output.
+The CI/CD pipeline will run these checks whenever new commits are
+pushed to GitHub, and the results will be available in the GitHub
+Actions output.
 
 ### Running the code formatter
 
         $ poetry run ruff format
 
-    [The `ruff` tool](https://docs.astral.sh/ruff/formatter/) will check
-    the source code for conformity with source code formatting rules. It
-    will also fix any issues it finds and leave the changes uncommitted
-    so you can review the changes prior to adding them to the codebase.
+[The `ruff` tool](https://docs.astral.sh/ruff/formatter/) will check
+the source code for conformity with source code formatting rules. It
+will also fix any issues it finds and leave the changes uncommitted
+so you can review the changes prior to adding them to the codebase.
 
-    As with the linter, the CI/CD pipeline will run the formatter when
-    commits are pushed to GitHub.
+As with the linter, the CI/CD pipeline will run the formatter when
+commits are pushed to GitHub.
 
 ### Ruff integration with your editor
 
-    Rather than running `ruff` manually from the commandline, it can be
-    integrated with the editor of your choice. See the
-    [ruff editor integration](https://docs.astral.sh/ruff/editors/) guide.
+Rather than running `ruff` manually from the commandline, it can be
+integrated with the editor of your choice. See the
+[ruff editor integration](https://docs.astral.sh/ruff/editors/) guide.
 
 ### Releasing
 
