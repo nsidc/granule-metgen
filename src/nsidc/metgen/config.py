@@ -43,7 +43,8 @@ class Config:
         if self.dry_run:
             LOGGER.info("")
             LOGGER.info(
-                "Note: The dry-run option was included, so no files will be staged and no CNM messages published."
+                """Note: The dry-run option was included, so no files will be\
+                staged and no CNM messages published."""
             )
             LOGGER.info("")
 

@@ -123,7 +123,6 @@ def process(config_filename, dry_run, env, number, write_cnm, overwrite):
         "number": number,
         "overwrite_ummg": overwrite,
         "write_cnm_file": write_cnm,
-        "number": number,
     }
     try:
         configuration = config.configuration(
