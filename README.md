@@ -55,7 +55,7 @@ this can be accomplished are detailed in the **AWS Credentials** section below.
   can be used to determine the padding added to x and y values.
 - Date/time strings can be parsed using `datetime.fromisoformat`
 
-## Installation of MetGenC from GitHub
+## Installing MetGenC
 
 MetGenC can be installed from [PyPI](https://pypi.org/):
 
