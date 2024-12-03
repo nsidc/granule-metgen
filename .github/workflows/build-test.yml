@@ -38,9 +38,14 @@ jobs:
 
       - name: Check formatting
         uses: astral-sh/ruff-action@v1
+        with:
+          args: "format --check"
+          src: "./src"
 
       - name: Lint code
         uses: astral-sh/ruff-action@v1
+        with:
+          src: "./src"
 
       - name: Test
         run: poetry run pytest
