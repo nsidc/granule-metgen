@@ -70,6 +70,9 @@ replace = 'v{new_version}'
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
 [tool.mypy]
 files = ["src", "tests"]
 
