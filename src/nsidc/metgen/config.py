@@ -32,7 +32,8 @@ class Config:
     dry_run: bool
 
     def show(self):
-        # TODO add section headings in the right spot (if we think we need them in the output)
+        # TODO: add section headings in the right spot
+        #       (if we think we need them in the output)
         LOGGER = logging.getLogger("metgenc")
         LOGGER.info("")
         LOGGER.info("Using configuration:")
@@ -192,12 +193,12 @@ def validate(configuration):
             lambda dir: os.path.exists(dir),
             "The local_output_dir does not exist.",
         ],
-        ## validate "local_output_dir/ummg_dir" as part of issue-71
-        [
-            "ummg_dir",
-            lambda dir: os.path.exists(dir),
-            "The ummg_dir does not exist.",
-        ],
+        # TODO: validate "local_output_dir/ummg_dir" as part of issue-71
+        # [
+        #     "ummg_dir",
+        #     lambda dir: os.path.exists(dir),
+        #     "The ummg_dir does not exist."
+        # ],
         [
             "kinesis_stream_name",
             lambda name: aws.kinesis_stream_exists(name),
