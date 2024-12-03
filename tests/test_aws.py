@@ -92,21 +92,30 @@ def test_post_to_kinesis(kinesis_stream_summary, test_message):
 
 
 def test_post_to_kinesis_returns_shard_id(kinesis_stream_summary, test_message):
-    """Given a Kinesis stream name and a test message, the response should include the shard id."""
+    """
+    Given a Kinesis stream name and a test message, the response should include
+    the shard id.
+    """
     stream_name = kinesis_stream_summary["StreamName"]
     result = aws.post_to_kinesis(stream_name, test_message)
     assert "shardId" in result
 
 
 def test_post_to_kinesis_with_invalid_stream_name(kinesis_stream_summary, test_message):
-    """Given an invalid Kinesis stream name and a message, it should raise an exception."""
+    """
+    Given an invalid Kinesis stream name and a message, it should raise an
+    exception.
+    """
     invalid_stream_name = "abcd-1234-wxyz-0987"
     with pytest.raises(Exception):
         aws.post_to_kinesis(invalid_stream_name, test_message)
 
 
 def test_post_to_kinesis_with_empty_message(kinesis_stream_summary):
-    """Given a Kinesis stream name, it should raise an exception when posting an empty message."""
+    """
+    Given a Kinesis stream name, it should raise an exception when posting
+    an empty message.
+    """
     stream_name = kinesis_stream_summary["StreamName"]
     with pytest.raises(Exception):
         aws.post_to_kinesis(stream_name, None)
