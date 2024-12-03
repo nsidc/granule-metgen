@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "nsidc-metgen"
-version = "0.1.0"
-description = "The nsidc-metgen package enables data producers as well as Operations staff managing the data ingest workflow to create metadata files conforming to NASA's Common Metadata Repository UMM-G specification."
+name = "nsidc-metgenc"
+version = "0.4.0"
+description = "The nsidc-metgenc package enables data producers as well as Operations staff managing the data ingest workflow to create metadata files conforming to NASA's Common Metadata Repository UMM-G specification."
 authors = ["National Snow and Ice Data Center (NSIDC) <nsidc@nsidc.org>"]
 readme = "README.md"
 package-mode = true
@@ -30,6 +30,41 @@ pytest-watcher = "^0.4.3"
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.5.5"
 mypy = "^1.11.1"
+bump-my-version = "^0.28.1"
+
+[tool.bumpversion]
+current_version = "0.4.0"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{major}.{minor}.{patch}"]
+search = "{current_version}"
+replace = "{new_version}"
+regex = false
+ignore_missing_version = false
+ignore_missing_files = false
+tag = true
+sign_tags = false
+tag_name = "v{new_version}"
+tag_message = "Bump version: {current_version} → {new_version}"
+allow_dirty = false
+commit = true
+message = "Bump version: {current_version} → {new_version}"
+commit_args = ""
+setup_hooks = []
+pre_commit_hooks = []
+post_commit_hooks = []
+
+[[tool.bumpversion.files]]
+filename = "src/nsidc/metgen/__init__.py"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "CHANGELOG.md"
+search = 'UNRELEASED'
+replace = 'v{new_version}'
 
 [build-system]
 requires = ["poetry-core"]
