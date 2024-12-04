@@ -1,10 +1,8 @@
 from unittest.mock import patch
 
-from click.testing import CliRunner
 import pytest
-
+from click.testing import CliRunner
 from nsidc.metgen.cli import cli
-
 
 # Unit tests for the 'cli' module functions.
 #
@@ -14,53 +12,64 @@ from nsidc.metgen.cli import cli
 # parameters, correctly handle their return values, and handle any exceptions
 # they may throw.
 
+
 @pytest.fixture
 def cli_runner():
     return CliRunner()
 
+
 def test_without_subcommand(cli_runner):
     result = cli_runner.invoke(cli)
     assert result.exit_code == 0
-    assert 'Usage' in result.output
-    assert 'Commands' in result.output
-    for subcommand in ['info', 'init', 'process']:
+    assert "Usage" in result.output
+    assert "Commands" in result.output
+    for subcommand in ["info", "init", "process"]:
         assert subcommand in result.output
 
+
 def test_help(cli_runner):
-    result = cli_runner.invoke(cli, ['--help'])
+    result = cli_runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
+
 
 def test_info_requires_config(cli_runner):
-    result = cli_runner.invoke(cli, ['info'])
+    result = cli_runner.invoke(cli, ["info"])
     assert result.exit_code != 0
 
+
 def test_info_with_config(cli_runner):
-    result = cli_runner.invoke(cli, ['info', '--config', './example/modscg.ini'])
+    result = cli_runner.invoke(cli, ["info", "--config", "./example/modscg.ini"])
     assert result.exit_code == 0
 
-@patch('nsidc.metgen.config.Config.show')
+
+@patch("nsidc.metgen.config.Config.show")
 def test_info_with_config_summarizes(mock, cli_runner):
-    result = cli_runner.invoke(cli, ['info', '--config', './example/modscg.ini'])
+    result = cli_runner.invoke(cli, ["info", "--config", "./example/modscg.ini"])
     assert mock.called
     assert result.exit_code == 0
 
-@patch('nsidc.metgen.metgen.process')
+
+@patch("nsidc.metgen.metgen.process")
 def test_process_requires_config(mock, cli_runner):
-    result = cli_runner.invoke(cli, ['process'])
+    result = cli_runner.invoke(cli, ["process"])
     assert not mock.called
     assert result.exit_code != 0
 
-@patch('nsidc.metgen.config.validate')
-@patch('nsidc.metgen.metgen.process')
+
+@patch("nsidc.metgen.config.validate")
+@patch("nsidc.metgen.metgen.process")
 def test_process_with_config_calls_process(mock_validate, mock_process, cli_runner):
-    result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
+    cli_runner.invoke(cli, ["process", "--config", "./example/modscg.ini"])
     assert mock_process.called
 
-@patch('nsidc.metgen.config.validate')
-@patch('nsidc.metgen.metgen.process')
+
+@patch("nsidc.metgen.config.validate")
+@patch("nsidc.metgen.metgen.process")
 def test_process_with_granule_limit(mock_validate, mock_process, cli_runner):
     number_files = 2
-    result = cli_runner.invoke(cli, ['process', '-n', str(number_files), '--config', './example/modscg.ini'])
+    result = cli_runner.invoke(
+        cli, ["process", "-n", str(number_files), "--config", "./example/modscg.ini"]
+    )
 
     assert mock_process.called
     args = mock_process.call_args.args
@@ -69,53 +78,70 @@ def test_process_with_granule_limit(mock_validate, mock_process, cli_runner):
     assert configuration.number == number_files
     assert result.exit_code == 0
 
-@patch('nsidc.metgen.config.configuration')
-@patch('nsidc.metgen.metgen.process')
-@patch('nsidc.metgen.config.validate')
-def test_process_with_no_write_cnm(mock_validate, process_mock, configuration_mock, cli_runner):
-    result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
+
+@patch("nsidc.metgen.config.configuration")
+@patch("nsidc.metgen.metgen.process")
+@patch("nsidc.metgen.config.validate")
+def test_process_with_no_write_cnm(
+    mock_validate, process_mock, configuration_mock, cli_runner
+):
+    result = cli_runner.invoke(cli, ["process", "--config", "./example/modscg.ini"])
 
     assert configuration_mock.called
     args = configuration_mock.call_args.args
     overrides = args[1]
-    assert overrides['write_cnm_file'] == None
+    assert overrides["write_cnm_file"] is None
     assert result.exit_code == 0
 
-@patch('nsidc.metgen.config.configuration')
-@patch('nsidc.metgen.metgen.process')
-@patch('nsidc.metgen.config.validate')
-def test_process_with_write_cnm(mock_validate, process_mock, configuration_mock, cli_runner):
-    result = cli_runner.invoke(cli, ['process', '-wc', '--config', './example/modscg.ini'])
+
+@patch("nsidc.metgen.config.configuration")
+@patch("nsidc.metgen.metgen.process")
+@patch("nsidc.metgen.config.validate")
+def test_process_with_write_cnm(
+    mock_validate, process_mock, configuration_mock, cli_runner
+):
+    result = cli_runner.invoke(
+        cli, ["process", "-wc", "--config", "./example/modscg.ini"]
+    )
 
     assert configuration_mock.called
     args = configuration_mock.call_args.args
     overrides = args[1]
-    assert overrides['write_cnm_file'] == True
+    assert overrides["write_cnm_file"]
     assert result.exit_code == 0
 
-@patch('nsidc.metgen.config.configuration')
-@patch('nsidc.metgen.metgen.process')
-@patch('nsidc.metgen.config.validate')
-def test_process_with_no_overwrite(mock_validate, process_mock, configuration_mock, cli_runner):
-    result = cli_runner.invoke(cli, ['process', '--config', './example/modscg.ini'])
+
+@patch("nsidc.metgen.config.configuration")
+@patch("nsidc.metgen.metgen.process")
+@patch("nsidc.metgen.config.validate")
+def test_process_with_no_overwrite(
+    mock_validate, process_mock, configuration_mock, cli_runner
+):
+    result = cli_runner.invoke(cli, ["process", "--config", "./example/modscg.ini"])
 
     assert configuration_mock.called
     args = configuration_mock.call_args.args
     overrides = args[1]
-    assert overrides['overwrite_ummg'] == None
+    assert overrides["overwrite_ummg"] is None
     assert result.exit_code == 0
 
-@patch('nsidc.metgen.config.configuration')
-@patch('nsidc.metgen.metgen.process')
-@patch('nsidc.metgen.config.validate')
-def test_process_with_overwrite(mock_validate, process_mock, configuration_mock, cli_runner):
-    result = cli_runner.invoke(cli, ['process', '-o', '--config', './example/modscg.ini'])
+
+@patch("nsidc.metgen.config.configuration")
+@patch("nsidc.metgen.metgen.process")
+@patch("nsidc.metgen.config.validate")
+def test_process_with_overwrite(
+    mock_validate, process_mock, configuration_mock, cli_runner
+):
+    result = cli_runner.invoke(
+        cli, ["process", "-o", "--config", "./example/modscg.ini"]
+    )
 
     assert configuration_mock.called
     args = configuration_mock.call_args.args
     overrides = args[1]
-    assert overrides['overwrite_ummg'] == True
+    assert overrides["overwrite_ummg"]
     assert result.exit_code == 0
+
 
 # TODO: When process raises an exception, cli handles it and displays a message
 #       and has non-zero exit code

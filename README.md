@@ -4,6 +4,9 @@
 
 # MetGenC
 
+![build & test workflow](https://github.com/nsidc/granule-metgen/actions/workflows/build-test.yml/badge.svg)
+![workflow workflow](https://github.com/nsidc/granule-metgen/actions/workflows/publish.yml/badge.svg)
+
 The `MetGenC` toolkit enables Operations staff and data
 producers to create metadata files conforming to NASA's Common Metadata Repository UMM-G
 specification and ingest data directly to NASA EOSDIS’s Cumulus archive. Cumulus is an
@@ -31,14 +34,8 @@ or
 
     $ python3 --version
 
-Next, you must also install [Poetry](https://python-poetry.org/) either by using the [official
-installer](https://python-poetry.org/docs/#installing-with-the-official-installer)
-if you’re comfortable following the instructions, or by using a package
-manager (like Homebrew) if this is more familiar to you. When successfully
-installed, you should be able to run:
-
-    $ poetry --version
-    Poetry (version 1.8.3)
+Next, install the AWS commandline interface (CLI) by [following the appropriate
+instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
 Lastly, you will need to create & setup AWS credentials for yourself. The ways in which
 this can be accomplished are detailed in the **AWS Credentials** section below.
@@ -125,29 +122,13 @@ Notes:
    the value `Y`, rather than assuming the variable is named `x`.
 
 
-## Installation of MetGenC from GitHub
+## Installing MetGenC
 
-Make a local directory (i.e., on your computer), and then `cd` into that
-directory. Clone the `granule-metgen` repository using ssh if you have [added
-ssh keys to your GitHub
-account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
-or via https if you haven't:
+MetGenC can be installed from [PyPI](https://pypi.org/):
 
-    $ mkdir -p ~/my-projects; cd ~/my-projects
-    # Install using ssh:
-    $ git clone git@github.com:nsidc/granule-metgen.git
-  OR
-    # Install using https:
-    $ git clone https://github.com/nsidc/granule-metgen.git
+    $ pip install nsidc-metgenc
 
-Enter the `granule-metgen` directory and run Poetry to have it install the `granule-metgen` dependencies. Then start a new shell in which you can run the tool:
-
-    $ cd granule-metgen
-    $ poetry install
-    $ poetry shell
-
-With the Poetry shell running, start the metgenc tool JUST to verify that it’s working by requesting its usage options and having them
-returned. There’s more to do (detailed in the **Usage** section below) before MetGenC can be run to successfully create ummg files, cnm messages, and stage data to an S3 bucket for ingest!)::
+That's it! Now we're ready to run MetGenC and see what it can do:
 
     $ metgenc --help
     Usage: metgenc [OPTIONS] COMMAND [ARGS]...
@@ -288,6 +269,15 @@ TBD
 * [Python](https://www.python.org/) v3.12+
 * [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
 
+You can install [Poetry](https://python-poetry.org/) either by using the [official
+installer](https://python-poetry.org/docs/#installing-with-the-official-installer)
+if you’re comfortable following the instructions, or by using a package
+manager (like Homebrew) if this is more familiar to you. When successfully
+installed, you should be able to run:
+
+    $ poetry --version
+    Poetry (version 1.8.3)
+
 ### Installing Dependencies
 
 * Use Poetry to create and activate a virtual environment
@@ -298,13 +288,76 @@ TBD
 
         $ poetry install
 
-### Run tests:
+### Run tests
 
         $ poetry run pytest
 
 ### Run tests when source changes (uses [pytest-watcher](https://github.com/olzhasar/pytest-watcher)):
 
         $ poetry run ptw . --now --clear
+
+### Running the linter for code style issues:
+
+        $ poetry run ruff check
+
+[The `ruff` tool](https://docs.astral.sh/ruff/linter/) will check
+the source code for conformity with various style rules. Some of
+these can be fixed by `ruff` itself, and if so, the output will
+describe how to automatically fix these issues.
+
+The CI/CD pipeline will run these checks whenever new commits are
+pushed to GitHub, and the results will be available in the GitHub
+Actions output.
+
+### Running the code formatter
+
+        $ poetry run ruff format
+
+[The `ruff` tool](https://docs.astral.sh/ruff/formatter/) will check
+the source code for conformity with source code formatting rules. It
+will also fix any issues it finds and leave the changes uncommitted
+so you can review the changes prior to adding them to the codebase.
+
+As with the linter, the CI/CD pipeline will run the formatter when
+commits are pushed to GitHub.
+
+### Ruff integration with your editor
+
+Rather than running `ruff` manually from the commandline, it can be
+integrated with the editor of your choice. See the
+[ruff editor integration](https://docs.astral.sh/ruff/editors/) guide.
+
+### Releasing
+
+* Update the CHANGELOG to include details of the changes included in the new
+  release. The version should be the string literal 'UNRELEASED' (without 
+  single-quotes). It will be replaced with the actual version number after
+  we bump the version below.
+
+* Show the current version and the possible next versions:
+
+        $ bump-my-version show-bump
+        0.3.0 ── bump ─┬─ major ─ 1.0.0
+                       ├─ minor ─ 0.4.0
+                       ╰─ patch ─ 0.3.1
+
+* Bump the version to the desired number, for example:
+
+        $ bump-my-version bump minor
+
+  You will see the latest commit & tag by looking at `git log`. You can then
+  push these to GitHub (`git push --follow-tags`) to trigger the CI/CD
+  workflow.
+
+* On the [GitHub repository](https://github.com/nsidc/granule-metgen), click
+  'Releases' and follow the steps documented on the 
+  [GitHub Releases page](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release).
+  Draft a new Release using the version tag created above. After you have
+  published the release, the MetGenC Publish GHA workflow will be started.
+  Check that the workflow succeeds on the
+  [MetGenC Actions page](https://github.com/nsidc/granule-metgen/actions),
+  and verify that the 
+  [new MetGenC release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
 
 ## Credit
 
