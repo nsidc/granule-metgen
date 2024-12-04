@@ -6,6 +6,7 @@ from nsidc.metgen import config, constants, metgen
 
 LOGGER = logging.getLogger(constants.ROOT_LOGGER)
 
+
 @click.group(epilog="For detailed help on each command, run: metgenc COMMAND --help")
 def cli():
     """The metgenc utility allows users to create granule-level
@@ -31,7 +32,6 @@ def init(config):
     help="Path to configuration file to display",
     required=True,
 )
-
 def info(config_filename):
     """Summarizes the contents of a configuration file."""
     click.echo(metgen.banner())
@@ -58,7 +58,6 @@ def info(config_filename):
     default="cnm",
     show_default=True,
 )
-
 def validate(config_filename, content_type):
     """Validates the contents of local JSON files."""
     click.echo(metgen.banner())

@@ -704,7 +704,7 @@ def file_type_path(configuration, content_type):
     match content_type:
         case "cnm":
             return configuration.cnm_path()
-        case 'ummg':
+        case "ummg":
             return configuration.ummg_path()
         case _:
             return ""
@@ -716,33 +716,23 @@ def schema_file_path(content_type):
     """
     dummy_json = dict()
     match content_type:
-<<<<<<< HEAD
-        case 'cnm':
+        case "cnm":
             return constants.CNM_JSON_SCHEMA, dummy_json
-        case 'ummg':
+        case "ummg":
             # We intentionally create UMM-G output with a couple of parts missing,
             # so we need to fill in the gaps with dummy values during validation.
             dummy_json["ProviderDates"] = [{"Date": "2000", "Type": "Create"}]
             dummy_json["GranuleUR"] = "FakeUR"
             return constants.UMMG_JSON_SCHEMA, dummy_json
         case _:
-            return '', {}
+            return "", {}
+
 
 def apply_schema(schema, json_file, dummy_json):
     """
     Apply JSON schema to generated JSON content.
     """
     logger = logging.getLogger(constants.ROOT_LOGGER)
-=======
-        case "cnm":
-            return constants.CNM_JSON_SCHEMA
-        case _:
-            return ""
-
-
-def apply_schema(schema, json_file):
-    logger = logging.getLogger("metgenc")
->>>>>>> main
     with open(json_file) as jf:
         json_content = json.load(jf)
         try:
