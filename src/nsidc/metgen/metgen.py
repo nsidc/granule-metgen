@@ -349,9 +349,9 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     summary = metadata_summary(metadata_details)
     summary['spatial_extent'] = populate_spatial(summary['geometry'])
     summary['temporal_extent'] = populate_temporal(summary['temporal'])
+    summary['ummg_schema_version'] = constants.UMMG_JSON_SCHEMA_VERSION
 
     # Populate the body template
-    #body = ummg_body_template().safe_substitute(mapping | summary | { 'ummg_schema_version': constants.UMMG_JSON_SCHEMA_VERSION })
     body = ummg_body_template().safe_substitute(
         dataclasses.asdict(granule) 
         | dataclasses.asdict(granule.collection) 
@@ -574,10 +574,10 @@ def initialize_template(file):
 
 def validate(configuration, content_type):
     """
-    Validate local JSON files
+    Validate local CNM or UMM-G (JSON) files
     """
     output_file_path = file_type_path(configuration, content_type)
-    schema_file = schema_file_path(content_type)
+    schema_file, dummy_json = schema_file_path(content_type)
 
     logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.info('')
@@ -587,12 +587,15 @@ def validate(configuration, content_type):
 
         # loop through all files and validate each one
         for json_file in output_file_path.glob('*.json'):
-            apply_schema(schema, json_file)
+            apply_schema(schema, json_file, dummy_json)
 
     logger.info("Validations complete.")
     return True
 
 def file_type_path(configuration, content_type):
+    """
+    Return directory containing JSON files to be validated.
+    """
     match content_type:
         case 'cnm':
             return configuration.cnm_path()
@@ -602,22 +605,31 @@ def file_type_path(configuration, content_type):
             return ''
 
 def schema_file_path(content_type):
+    """
+    Identify the schema to be used for validation
+    """
+    dummy_json = dict()
     match content_type:
         case 'cnm':
-            return constants.CNM_JSON_SCHEMA
+            return constants.CNM_JSON_SCHEMA, dummy_json
         case 'ummg':
-            return constants.UMMG_JSON_SCHEMA
+            # We intentionally create UMM-G output with a couple of parts missing,
+            # so we need to fill in the gaps with dummy values during validation.
+            dummy_json["ProviderDates"] = [{"Date": "2000", "Type": "Create"}]
+            dummy_json["GranuleUR"] = "FakeUR"
+            return constants.UMMG_JSON_SCHEMA, dummy_json
         case _:
-            return ''
+            return '', {}
 
-def apply_schema(schema, json_file):
+def apply_schema(schema, json_file, dummy_json):
+    """
+    Apply JSON schema to generated JSON content.
+    """
     logger = logging.getLogger(constants.ROOT_LOGGER)
     with open(json_file) as jf:
         json_content = json.load(jf)
-        #json_content["ProviderDates"] = [{"Date": "2000", "Type": "Create"}]
-        #json_content["GranuleUR"] = "FakeUR"
         try:
-            jsonschema.validate(instance=json_content, schema=schema)
+            jsonschema.validate(instance=json_content | dummy_json, schema=schema)
             logger.info(f"No validation errors: {json_file}")
         except jsonschema.exceptions.ValidationError as err:
             logger.error(f'Validation failed for "{err.validator}" in {json_file}: {err.validator_value}')
