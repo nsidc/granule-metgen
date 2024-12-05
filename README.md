@@ -265,7 +265,8 @@ integrated with the editor of your choice. See the
 * Update the CHANGELOG to include details of the changes included in the new
   release. The version should be the string literal 'UNRELEASED' (without 
   single-quotes). It will be replaced with the actual version number after
-  we bump the version below.
+  we bump the version below. Commit the CHANGELOG so the working directory is
+  clean.
 
 * Show the current version and the possible next versions:
 
