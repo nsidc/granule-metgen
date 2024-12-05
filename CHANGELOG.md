@@ -1,6 +1,6 @@
 MetGenC Changelog
 
-## UNRELEASED
+## v0.6.0
 
 This is the Minimum Viable Product (MVP) release of MetGenC. The
 features include:
