@@ -33,7 +33,7 @@ def init_logging(configuration: config.Config):
     """
     Initialize the logger for metgenc.
     """
-    logger = logging.getLogger("metgenc")
+    logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.setLevel(logging.DEBUG)
 
     console_handler = logging.StreamHandler(sys.stdout)
@@ -41,7 +41,7 @@ def init_logging(configuration: config.Config):
     console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
     logger.addHandler(console_handler)
 
-    logfile_handler = logging.FileHandler("metgenc.log", "a")
+    logfile_handler = logging.FileHandler(constants.ROOT_LOGGER + ".log", "a")
     logfile_handler.setLevel(logging.DEBUG)
     logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
     logger.addHandler(logfile_handler)
@@ -424,6 +424,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     summary = metadata_summary(metadata_details)
     summary["spatial_extent"] = populate_spatial(summary["geometry"])
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
+    summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
 
     # Populate the body template
     body = ummg_body_template().safe_substitute(
@@ -518,7 +519,7 @@ def publish_cnm(configuration: config.Config, granule: Granule) -> Granule:
 
 def log_ledger(ledger: Ledger) -> Ledger:
     """Log a Ledger of the operations performed on a Granule."""
-    logger = logging.getLogger("metgenc")
+    logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.info(f"Granule: {ledger.granule.producer_granule_id}")
     logger.info(f"  * UUID           : {ledger.granule.uuid}")
     logger.info(f"  * Submission time: {ledger.granule.submission_time}")
@@ -677,12 +678,12 @@ def initialize_template(resource_location):
 
 def validate(configuration, content_type):
     """
-    Validate local JSON files
+    Validate local CNM or UMM-G (JSON) files
     """
     output_file_path = file_type_path(configuration, content_type)
-    schema_resource_location = schema_file_path(content_type)
+    schema_resource_location, dummy_json = schema_file_path(content_type)
 
-    logger = logging.getLogger("metgenc")
+    logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.info("")
     logger.info(f"Validating files in {output_file_path}...")
     with open_text(*schema_resource_location) as sf:
@@ -690,35 +691,53 @@ def validate(configuration, content_type):
 
         # loop through all files and validate each one
         for json_file in output_file_path.glob("*.json"):
-            apply_schema(schema, json_file)
+            apply_schema(schema, json_file, dummy_json)
 
     logger.info("Validations complete.")
     return True
 
 
 def file_type_path(configuration, content_type):
+    """
+    Return directory containing JSON files to be validated.
+    """
     match content_type:
         case "cnm":
             return configuration.cnm_path()
+        case "ummg":
+            return configuration.ummg_path()
         case _:
             return ""
 
 
 def schema_file_path(content_type):
+    """
+    Identify the schema to be used for validation
+    """
+    dummy_json = dict()
     match content_type:
         case "cnm":
-            return constants.CNM_JSON_SCHEMA
+            return constants.CNM_JSON_SCHEMA, dummy_json
+        case "ummg":
+            # We intentionally create UMM-G output with a couple of parts missing,
+            # so we need to fill in the gaps with dummy values during validation.
+            dummy_json["ProviderDates"] = [{"Date": "2000", "Type": "Create"}]
+            dummy_json["GranuleUR"] = "FakeUR"
+            return constants.UMMG_JSON_SCHEMA, dummy_json
         case _:
-            return ""
+            return "", {}
 
 
-def apply_schema(schema, json_file):
-    logger = logging.getLogger("metgenc")
+def apply_schema(schema, json_file, dummy_json):
+    """
+    Apply JSON schema to generated JSON content.
+    """
+    logger = logging.getLogger(constants.ROOT_LOGGER)
     with open(json_file) as jf:
         json_content = json.load(jf)
         try:
-            jsonschema.validate(instance=json_content, schema=schema)
-            logger.info(f"Validated {json_file}")
+            jsonschema.validate(instance=json_content | dummy_json, schema=schema)
+            logger.info(f"No validation errors: {json_file}")
         except jsonschema.exceptions.ValidationError as err:
             logger.error(
                 f"""Validation failed for "{err.validator}"\
