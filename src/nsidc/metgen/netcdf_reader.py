@@ -10,6 +10,10 @@ from nsidc.metgen import constants
 
 
 def extract_metadata(netcdf_path):
+    # provide some sort of "review" command line function to
+    # assess what's missing from netcdf file?
+    # or add to ini file generator a step that evaluates an
+    # example file for completeness?
     """
     Read the content at netcdf_path and return a structure with temporal coverage
     information, spatial coverage information, file size, and production datetime.
@@ -20,7 +24,9 @@ def extract_metadata(netcdf_path):
 
     return {
         "size_in_bytes": os.path.getsize(netcdf_path),
+        # no date modified in file
         "production_date_time": ensure_iso(netcdf.attrs["date_modified"]),
+        # no time range in file
         "temporal": time_range(netcdf),
         "geometry": {"points": json.dumps(spatial_values(netcdf))},
     }
@@ -51,9 +57,7 @@ def spatial_values(netcdf):
     crs_4326 = CRS.from_epsg(4326)
     xformer = Transformer.from_crs(data_crs, crs_4326, always_xy=True)
 
-    # Adding padding should give us values that match up to the
-    # netcdf.attrs.geospatial_bounds
-    pad = abs(float(netcdf.crs.GeoTransform.split()[1])) / 2
+    pad = pixel_padding(netcdf)
     xdata = [x - pad if x < 0 else x + pad for x in netcdf.x.data]
     ydata = [y - pad if y < 0 else y + pad for y in netcdf.y.data]
 
@@ -65,6 +69,10 @@ def spatial_values(netcdf):
         for (lon, lat) in perimeter
     ]
 
+def pixel_padding(netcdf):
+    # Adding padding should give us values that match up to the
+    # netcdf.attrs.geospatial_bounds
+    return abs(float(netcdf.crs.GeoTransform.split()[1])) / 2
 
 def thinned_perimeter(xdata, ydata):
     """

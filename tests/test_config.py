@@ -32,6 +32,7 @@ def expected_keys():
             "checksum_type",
             "number",
             "dry_run",
+            "collection"
         ]
     )
 

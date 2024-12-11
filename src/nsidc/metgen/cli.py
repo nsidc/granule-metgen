@@ -21,6 +21,8 @@ def init(config):
     """Populates a configuration file based on user input."""
     click.echo(metgen.banner())
     config = metgen.init_config(config)
+    # add step here to evaluate input files?
+    # if netcdf: header information
     click.echo(f"Initialized the metgen configuration file {config}")
 
 
@@ -67,6 +69,17 @@ def validate(config_filename, content_type):
     metgen.init_logging(configuration)
     metgen.validate(configuration, content_type)
 
+@cli.command()
+@click.option(
+    "-f",
+    "--file",
+    "data_filename",
+    help="Path to sample data file",
+    required=True,
+)
+def assess():
+    """Examine a sample data file for metadata completeness"""
+    return True
 
 @cli.command()
 @click.option(

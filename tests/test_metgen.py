@@ -102,14 +102,22 @@ def test_returns_datetime_range():
 
 
 def test_s3_object_path_has_no_leading_slash():
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    granule = metgen.Granule(
+        "foo",
+        metgen.Collection("ABCD", 2, "my_reader"),
+        uuid="abcd-1234"
+    )
     expected = "external/ABCD/2/abcd-1234/xyzzy.bin"
     assert metgen.s3_object_path(granule, "xyzzy.bin") == expected
 
 
 def test_s3_url_simple_case():
     staging_bucket_name = "xyzzy-bucket"
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    granule = metgen.Granule(
+        "foo",
+        metgen.Collection("ABCD", 2, "my_reader"),
+        uuid="abcd-1234"
+    )
     expected = "s3://xyzzy-bucket/external/ABCD/2/abcd-1234/xyzzy.bin"
     assert metgen.s3_url(staging_bucket_name, granule, "xyzzy.bin") == expected
 
