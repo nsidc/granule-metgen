@@ -4,7 +4,7 @@ import logging
 import os.path
 from pathlib import Path
 
-from nsidc.metgen import aws, constants
+from nsidc.metgen import aws, constants, netcdf_reader
 
 
 class ValidationError(Exception):
@@ -31,6 +31,10 @@ class Config:
     number: int
     dry_run: bool
 
+    def __post_init__(self):
+        # data_reader: Callable[[str], dict]
+        self.data_reader = netcdf_reader
+
     def show(self):
         # TODO: add section headings in the right spot
         #       (if we think we need them in the output)
@@ -43,8 +47,8 @@ class Config:
         if self.dry_run:
             LOGGER.info("")
             LOGGER.info(
-                """Note: The dry-run option was included, so no files will be\
-                staged and no CNM messages published."""
+                """Note: The dry-run option was included, so no files will be \
+staged and no CNM messages published."""
             )
             LOGGER.info("")
 
