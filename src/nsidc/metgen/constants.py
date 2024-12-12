@@ -8,9 +8,14 @@ DEFAULT_CHECKSUM_TYPE = "SHA256"
 DEFAULT_NUMBER = 1000000
 DEFAULT_DRY_RUN = False
 
+# Logging
+ROOT_LOGGER = "metgenc"
+
 # JSON schema locations and versions
 CNM_JSON_SCHEMA = ("nsidc.metgen.json-schema", "cumulus_sns_schema.json")
 CNM_JSON_SCHEMA_VERSION = "1.6.1"
+UMMG_JSON_SCHEMA = ("nsidc.metgen.json-schema", "umm-g-json-schema.json")
+UMMG_JSON_SCHEMA_VERSION = "1.6.6"
 
 # Configuration sections
 SOURCE_SECTION_NAME = "Source"

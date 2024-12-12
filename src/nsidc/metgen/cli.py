@@ -4,7 +4,7 @@ import click
 
 from nsidc.metgen import config, constants, metgen
 
-LOGGER = logging.getLogger("metgenc")
+LOGGER = logging.getLogger(constants.ROOT_LOGGER)
 
 
 @click.group(epilog="For detailed help on each command, run: metgenc COMMAND --help")
@@ -133,13 +133,13 @@ def process(config_filename, dry_run, env, number, write_cnm, overwrite):
         config.validate(configuration)
         metgen.process(configuration)
     except config.ValidationError as e:
-        logger = logging.getLogger("metgenc")
+        logger = logging.getLogger(constants.ROOT_LOGGER)
         logger.error("\nThe configuration is invalid:")
         for error in e.errors:
             logger.error(f"  * {error}")
         exit(1)
     except Exception as e:
-        logger = logging.getLogger("metgenc")
+        logger = logging.getLogger(constants.ROOT_LOGGER)
         logger.error("\nUnable to process data: " + str(e))
         exit(1)
     click.echo("Processing complete")

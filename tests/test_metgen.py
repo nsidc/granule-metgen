@@ -182,3 +182,32 @@ def test_recorder_with_failing_operation():
     assert new_ledger.granule == ledger.granule
     assert len(new_ledger.actions) == 1
     assert not new_ledger.actions[0].successful
+
+
+def test_no_dummy_json_for_cnm():
+    schema_path, dummy_json = metgen.schema_file_path("cnm")
+    assert schema_path
+    assert not dummy_json
+
+    schema_path, dummy_json = metgen.schema_file_path("foobar")
+    assert not schema_path
+    assert not dummy_json
+
+
+def test_dummy_json_for_ummg():
+    schema_path, dummy_json = metgen.schema_file_path("ummg")
+    assert schema_path
+    assert dummy_json
+
+
+@patch("nsidc.metgen.metgen.open")
+@patch("nsidc.metgen.metgen.jsonschema.validate")
+def test_dummy_json_used(mock_validate, mock_open):
+    fake_json = {"key": [{"foo": "bar"}]}
+    fake_dummy_json = {"missing_key": "missing_foo"}
+
+    with patch("nsidc.metgen.metgen.json.load", return_value=fake_json):
+        metgen.apply_schema("schema file", "json_file", fake_dummy_json)
+        mock_validate.assert_called_once_with(
+            instance=fake_json | fake_dummy_json, schema="schema file"
+        )
