@@ -6,6 +6,8 @@
 
 ![build & test workflow](https://github.com/nsidc/granule-metgen/actions/workflows/build-test.yml/badge.svg)
 ![workflow workflow](https://github.com/nsidc/granule-metgen/actions/workflows/publish.yml/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/granule-metgen/badge/?version=latest)](https://granule-metgen.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/granule-metgen/badge/?version=stable)](https://granule-metgen.readthedocs.io/en/stable/?badge=stable)
 
 The `MetGenC` toolkit enables Operations staff and data
 producers to create metadata files conforming to NASA's Common Metadata Repository UMM-G
