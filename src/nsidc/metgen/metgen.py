@@ -8,6 +8,7 @@ import os.path
 import sys
 import uuid
 from collections.abc import Callable
+from functools import cache
 from importlib.resources import open_text
 from pathlib import Path
 from string import Template
@@ -18,7 +19,7 @@ from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
-from nsidc.metgen import aws, config, constants, netcdf_reader
+from nsidc.metgen import aws, config, constants
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -186,7 +187,6 @@ class Collection:
 
     auth_id: str
     version: int
-    data_reader: Callable[[str], dict]
 
 
 @dataclasses.dataclass
@@ -231,15 +231,7 @@ def process(configuration: config.Config) -> None:
     """
     Process all Granules and record the results and summary.
     """
-    # TODO:
-    #   Do any prep actions, like mkdir, etc
-    #   Get real collection information from CMR
-    #   Determine data reader based on actual data file characteristics (e.g. suffix)
-    configuration.collection = Collection(
-            configuration.auth_id,
-            configuration.version,
-            netcdf_reader.extract_metadata
-    )
+    # TODO: Do any prep actions, like mkdir, etc
 
     # Ordered list of operations to perform on each granule
     operations = [
@@ -343,12 +335,21 @@ def null_operation(configuration: config.Config, granule: Granule) -> Granule:
     return granule
 
 
+@cache
+def retrieve_collection(auth_id: str, version: int):
+    # ummc_from_cmr = talk_to_cmr(configuration.auth_id, configuration.version)
+    # pull out fields from UMM-C response and use to create collection object
+    # with more than just auth_id and version number.
+    return Collection(auth_id, version)
+
+
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
     """
-    Associate the Collection with the Granule.
+    Associate collection information with the Granule.
     """
     return dataclasses.replace(
-        granule, collection=configuration.collection
+        granule,
+        collection=retrieve_collection(configuration.auth_id, configuration.version),
     )
 
 
@@ -399,7 +400,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     # }
     metadata_details = {}
     for data_file in granule.data_filenames:
-        metadata_details[data_file] = granule.collection.data_reader(data_file)
+        metadata_details[data_file] = configuration.data_reader(data_file)
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)

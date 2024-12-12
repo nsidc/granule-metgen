@@ -4,7 +4,7 @@ import logging
 import os.path
 from pathlib import Path
 
-from nsidc.metgen import aws, constants
+from nsidc.metgen import aws, constants, netcdf_reader
 
 
 class ValidationError(Exception):
@@ -32,7 +32,8 @@ class Config:
     dry_run: bool
 
     def __post_init__(self):
-        self.collection = None
+        # data_reader: Callable[[str], dict]
+        self.data_reader = netcdf_reader
 
     def show(self):
         # TODO: add section headings in the right spot

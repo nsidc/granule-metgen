@@ -69,10 +69,12 @@ def spatial_values(netcdf):
         for (lon, lat) in perimeter
     ]
 
+
 def pixel_padding(netcdf):
     # Adding padding should give us values that match up to the
     # netcdf.attrs.geospatial_bounds
     return abs(float(netcdf.crs.GeoTransform.split()[1])) / 2
+
 
 def thinned_perimeter(xdata, ydata):
     """

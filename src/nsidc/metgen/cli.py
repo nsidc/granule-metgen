@@ -69,6 +69,7 @@ def validate(config_filename, content_type):
     metgen.init_logging(configuration)
     metgen.validate(configuration, content_type)
 
+
 @cli.command()
 @click.option(
     "-f",
@@ -80,6 +81,7 @@ def validate(config_filename, content_type):
 def assess():
     """Examine a sample data file for metadata completeness"""
     return True
+
 
 @cli.command()
 @click.option(
