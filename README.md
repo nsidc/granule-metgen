@@ -126,7 +126,7 @@ Notes:
 
 MetGenC can be installed from [PyPI](https://pypi.org/):
 
-    $ pip install nsidc-metgenc
+    $ pip install --user nsidc-metgenc
 
 That's it! Now we're ready to run MetGenC and see what it can do:
 
