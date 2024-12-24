@@ -124,9 +124,16 @@ Notes:
 
 ## Installing MetGenC
 
-MetGenC can be installed from [PyPI](https://pypi.org/):
+MetGenC can be installed from [PyPI](https://pypi.org/). First, create a
+Python virtual environment in a directory of your choice, then activate
+it:
 
-    $ pip install --user nsidc-metgenc
+    $ python -m venv path-to-venv-name-i-chose
+    $ source path-to-venv-name-i-chose/bin/activate
+
+Now install MetGenC into the virtual environment using `pip`:
+
+    $ pip install nsidc-metgenc
 
 That's it! Now we're ready to run MetGenC and see what it can do:
 
