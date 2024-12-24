@@ -9,7 +9,7 @@ from pyproj import CRS, Transformer
 from nsidc.metgen import constants
 
 
-def extract_metadata(netcdf_path):
+def extract_metadata(netcdf_path, configuration):
     # provide some sort of "review" command line function to
     # assess what's missing from netcdf file?
     # or add to ini file generator a step that evaluates an
@@ -24,9 +24,10 @@ def extract_metadata(netcdf_path):
 
     return {
         "size_in_bytes": os.path.getsize(netcdf_path),
-        # no date modified in file
-        "production_date_time": ensure_iso(netcdf.attrs["date_modified"]),
+        "production_date_time": date_modified(netcdf, configuration),
         # no time range in file
+        # use regex to get start date from file name (assume 00:00:00 time)
+        # get time_coverage_duration from configuration
         "temporal": time_range(netcdf),
         "geometry": {"points": json.dumps(spatial_values(netcdf))},
     }
@@ -53,6 +54,7 @@ def spatial_values(netcdf):
     general-use module.
     """
 
+    # wkt exists in netcdf but in polar_stereographic variable (look for grid_mapping_name)
     data_crs = CRS.from_wkt(netcdf.crs.crs_wkt)
     crs_4326 = CRS.from_epsg(4326)
     xformer = Transformer.from_crs(data_crs, crs_4326, always_xy=True)
@@ -73,6 +75,10 @@ def spatial_values(netcdf):
 def pixel_padding(netcdf):
     # Adding padding should give us values that match up to the
     # netcdf.attrs.geospatial_bounds
+    # instead of using Geotransform:
+    # if x and y have atrributes valid_range then different between
+    # valid range and first x value for example should be padding
+    # if no valid range attribute then look for pixel size value in ini
     return abs(float(netcdf.crs.GeoTransform.split()[1])) / 2
 
 
@@ -132,6 +138,10 @@ def index_subset(original_length):
     else:
         return list(range(original_length))
 
+# no date modified in netcdf global attributes, then retrieve from configuration
+def date_modified(netcdf, configuration):
+    datetime_str = netcdf.attrs['date_modified'] if 'date_modified' in netcdf.attrs else configuration.date_modified
+    ensure_iso(datetime_str)
 
 def ensure_iso(datetime_str):
     """

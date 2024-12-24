@@ -19,7 +19,7 @@ from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
-from nsidc.metgen import aws, config, constants
+from nsidc.metgen import aws, config, constants, netcdf_reader
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -200,6 +200,7 @@ class Granule:
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
     cnm_message: Maybe[str] = Maybe.empty
+    data_reader: Callable[[str], dict] = Maybe.empty
 
 
 @dataclasses.dataclass
@@ -257,8 +258,9 @@ def process(configuration: config.Config) -> None:
 
     # Find all of the input granule files, limit the size of the list based
     # on the configuration, and execute the pipeline on each of the granules.
+    # TODO: Nicely manage reader and glob pattern for other file types.
     candidate_granules = [
-        Granule(p.name, data_filenames=[str(p)])
+        Granule(p.name, data_filenames=[str(p)], data_reader=netcdf_reader.extract_metadata)
         for p in Path(configuration.data_dir).glob("*.nc")
     ]
     granules = take(configuration.number, candidate_granules)
@@ -400,7 +402,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     # }
     metadata_details = {}
     for data_file in granule.data_filenames:
-        metadata_details[data_file] = configuration.data_reader(data_file)
+        metadata_details[data_file] = granule.data_reader(data_file, configuration)
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)

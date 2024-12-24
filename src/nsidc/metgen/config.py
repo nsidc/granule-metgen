@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import os.path
 from pathlib import Path
+from returns.maybe import Maybe, Nothing
 
 from nsidc.metgen import aws, constants, netcdf_reader
 
@@ -30,10 +31,11 @@ class Config:
     checksum_type: str
     number: int
     dry_run: bool
-
-    def __post_init__(self):
-        # data_reader: Callable[[str], dict]
-        self.data_reader = netcdf_reader
+    filename_regex: Maybe[str] = Maybe.empty
+    time_coverage_duration: Maybe[str] = Maybe.empty
+    geospatial_x_resolution: Maybe[str] = Maybe.empty
+    geospatial_y_resolution: Maybe[str] = Maybe.empty
+    date_modified: Maybe[str] = Maybe.empty
 
     def show(self):
         # TODO: add section headings in the right spot
@@ -110,6 +112,11 @@ def configuration(
         "checksum_type": constants.DEFAULT_CHECKSUM_TYPE,
         "number": constants.DEFAULT_NUMBER,
         "dry_run": constants.DEFAULT_DRY_RUN,
+        "filename_regex": Nothing,
+        "time_coverage_duration": Nothing,
+        "geospatial_x_resolution": Nothing,
+        "geospatial_y_resolution": Nothing,
+        "date_modified": Nothing,
     }
     try:
         return Config(
@@ -177,6 +184,21 @@ def configuration(
             ),
             _get_configuration_value(
                 environment, "Settings", "dry_run", bool, config_parser, overrides
+            ),
+            _get_configuration_value(
+                environment, "Collection", "filename_regex", str, config_parser, overrides
+            ),
+            _get_configuration_value(
+                environment, "Collection", "time_coverage_duration", str, config_parser, overrides
+            ),
+            _get_configuration_value(
+                environment, "Collection", "geospatial_x_resolution", str, config_parser, overrides
+            ),
+            _get_configuration_value(
+                environment, "Collection", "geospatial_y_resolution", str, config_parser, overrides
+            ),
+            _get_configuration_value(
+                environment, "Collection", "date_modified", str, config_parser, overrides
             ),
         )
     except Exception as e:

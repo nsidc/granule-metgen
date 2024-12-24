@@ -32,7 +32,11 @@ def expected_keys():
             "checksum_type",
             "number",
             "dry_run",
-            "data_reader",
+            "filename_regex",
+            "time_coverage_duration",
+            "date_modified",
+            "geospatial_x_resolution",
+            "geospatial_y_resolution",
         ]
     )
 
