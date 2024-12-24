@@ -1,0 +1,6 @@
+﻿nsidc
+=====
+
+.. automodule:: nsidc
+
+   

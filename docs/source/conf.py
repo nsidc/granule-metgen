@@ -1,35 +1,46 @@
-# Configuration file for the Sphinx documentation builder.
+import sys
+from pathlib import Path
 
-# -- Project information
+sys.path.insert(0, str(Path('..', '..', 'src').resolve()))
+
+# For the full list of built-in configuration values, see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'MetGenC'
 copyright = '2024, NSIDC'
-author = 'National Snow and Ice Data Center'
+author = 'NSIDC'
+release = 'v0.6'
 
-release = '0.6'
-version = '0.6.0'
-
-# -- General configuration
-
+# -- General configuration ---------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 extensions = [
-    'sphinx.ext.duration',
-    'sphinx.ext.doctest',
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.intersphinx',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.napoleon",
 ]
 
-intersphinx_mapping = {
-    'python': ('https://docs.python.org/3/', None),
-    'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
-}
-intersphinx_disabled_domains = ['std']
+exclude_patterns = [
+    "_build",
+    "**.ipynb_checkpoints",
+    "Thumbs.db",
+    ".DS_Store",
+    ".env",
+    ".venv",
+]
 
 templates_path = ['_templates']
 
-# -- Options for HTML output
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-html_theme = 'sphinx_rtd_theme'
+always_document_param_types = True
 
-# -- Options for EPUB output
-epub_show_urls = 'footnote'
+
+# -- Options for HTML output -------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+
+html_theme = 'classic'
+
+html_static_path = ['_static']
