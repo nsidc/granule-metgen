@@ -4,6 +4,9 @@
 
 # MetGenC
 
+![build & test workflow](https://github.com/nsidc/granule-metgen/actions/workflows/build-test.yml/badge.svg)
+![workflow workflow](https://github.com/nsidc/granule-metgen/actions/workflows/publish.yml/badge.svg)
+
 The `MetGenC` toolkit enables Operations staff and data
 producers to create metadata files conforming to NASA's Common Metadata Repository UMM-G
 specification and ingest data directly to NASA EOSDIS’s Cumulus archive. Cumulus is an
@@ -31,55 +34,108 @@ or
 
     $ python3 --version
 
-Next, install [Poetry](https://python-poetry.org/) by using the [official
-installer](https://python-poetry.org/docs/#installing-with-the-official-installer)
-if you’re comfortable with the instructions, or by installing it using a package
-manager (like Homebrew) if this is more familiar to you. When successfully
-installed, you should be able to run:
-
-    $ poetry --version
-    Poetry (version 1.8.3)
-
-Finally, install the AWS commandline interface (CLI) by [following the appropriate
+Next, install the AWS commandline interface (CLI) by [following the appropriate
 instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+
+Lastly, you will need to create & setup AWS credentials for yourself. The ways in which
+this can be accomplished are detailed in the **AWS Credentials** section below.
 
 ## Assumptions
 
-- Checksums are all SHA256
-- In the data files to be ingested:
-  - The global attribute "date_modified" exists and will be used to represent
-  the production date and time.
-  - Global attributes "time_coverage_start" and "time_coverage_end" exist and
-  will be used for the time range metadata values.
-  - Only one coordinate system is used by all variables (i.e. only one grid mapping variable is present in a file)
-  - (x[0],y[0]) represents the upper left corner of the spatial coverage.
-  - x,y coordinates represent the center of the pixel
-  - The grid mapping variable contains a GeoTransform attribute (which defines the pixel size ), and
-  can be used to determine the padding added to x and y values.
-- Date/time strings can be parsed using `datetime.fromisoformat`
+* Checksums are all SHA256
+* NetCDF files have an extension of `.nc` (required by CF conventions)
+* (x[0],y[0]) represents the upper left corner of the spatial coverage.
+* x and y coordinate values represent the center of the pixel
+* Date/time strings can be parsed using `datetime.fromisoformat`
+* Only one coordinate system is used by all data variables (i.e. only one grid
+  mapping variable is present in a file)
 
-## Installation
+### Reference links
 
-Make a local directory (i.e., on your computer), and then `cd` into that
-directory. Clone the `granule-metgen` repository using ssh if you have [added
-ssh keys to your GitHub
-account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
-or https if you have not:
+* https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3
+* https://cfconventions.org/Data/cf-conventions/cf-conventions-1.11/cf-conventions.html
 
-    $ mkdir -p ~/my-projects; cd ~/my-projects
-    # Install using ssh:
-    $ git clone git@github.com:nsidc/granule-metgen.git
-    # Install using https:
-    $ git clone https://github.com/nsidc/granule-metgen.git
+### NetCDF Attributes Used to Populate UMM-G
 
-Enter the `granule-metgen` directory and run Poetry to have it install the `granule-metgen` dependencies. Then start a new shell in which you can run the tool:
+- **Required** required
+- **RequiredC** conditionally required
+- **R+** highly or strongly recommended
+- **R** recommended
+- **S** suggested
 
-    $ cd granule-metgen
-    $ poetry install
-    $ poetry shell
+| Attribute in use (location)   | ACDD | CF Conventions | NSIDC Guidelines | Note    |
+| ----------------------------- | ---- | -------------- | ---------------- | ------- |
+| date_modified (global)        | S    |                | R                | 1       |
+| time_coverage_start (global)  | R    |                | R                | 2       |
+| time_coverage_end (global)    | R    |                | R                | 2       |
+| crs_wkt (`crs` variable)      |      |                | R                | 3       |
+| GeoTransform (`crs` variable) |      |                | R                | 4       |
+| data (`x` variable)           |      |                | R                | 5       |
+| data (`y` variable)           |      |                | R                | 6       |
 
-With the Poetry shell running, start the metgenc tool just to verify that it’s working by requesting its usage options and having them
-returned (there’s more to do—explained in the **Usage** section below—before MetGenC can be run successfully to create ummg, cnm, and stage data!)::
+
+| Attributes not currently used | ACDD | CF Conventions | NSIDC Guidelines | Comments |
+| ----------------------------- | ---- | -------------- | ---------------- | -------- |
+| Conventions (global)          | R+   | Required       | R                |          |
+| standard_name (variable)      | R+   | R+             |                  |          |
+| grid_mapping (data variable)  |      | RequiredC      | R+               | 7        |
+| grid_mapping_name (variable)  |      | RequiredC      | R+               | 7        |
+| `projection_x_coordinate` standard name (variable) |  | RequiredC  |     | 8        |
+| `projection_y_coordinate` standard name (variable) |  | RequiredC  |     | 9        |
+| axis (variable)               |      | R              |                  | 8, 9     |
+| geospatial_bounds (global)    | R    |                | R                |          |
+| geospatial_bounds_crs (global)| R    |                | R                |          |
+| geospatial_lat_min (global)   | R    |                | R                |          |
+| geospatial_lat_max (global)   | R    |                | R                |          |
+| geospatial_lat_units (global) | R    |                | R                |          |
+| geospatial_lon_min (global)   | R    |                | R                |          |
+| geospatial_lon_max (global)   | R    |                | R                |          |
+| geospatial_lon_units (global) | R    |                | R                |          |
+
+Notes:
+1. Used to populate the production date and time values in UMM-G output.
+2. Used to populate the time begin and end UMM-G values.
+3. The `crs_wkt` ("well known text") value is handed to the
+   `CRS` and `Transformer` modules in `pyproj` to conveniently deal
+   with the reprojection of (y,x) values to EPSG 4326 (lon, lat) values.
+4. The `GeoTransform` value provides the pixel size per data value, which is then used
+   to calculate the padding added to x and y values to create a GPolygon enclosing all
+   of the data.
+5. The `x` coordinate variable values are reprojected and thinned to create a GPolygon.
+6. The `y` coordinate variable values are reprojected and thinned to create a GPolygon.
+7. A grid mapping variable is required if the horizontal spatial coordinates are not
+   longitude and latitude and the intent of the data provider is to geolocate
+   the data. `grid_mapping` and `grid_mapping_name` allow programmatic identification of
+   the variable holding information about the horizontal coordinate reference system.
+   `metgenc` code currently assumes a variable named `crs` exists with grid
+   information. **TODO:** Identify the coordinate reference system variable by
+   looking for the `grid_mapping_name` or `grid_mapping` attribute.
+8. `metgenc` code currently assumes a coordinate variable `x` exists whose
+   data values represent spatial information in meters.
+   **TODO:** Identify the x-axis coordinate variable by looking for the `standard_name`
+   attribute with a value of `projection_x_coordinate`, or an `axis` attribute with
+   the value `X`, rather than assuming the variable is named `x`.
+9. `metgenc` code currently assumes a coordinate variable `y` exists whose
+   data values represent spatial information in meters.
+   **TODO:** Identify the y-axis coordinate variable by looking for the `standard_name`
+   attribute with a value of `projection_y_coordinate`, or an `axis` attribute with
+   the value `Y`, rather than assuming the variable is named `x`.
+
+
+## Installing MetGenC
+
+MetGenC can be installed from [PyPI](https://pypi.org/). First, create a
+Python virtual environment in a directory of your choice, then activate
+it:
+
+    $ python -m venv path-to-venv-name-i-chose
+    $ source path-to-venv-name-i-chose/bin/activate
+
+Now install MetGenC into the virtual environment using `pip`:
+
+    $ pip install nsidc-metgenc
+
+That's it! Now we're ready to run MetGenC and see what it can do:
 
     $ metgenc --help
     Usage: metgenc [OPTIONS] COMMAND [ARGS]...
@@ -187,7 +243,7 @@ Options:
   --help              Show this message and exit.
   ```
 
-* Show summary information about an `metgenc` configuration file. Here we use the example configuration file provided in the repo:
+* Show summary information about a `metgenc` configuration file. Here we use the example configuration file provided in the repo:
 
         $ metgenc info --config example/modscg.ini
 
@@ -220,6 +276,15 @@ TBD
 * [Python](https://www.python.org/) v3.12+
 * [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
 
+You can install [Poetry](https://python-poetry.org/) either by using the [official
+installer](https://python-poetry.org/docs/#installing-with-the-official-installer)
+if you’re comfortable following the instructions, or by using a package
+manager (like Homebrew) if this is more familiar to you. When successfully
+installed, you should be able to run:
+
+    $ poetry --version
+    Poetry (version 1.8.3)
+
 ### Installing Dependencies
 
 * Use Poetry to create and activate a virtual environment
@@ -230,13 +295,77 @@ TBD
 
         $ poetry install
 
-### Run tests:
+### Run tests
 
         $ poetry run pytest
 
 ### Run tests when source changes (uses [pytest-watcher](https://github.com/olzhasar/pytest-watcher)):
 
         $ poetry run ptw . --now --clear
+
+### Running the linter for code style issues:
+
+        $ poetry run ruff check
+
+[The `ruff` tool](https://docs.astral.sh/ruff/linter/) will check
+the source code for conformity with various style rules. Some of
+these can be fixed by `ruff` itself, and if so, the output will
+describe how to automatically fix these issues.
+
+The CI/CD pipeline will run these checks whenever new commits are
+pushed to GitHub, and the results will be available in the GitHub
+Actions output.
+
+### Running the code formatter
+
+        $ poetry run ruff format
+
+[The `ruff` tool](https://docs.astral.sh/ruff/formatter/) will check
+the source code for conformity with source code formatting rules. It
+will also fix any issues it finds and leave the changes uncommitted
+so you can review the changes prior to adding them to the codebase.
+
+As with the linter, the CI/CD pipeline will run the formatter when
+commits are pushed to GitHub.
+
+### Ruff integration with your editor
+
+Rather than running `ruff` manually from the commandline, it can be
+integrated with the editor of your choice. See the
+[ruff editor integration](https://docs.astral.sh/ruff/editors/) guide.
+
+### Releasing
+
+* Update the CHANGELOG to include details of the changes included in the new
+  release. The version should be the string literal 'UNRELEASED' (without 
+  single-quotes). It will be replaced with the actual version number after
+  we bump the version below. Commit the CHANGELOG so the working directory is
+  clean.
+
+* Show the current version and the possible next versions:
+
+        $ bump-my-version show-bump
+        0.3.0 ── bump ─┬─ major ─ 1.0.0
+                       ├─ minor ─ 0.4.0
+                       ╰─ patch ─ 0.3.1
+
+* Bump the version to the desired number, for example:
+
+        $ bump-my-version bump minor
+
+  You will see the latest commit & tag by looking at `git log`. You can then
+  push these to GitHub (`git push --follow-tags`) to trigger the CI/CD
+  workflow.
+
+* On the [GitHub repository](https://github.com/nsidc/granule-metgen), click
+  'Releases' and follow the steps documented on the 
+  [GitHub Releases page](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release).
+  Draft a new Release using the version tag created above. After you have
+  published the release, the MetGenC Publish GHA workflow will be started.
+  Check that the workflow succeeds on the
+  [MetGenC Actions page](https://github.com/nsidc/granule-metgen/actions),
+  and verify that the 
+  [new MetGenC release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
 
 ## Credit
 

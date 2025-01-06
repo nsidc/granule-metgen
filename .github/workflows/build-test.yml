@@ -1,10 +1,9 @@
+name: Build & test
 on:
   push:
-    branches: [main]
-  pull_request:
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,4 +36,16 @@ jobs:
 
       - run: poetry install --no-interaction
 
-      - run: poetry run pytest
+      - name: Check formatting
+        uses: astral-sh/ruff-action@v1
+        with:
+          args: "format --check"
+          src: "./src"
+
+      - name: Lint code
+        uses: astral-sh/ruff-action@v1
+        with:
+          src: "./src"
+
+      - name: Test
+        run: poetry run pytest

@@ -1,7 +1,7 @@
 import boto3
 
-
 KINESIS_PARTITION_KEY = "metgenc-duck"
+
 
 def kinesis_stream_exists(stream_name):
     """
@@ -10,10 +10,11 @@ def kinesis_stream_exists(stream_name):
     """
     client = boto3.client("kinesis")
     try:
-        summary = client.describe_stream_summary(StreamName=stream_name)
+        client.describe_stream_summary(StreamName=stream_name)
         return True
-    except Exception as e:
+    except Exception:
         return False
+
 
 def post_to_kinesis(stream_name, cnm_message):
     """
@@ -21,12 +22,11 @@ def post_to_kinesis(stream_name, cnm_message):
     """
     client = boto3.client("kinesis")
     result = client.put_record(
-        StreamName=stream_name,
-        Data=cnm_message,
-        PartitionKey=KINESIS_PARTITION_KEY
+        StreamName=stream_name, Data=cnm_message, PartitionKey=KINESIS_PARTITION_KEY
     )
 
-    return result['ShardId']
+    return result["ShardId"]
+
 
 def staging_bucket_exists(bucket_name):
     """
@@ -37,8 +37,9 @@ def staging_bucket_exists(bucket_name):
     try:
         client.head_bucket(Bucket=bucket_name)
         return True
-    except Exception as e:
+    except Exception:
         return False
+
 
 def stage_file(s3_bucket_name, object_name, *, data=None, file=None):
     """

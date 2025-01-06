@@ -1,13 +1,13 @@
 import json
 import os.path
-import xarray as xr
 from datetime import timezone
-from dateutil.parser import parse
 
-from pyproj import CRS
-from pyproj import Transformer
+import xarray as xr
+from dateutil.parser import parse
+from pyproj import CRS, Transformer
 
 from nsidc.metgen import constants
+
 
 def extract_metadata(netcdf_path):
     """
@@ -18,20 +18,22 @@ def extract_metadata(netcdf_path):
     # TODO: handle errors if any needed attributes don't exist.
     netcdf = xr.open_dataset(netcdf_path, decode_coords="all")
 
-    return { 
-        'size_in_bytes': os.path.getsize(netcdf_path),
-        'production_date_time': ensure_iso(netcdf.attrs['date_modified']),
-        'temporal': time_range(netcdf),
-        'geometry': {'points': json.dumps(spatial_values(netcdf))}
+    return {
+        "size_in_bytes": os.path.getsize(netcdf_path),
+        "production_date_time": ensure_iso(netcdf.attrs["date_modified"]),
+        "temporal": time_range(netcdf),
+        "geometry": {"points": json.dumps(spatial_values(netcdf))},
     }
+
 
 def time_range(netcdf):
     """Return an array of datetime strings"""
     datetimes = []
-    datetimes.append(ensure_iso(netcdf.attrs['time_coverage_start']))
-    datetimes.append(ensure_iso(netcdf.attrs['time_coverage_end']))
+    datetimes.append(ensure_iso(netcdf.attrs["time_coverage_start"]))
+    datetimes.append(ensure_iso(netcdf.attrs["time_coverage_end"]))
 
     return datetimes
+
 
 def spatial_values(netcdf):
     """
@@ -49,15 +51,20 @@ def spatial_values(netcdf):
     crs_4326 = CRS.from_epsg(4326)
     xformer = Transformer.from_crs(data_crs, crs_4326, always_xy=True)
 
-    # Adding padding should give us values that match up to the netcdf.attrs.geospatial_bounds
-    pad = abs(float(netcdf.crs.GeoTransform.split()[1]))/2
+    # Adding padding should give us values that match up to the
+    # netcdf.attrs.geospatial_bounds
+    pad = abs(float(netcdf.crs.GeoTransform.split()[1])) / 2
     xdata = [x - pad if x < 0 else x + pad for x in netcdf.x.data]
     ydata = [y - pad if y < 0 else y + pad for y in netcdf.y.data]
 
     # Extract the perimeter points and transform to lon, lat
     perimeter = [xformer.transform(x, y) for (x, y) in thinned_perimeter(xdata, ydata)]
 
-    return [{'Longitude': round(lon, 8), 'Latitude': round(lat, 8)} for (lon, lat) in perimeter]
+    return [
+        {"Longitude": round(lon, 8), "Latitude": round(lat, 8)}
+        for (lon, lat) in perimeter
+    ]
+
 
 def thinned_perimeter(xdata, ydata):
     """
@@ -71,16 +78,25 @@ def thinned_perimeter(xdata, ydata):
     # Pull out just the perimeter of the grid, counter-clockwise direction,
     # starting at top left.
     # xindex[0], yindex[0]..yindex[-2]
-    left = [(x,y) for x in xdata[:1] for i in yindices[:ylen-1] for y in [ydata[i]]]
+    left = [(x, y) for x in xdata[:1] for i in yindices[: ylen - 1] for y in [ydata[i]]]
 
     # xindex[0]..xindex[-2], yindex[-1]
-    bottom = [(x,y) for i in xindices[:xlen-1] for x in [xdata[i]] for y in ydata[-1:]]
+    bottom = [
+        (x, y) for i in xindices[: xlen - 1] for x in [xdata[i]] for y in ydata[-1:]
+    ]
 
     # xindex[-1], yindex[-1]..yindex[1]
-    right = [(x,y) for x in xdata[-1:] for i in yindices[ylen-1:0:-1] for y in [ydata[i]]]
+    right = [
+        (x, y)
+        for x in xdata[-1:]
+        for i in yindices[ylen - 1 : 0 : -1]
+        for y in [ydata[i]]
+    ]
 
     # xindex[-1]..xindex[0], yindex[0]
-    top = [(x,y) for i in xindices[xlen-1::-1] for x in [xdata[i]] for y in ydata[:1]]
+    top = [
+        (x, y) for i in xindices[xlen - 1 :: -1] for x in [xdata[i]] for y in ydata[:1]
+    ]
 
     # The last point should already be the same as the first, given that top
     # uses all of the xindices, but just in case...
@@ -88,7 +104,8 @@ def thinned_perimeter(xdata, ydata):
         top.append(left[0])
 
     # concatenate the "sides" and return the perimeter points
-    return(left + bottom + right + top)
+    return left + bottom + right + top
+
 
 def index_subset(original_length):
     """
@@ -96,16 +113,23 @@ def index_subset(original_length):
     somewhat arbitrary, and approximately evenly spaced, additional number
     of indices in between the beginning and end.
     """
-    if(original_length > 6):
-        return [round(index*count*.2) for count in range(constants.DEFAULT_SPATIAL_AXIS_SIZE) for index in [original_length - 1]]
+    if original_length > 6:
+        return [
+            round(index * count * 0.2)
+            for count in range(constants.DEFAULT_SPATIAL_AXIS_SIZE)
+            for index in [original_length - 1]
+        ]
     else:
         return list(range(original_length))
+
 
 def ensure_iso(datetime_str):
     """
     Parse ISO-standard datetime strings without a timezone identifier.
     """
     iso_obj = parse(datetime_str)
-    return iso_obj.replace(tzinfo=timezone.utc) \
-        .isoformat(timespec='milliseconds') \
+    return (
+        iso_obj.replace(tzinfo=timezone.utc)
+        .isoformat(timespec="milliseconds")
         .replace("+00:00", "Z")
+    )
