@@ -1,6 +1,9 @@
 import json
+import logging
 import os.path
+import re
 from datetime import timezone
+from isoduration import parse_duration
 
 import xarray as xr
 from dateutil.parser import parse
@@ -10,10 +13,6 @@ from nsidc.metgen import constants
 
 
 def extract_metadata(netcdf_path, configuration):
-    # provide some sort of "review" command line function to
-    # assess what's missing from netcdf file?
-    # or add to ini file generator a step that evaluates an
-    # example file for completeness?
     """
     Read the content at netcdf_path and return a structure with temporal coverage
     information, spatial coverage information, file size, and production datetime.
@@ -25,24 +24,44 @@ def extract_metadata(netcdf_path, configuration):
     return {
         "size_in_bytes": os.path.getsize(netcdf_path),
         "production_date_time": date_modified(netcdf, configuration),
-        # no time range in file
-        # use regex to get start date from file name (assume 00:00:00 time)
-        # get time_coverage_duration from configuration
-        "temporal": time_range(netcdf),
-        "geometry": {"points": json.dumps(spatial_values(netcdf))},
+        "temporal": time_range(os.path.basename(netcdf_path), netcdf, configuration),
+        "geometry": {"points": json.dumps(spatial_values(netcdf, configuration))},
     }
 
 
-def time_range(netcdf):
+def time_range(netcdf_filename, netcdf, configuration):
     """Return an array of datetime strings"""
-    datetimes = []
-    datetimes.append(ensure_iso(netcdf.attrs["time_coverage_start"]))
-    datetimes.append(ensure_iso(netcdf.attrs["time_coverage_end"]))
+    # datetimes.append(time_coverage_start(netcdf_filename, netcdf, configuration))
+    coverage_start = time_coverage_start(netcdf_filename, netcdf, configuration)
+    # datetimes.append(ensure_iso(netcdf.attrs["time_coverage_end"]))
+    coverage_end = time_coverage_end(netcdf, configuration, coverage_start)
 
-    return datetimes
+    if (coverage_start and coverage_end):
+        return [coverage_start, coverage_end]
 
+    return []
 
-def spatial_values(netcdf):
+def time_coverage_start(netcdf_filename, netcdf, configuration):
+    if netcdf.attrs["time_coverage_start"]:
+        return ensure_iso(netcdf.attrs["time_coverage_start"])
+
+    if configuration.filename_regex:
+        m = re.match(configuration.filename_regex, netcdf_filename)
+        return ensure_iso(m.group('time_coverage_start'))
+
+    return None
+
+def time_coverage_end(netcdf, configuration, time_coverage_start):
+    if netcdf.attrs["time_coverage_end"]:
+        return ensure_iso(netcdf.attrs["time_coverage_end"])
+
+    if (configuration.time_coverage_duration and time_coverage_start):
+        duration = parse_duration(configuration.time_coverage_duration)
+        return(ensure_iso(parse(time_coverage_start) + duration))
+    
+    return None
+
+def spatial_values(netcdf, configuration):
     """
     Return an array of dicts, each dict representing one lat/lon pair like so:
 
@@ -55,11 +74,13 @@ def spatial_values(netcdf):
     """
 
     # wkt exists in netcdf but in polar_stereographic variable (look for grid_mapping_name)
+    # assume only one grid mapping and stop once a variable is found with that attribute
+    # see xarray Dataset.filter_by_attrs()
     data_crs = CRS.from_wkt(netcdf.crs.crs_wkt)
     crs_4326 = CRS.from_epsg(4326)
     xformer = Transformer.from_crs(data_crs, crs_4326, always_xy=True)
 
-    pad = pixel_padding(netcdf)
+    pad = pixel_padding(netcdf, configuration)
     xdata = [x - pad if x < 0 else x + pad for x in netcdf.x.data]
     ydata = [y - pad if y < 0 else y + pad for y in netcdf.y.data]
 
@@ -72,13 +93,15 @@ def spatial_values(netcdf):
     ]
 
 
-def pixel_padding(netcdf):
+def pixel_padding(netcdf, configuration):
     # Adding padding should give us values that match up to the
     # netcdf.attrs.geospatial_bounds
     # instead of using Geotransform:
     # if x and y have atrributes valid_range then different between
     # valid range and first x value for example should be padding
     # if no valid range attribute then look for pixel size value in ini
+
+    # in ini file: geospatial_x_resolution, geospatial_y_resolution
     return abs(float(netcdf.crs.GeoTransform.split()[1])) / 2
 
 
@@ -138,10 +161,19 @@ def index_subset(original_length):
     else:
         return list(range(original_length))
 
-# no date modified in netcdf global attributes, then retrieve from configuration
+# if no date modified in netcdf global attributes, then retrieve from configuration
+# should errors be added to ledger for summary purposes, or simply plopped into log?
 def date_modified(netcdf, configuration):
     datetime_str = netcdf.attrs['date_modified'] if 'date_modified' in netcdf.attrs else configuration.date_modified
-    ensure_iso(datetime_str)
+    if datetime_str:
+        return ensure_iso(datetime_str)
+
+    log_error('No date modified value exists.')
+
+def log_error(err):
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+    logger.error(err)
+    exit(1)
 
 def ensure_iso(datetime_str):
     """

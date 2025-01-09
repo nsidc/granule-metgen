@@ -339,9 +339,9 @@ def null_operation(configuration: config.Config, granule: Granule) -> Granule:
 
 @cache
 def retrieve_collection(auth_id: str, version: int):
-    # ummc_from_cmr = talk_to_cmr(configuration.auth_id, configuration.version)
-    # pull out fields from UMM-C response and use to create collection object
-    # with more than just auth_id and version number.
+    # TODO: Issue request to CMR for UMM-C record, pull out fields from UMM-C
+    # response and use to create collection object with more than just auth_id
+    # and version number.
     return Collection(auth_id, version)
 
 
