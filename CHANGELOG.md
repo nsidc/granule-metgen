@@ -1,6 +1,6 @@
 MetGenC Changelog
 
-## UNRELEASED
+## v1.0.0
 
 * Adds command-line option to:
   * Validate the generated CNM message against the JSON schema
