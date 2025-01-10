@@ -17,9 +17,13 @@ release = 'v0.6'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
-    "sphinx.ext.napoleon",
+    'myst_parser',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.doctest',
+    'sphinx.ext.duration',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.napoleon',
 ]
 
 exclude_patterns = [
