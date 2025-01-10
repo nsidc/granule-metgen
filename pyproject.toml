@@ -65,8 +65,18 @@ replace = 'version = "{new_version}"'
 
 [[tool.bumpversion.files]]
 filename = "CHANGELOG.md"
-search = 'UNRELEASED'
-replace = 'v{new_version}'
+search = "UNRELEASED"
+replace = "v{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "docs/source/config.py"
+search = "release = 'v{current_version}'"
+replace = "release = 'v{new_version}'"
+
+[[tool.bumpversion.files]]
+filename = "docs/source/config.py"
+search = "version = 'v{current_version}'"
+replace = "version = 'v{new_version}'"
 
 [build-system]
 requires = ["poetry-core"]

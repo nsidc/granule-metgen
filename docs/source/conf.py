@@ -12,7 +12,8 @@ sys.path.insert(0, str(Path('..', '..', 'src').resolve()))
 project = 'MetGenC'
 copyright = '2024, NSIDC'
 author = 'NSIDC'
-release = 'v0.6'
+release = 'v1.0.0'
+version = 'v1.0.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -45,6 +46,6 @@ always_document_param_types = True
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'classic'
+html_theme = 'alabaster'
 
 html_static_path = ['_static']

@@ -1,15 +1,18 @@
-MetGenC Changelog
+## UNRELEASED
+
+* Creates and publishes documentation to
+  [ReadTheDocs](https://granule-metgen.readthedocs.io/en/latest/)
 
 ## v1.0.0
 
-* Adds command-line option to:
+* Adds command-line options to:
   * Validate the generated CNM message against the JSON schema
   * Validate the generated UMM-G metadata against the JSON schema
   * Skip staging the UMM-G files and sending the CNM message
   * Overwrite any existing UMM-G files for granules it is processing
 * Adds code linting and formatting checks
-* Adds a new release proces for the project
-* Now publishes releases to [PyPI](https://pypi.org/project/nsidc-metgenc/)
+* Adds a new release process for the project
+* Releases are published to [PyPI](https://pypi.org/project/nsidc-metgenc/)
 
 ## v0.6.0
 
@@ -30,4 +33,3 @@ features include:
   * Command-line validation options for CNM JSON content.
   * A `--dry-run` command-line option for testing without S3/Kinesis access.
   * Automatic build and deploy of the application to PyPI.
-
