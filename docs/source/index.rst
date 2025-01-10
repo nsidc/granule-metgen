@@ -26,7 +26,7 @@ API Documentation
 Specific documentation on the MetGenC Python package, its modules, and their functions, classes, and methods.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    api
 
