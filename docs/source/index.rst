@@ -20,19 +20,11 @@ Readme File
 .. include:: include.md
    :parser: myst_parser.sphinx_
 
-API Documentation
-=================
+Contents
+========
 
 Specific documentation on the MetGenC Python package, its modules, and their functions, classes, and methods.
 
 .. toctree::
-   :maxdepth: 4
 
-.. automodule:: nsidc
-
-Indices and Tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   api
