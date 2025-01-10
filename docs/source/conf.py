@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path('..', '..', 'src').resolve()))
+sys.path.insert(0, str(Path("..", "..", "src").resolve()))
 
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
@@ -9,22 +9,22 @@ sys.path.insert(0, str(Path('..', '..', 'src').resolve()))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'MetGenC'
-copyright = '2024, NSIDC'
-author = 'NSIDC'
-release = 'v1.0.0'
-version = 'v1.0.0'
+project = "MetGenC"
+copyright = "2024, NSIDC"
+author = "NSIDC"
+release = "v1.0.0"
+version = "v1.0.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 extensions = [
-    'myst_parser',
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.doctest',
-    'sphinx.ext.duration',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.napoleon',
+    "myst_parser",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.doctest",
+    "sphinx.ext.duration",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
 ]
 
 exclude_patterns = [
@@ -36,9 +36,9 @@ exclude_patterns = [
     ".venv",
 ]
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 always_document_param_types = True
 
@@ -46,6 +46,6 @@ always_document_param_types = True
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
+html_theme = "alabaster"
 
-html_static_path = ['_static']
+html_static_path = ["_static"]

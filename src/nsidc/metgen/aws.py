@@ -3,6 +3,7 @@ Utility functions for interacting with AWS. Includes functions to validate the
 AWS objects that have been configured by the MetGenC user, stage metadata files
 and post CNM messages to their destinations.
 """
+
 import boto3
 
 KINESIS_PARTITION_KEY = "metgenc-duck"

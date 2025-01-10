@@ -3,6 +3,7 @@ Describes the full command-line interface provided by MetGenC. The commandline
 operations described here are implemented by other modules within the
 `nsidc.metgen` package.
 """
+
 import logging
 
 import click

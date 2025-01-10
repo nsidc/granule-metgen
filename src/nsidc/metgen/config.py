@@ -2,6 +2,7 @@
 Provides functions for reading, parsing, and validating the application
 configuration values.
 """
+
 import configparser
 import dataclasses
 import logging

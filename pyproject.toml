@@ -70,13 +70,13 @@ replace = "v{new_version}"
 
 [[tool.bumpversion.files]]
 filename = "docs/source/conf.py"
-search = "release = 'v{current_version}'"
-replace = "release = 'v{new_version}'"
+search = "release = \"v{current_version}\""
+replace = "release = \"v{new_version}\""
 
 [[tool.bumpversion.files]]
 filename = "docs/source/conf.py"
-search = "version = 'v{current_version}'"
-replace = "version = 'v{new_version}'"
+search = "version = \"v{current_version}\""
+replace = "version = \"v{new_version}\""
 
 [build-system]
 requires = ["poetry-core"]

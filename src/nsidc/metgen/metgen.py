@@ -3,6 +3,7 @@ Implements all core functionality of the MetGenC utility: logging,
 metadata generation, CNM message creation, as well as staging the
 metadata and posting the notification message.
 """
+
 import configparser
 import dataclasses
 import datetime as dt
