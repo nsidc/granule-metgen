@@ -28,7 +28,7 @@ Specific documentation on the MetGenC Python package, its modules, and their fun
 .. toctree::
    :maxdepth: 4
 
-   api
+.. automodule:: nsidc
 
 Indices and Tables
 ==================
