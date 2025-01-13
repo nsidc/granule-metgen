@@ -3,6 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path("..", "..", "src").resolve()))
 print(sys.path)
+import nsidc.metgen
 
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
