@@ -1,2 +1,2 @@
-myst-parser=4
-sphinx==8
+myst-parser==4.0
+sphinx==8.1
