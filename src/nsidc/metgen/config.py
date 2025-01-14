@@ -4,6 +4,8 @@ import logging
 import os.path
 from pathlib import Path
 
+from returns.maybe import Maybe, Nothing
+
 from nsidc.metgen import aws, constants
 
 
@@ -30,6 +32,10 @@ class Config:
     checksum_type: str
     number: int
     dry_run: bool
+    filename_regex: Maybe[str] = Maybe.empty
+    time_coverage_duration: Maybe[str] = Maybe.empty
+    geotransform: Maybe[str] = Maybe.empty
+    date_modified: Maybe[str] = Maybe.empty
 
     def show(self):
         # TODO: add section headings in the right spot
@@ -43,8 +49,8 @@ class Config:
         if self.dry_run:
             LOGGER.info("")
             LOGGER.info(
-                "Note: The dry-run option was included, so no files will be "
-                "staged and no CNM messages published."
+                "Note: The dry-run option was included, so no files will be \
+staged and no CNM messages published."
             )
             LOGGER.info("")
 
@@ -106,6 +112,10 @@ def configuration(
         "checksum_type": constants.DEFAULT_CHECKSUM_TYPE,
         "number": constants.DEFAULT_NUMBER,
         "dry_run": constants.DEFAULT_DRY_RUN,
+        "filename_regex": Nothing,
+        "time_coverage_duration": Nothing,
+        "geotransform": Nothing,
+        "date_modified": Nothing,
     }
     try:
         return Config(
@@ -173,6 +183,33 @@ def configuration(
             ),
             _get_configuration_value(
                 environment, "Settings", "dry_run", bool, config_parser, overrides
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "filename_regex",
+                str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "time_coverage_duration",
+                str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment, "Collection", "geotransform", str, config_parser, overrides
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "date_modified",
+                str,
+                config_parser,
+                overrides,
             ),
         )
     except Exception as e:

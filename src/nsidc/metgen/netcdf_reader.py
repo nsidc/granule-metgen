@@ -1,15 +1,18 @@
 import json
+import logging
 import os.path
+import re
 from datetime import timezone
 
 import xarray as xr
 from dateutil.parser import parse
+from isoduration import parse_duration
 from pyproj import CRS, Transformer
 
 from nsidc.metgen import constants
 
 
-def extract_metadata(netcdf_path):
+def extract_metadata(netcdf_path, configuration):
     """
     Read the content at netcdf_path and return a structure with temporal coverage
     information, spatial coverage information, file size, and production datetime.
@@ -20,22 +23,47 @@ def extract_metadata(netcdf_path):
 
     return {
         "size_in_bytes": os.path.getsize(netcdf_path),
-        "production_date_time": ensure_iso(netcdf.attrs["date_modified"]),
-        "temporal": time_range(netcdf),
-        "geometry": {"points": json.dumps(spatial_values(netcdf))},
+        "production_date_time": date_modified(netcdf, configuration),
+        "temporal": time_range(os.path.basename(netcdf_path), netcdf, configuration),
+        "geometry": {"points": json.dumps(spatial_values(netcdf, configuration))},
     }
 
 
-def time_range(netcdf):
+def time_range(netcdf_filename, netcdf, configuration):
     """Return an array of datetime strings"""
-    datetimes = []
-    datetimes.append(ensure_iso(netcdf.attrs["time_coverage_start"]))
-    datetimes.append(ensure_iso(netcdf.attrs["time_coverage_end"]))
+    coverage_start = time_coverage_start(netcdf_filename, netcdf, configuration)
+    coverage_end = time_coverage_end(netcdf, configuration, coverage_start)
 
-    return datetimes
+    if coverage_start and coverage_end:
+        return [coverage_start, coverage_end]
+
+    return []
 
 
-def spatial_values(netcdf):
+def time_coverage_start(netcdf_filename, netcdf, configuration):
+    if "time_coverage_start" in netcdf.attrs.keys():
+        return ensure_iso(netcdf.attrs["time_coverage_start"])
+
+    if configuration.filename_regex:
+        m = re.match(configuration.filename_regex, netcdf_filename)
+        return ensure_iso(m.group("time_coverage_start"))
+
+    return None
+
+
+def time_coverage_end(netcdf, configuration, time_coverage_start):
+    if "time_coverage_end" in netcdf.attrs.keys():
+        return ensure_iso(netcdf.attrs["time_coverage_end"])
+
+    if configuration.time_coverage_duration and time_coverage_start:
+        duration = parse_duration(configuration.time_coverage_duration)
+        time_obj = parse(time_coverage_start) + duration
+        return ensure_iso(time_obj.isoformat())
+
+    return None
+
+
+def spatial_values(netcdf, configuration):
     """
     Return an array of dicts, each dict representing one lat/lon pair like so:
 
@@ -47,13 +75,16 @@ def spatial_values(netcdf):
     general-use module.
     """
 
-    data_crs = CRS.from_wkt(netcdf.crs.crs_wkt)
+    # We currently assume only one grid mapping coordinate variable exists.
+    grid_mapping_var = netcdf.filter_by_attrs(grid_mapping_name=lambda v: v is not None)
+    grid_mapping_var_name = list(grid_mapping_var.coords)[0]
+    wkt = netcdf.variables[grid_mapping_var_name].attrs["crs_wkt"]
+
+    data_crs = CRS.from_wkt(wkt)
     crs_4326 = CRS.from_epsg(4326)
     xformer = Transformer.from_crs(data_crs, crs_4326, always_xy=True)
 
-    # Adding padding should give us values that match up to the
-    # netcdf.attrs.geospatial_bounds
-    pad = abs(float(netcdf.crs.GeoTransform.split()[1])) / 2
+    pad = pixel_padding(netcdf.variables[grid_mapping_var_name], configuration)
     xdata = [x - pad if x < 0 else x + pad for x in netcdf.x.data]
     ydata = [y - pad if y < 0 else y + pad for y in netcdf.y.data]
 
@@ -64,6 +95,17 @@ def spatial_values(netcdf):
         {"Longitude": round(lon, 8), "Latitude": round(lat, 8)}
         for (lon, lat) in perimeter
     ]
+
+
+def pixel_padding(netcdf_var, configuration):
+    # We could also calculate padding from the geospatial_bounds global attribute
+    # rather than GeoTransform.
+    if "GeoTransform" in netcdf_var.attrs.keys():
+        geotransform = netcdf_var.attrs["GeoTransform"]
+    else:
+        geotransform = configuration.geotransform
+
+    return abs(float(geotransform.split()[1])) / 2
 
 
 def thinned_perimeter(xdata, ydata):
@@ -121,6 +163,27 @@ def index_subset(original_length):
         ]
     else:
         return list(range(original_length))
+
+
+# if no date modified in netcdf global attributes, then retrieve from configuration
+# should errors be added to ledger for summary purposes, or simply plopped into log?
+def date_modified(netcdf, configuration):
+    if "date_modified" in netcdf.attrs.keys():
+        datetime_str = netcdf.attrs["date_modified"]
+    else:
+        datetime_str = configuration.date_modified
+
+    if datetime_str:
+        return ensure_iso(datetime_str)
+
+    log_error("No date modified value exists.")
+    return None
+
+
+def log_error(err):
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+    logger.error(err)
+    exit(1)
 
 
 def ensure_iso(datetime_str):
