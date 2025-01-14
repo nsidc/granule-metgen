@@ -3,10 +3,10 @@ import logging
 import os.path
 import re
 from datetime import timezone
-from isoduration import parse_duration
 
 import xarray as xr
 from dateutil.parser import parse
+from isoduration import parse_duration
 from pyproj import CRS, Transformer
 
 from nsidc.metgen import constants
@@ -36,30 +36,34 @@ def time_range(netcdf_filename, netcdf, configuration):
     # datetimes.append(ensure_iso(netcdf.attrs["time_coverage_end"]))
     coverage_end = time_coverage_end(netcdf, configuration, coverage_start)
 
-    if (coverage_start and coverage_end):
+    if coverage_start and coverage_end:
         return [coverage_start, coverage_end]
 
     return []
 
+
 def time_coverage_start(netcdf_filename, netcdf, configuration):
-    if netcdf.attrs["time_coverage_start"]:
+    if "time_coverage_start" in netcdf.attrs.keys():
         return ensure_iso(netcdf.attrs["time_coverage_start"])
 
     if configuration.filename_regex:
         m = re.match(configuration.filename_regex, netcdf_filename)
-        return ensure_iso(m.group('time_coverage_start'))
+        return ensure_iso(m.group("time_coverage_start"))
 
     return None
+
 
 def time_coverage_end(netcdf, configuration, time_coverage_start):
-    if netcdf.attrs["time_coverage_end"]:
+    if "time_coverage_end" in netcdf.attrs.keys():
         return ensure_iso(netcdf.attrs["time_coverage_end"])
 
-    if (configuration.time_coverage_duration and time_coverage_start):
+    if configuration.time_coverage_duration and time_coverage_start:
         duration = parse_duration(configuration.time_coverage_duration)
-        return(ensure_iso(parse(time_coverage_start) + duration))
-    
+        time_obj = parse(time_coverage_start) + duration
+        return ensure_iso(time_obj.isoformat())
+
     return None
+
 
 def spatial_values(netcdf, configuration):
     """
@@ -74,10 +78,9 @@ def spatial_values(netcdf, configuration):
     """
 
     # We currently assume only one grid mapping coordinate variable exists.
-    grid_mapping_name = lambda v: v is not None
-    grid_mapping_var = netcdf.filter_by_attrs(grid_mapping_name=grid_mapping_name)
+    grid_mapping_var = netcdf.filter_by_attrs(grid_mapping_name=lambda v: v is not None)
     grid_mapping_var_name = list(grid_mapping_var.coords)[0]
-    wkt = netcdf.variables[grid_mapping_var_name].attrs['crs_wkt']
+    wkt = netcdf.variables[grid_mapping_var_name].attrs["crs_wkt"]
 
     data_crs = CRS.from_wkt(wkt)
     crs_4326 = CRS.from_epsg(4326)
@@ -97,18 +100,13 @@ def spatial_values(netcdf, configuration):
 
 
 def pixel_padding(netcdf_var, configuration):
-    # Adding padding should give us values that match up to the
-    # netcdf.attrs.geospatial_bounds
-    # instead of using Geotransform:
-    # if x and y have attributes valid_range then difference between
-    # valid range and first x value for example should be padding
-    # if no valid range attribute then look for pixel size value in ini
-    if netcdf_var.attrs['GeoTransform'] is None:
-        geotransform = configuration.geotransform
+    # We could also calculate padding from the geospatial_bounds global attribute
+    # rather than GeoTransform.
+    if "GeoTransform" in netcdf_var.attrs.keys():
+        geotransform = netcdf_var.attrs["GeoTransform"]
     else:
-        geotransform = netcdf_var.attrs['GeoTransform']
+        geotransform = configuration.geotransform
 
-    # in ini file: geospatial_x_resolution, geospatial_y_resolution
     return abs(float(geotransform.split()[1])) / 2
 
 
@@ -168,19 +166,26 @@ def index_subset(original_length):
     else:
         return list(range(original_length))
 
+
 # if no date modified in netcdf global attributes, then retrieve from configuration
 # should errors be added to ledger for summary purposes, or simply plopped into log?
 def date_modified(netcdf, configuration):
-    datetime_str = netcdf.attrs['date_modified'] if 'date_modified' in netcdf.attrs else configuration.date_modified
+    if "date_modified" in netcdf.attrs:
+        datetime_str = netcdf.attrs["date_modified"]
+    else:
+        datetime_str = configuration.date_modified
+
     if datetime_str:
         return ensure_iso(datetime_str)
 
-    log_error('No date modified value exists.')
+    log_error("No date modified value exists.")
+
 
 def log_error(err):
     logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.error(err)
     exit(1)
+
 
 def ensure_iso(datetime_str):
     """

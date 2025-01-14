@@ -35,8 +35,7 @@ def expected_keys():
             "filename_regex",
             "time_coverage_duration",
             "date_modified",
-            "geospatial_x_resolution",
-            "geospatial_y_resolution",
+            "geotransform",
         ]
     )
 

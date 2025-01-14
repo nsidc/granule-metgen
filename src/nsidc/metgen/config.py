@@ -34,8 +34,7 @@ class Config:
     dry_run: bool
     filename_regex: Maybe[str] = Maybe.empty
     time_coverage_duration: Maybe[str] = Maybe.empty
-    geospatial_x_resolution: Maybe[str] = Maybe.empty
-    geospatial_y_resolution: Maybe[str] = Maybe.empty
+    geotransform: Maybe[str] = Maybe.empty
     date_modified: Maybe[str] = Maybe.empty
 
     def show(self):
@@ -115,8 +114,7 @@ def configuration(
         "dry_run": constants.DEFAULT_DRY_RUN,
         "filename_regex": Nothing,
         "time_coverage_duration": Nothing,
-        "geospatial_x_resolution": Nothing,
-        "geospatial_y_resolution": Nothing,
+        "geotransform": Nothing,
         "date_modified": Nothing,
     }
     try:
@@ -187,19 +185,31 @@ def configuration(
                 environment, "Settings", "dry_run", bool, config_parser, overrides
             ),
             _get_configuration_value(
-                environment, "Collection", "filename_regex", str, config_parser, overrides
+                environment,
+                "Collection",
+                "filename_regex",
+                str,
+                config_parser,
+                overrides,
             ),
             _get_configuration_value(
-                environment, "Collection", "time_coverage_duration", str, config_parser, overrides
+                environment,
+                "Collection",
+                "time_coverage_duration",
+                str,
+                config_parser,
+                overrides,
             ),
             _get_configuration_value(
-                environment, "Collection", "geospatial_x_resolution", str, config_parser, overrides
+                environment, "Collection", "geotransform", str, config_parser, overrides
             ),
             _get_configuration_value(
-                environment, "Collection", "geospatial_y_resolution", str, config_parser, overrides
-            ),
-            _get_configuration_value(
-                environment, "Collection", "date_modified", str, config_parser, overrides
+                environment,
+                "Collection",
+                "date_modified",
+                str,
+                config_parser,
+                overrides,
             ),
         )
     except Exception as e:

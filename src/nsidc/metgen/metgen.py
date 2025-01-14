@@ -260,7 +260,9 @@ def process(configuration: config.Config) -> None:
     # on the configuration, and execute the pipeline on each of the granules.
     # TODO: Nicely manage reader and glob pattern for other file types.
     candidate_granules = [
-        Granule(p.name, data_filenames=[str(p)], data_reader=netcdf_reader.extract_metadata)
+        Granule(
+            p.name, data_filenames=[str(p)], data_reader=netcdf_reader.extract_metadata
+        )
         for p in Path(configuration.data_dir).glob("*.nc")
     ]
     granules = take(configuration.number, candidate_granules)
