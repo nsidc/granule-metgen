@@ -2,12 +2,12 @@ import configparser
 import dataclasses
 import datetime as dt
 import hashlib
+import importlib.resources
 import json
 import logging
 import os.path
 import sys
 import uuid
-from importlib.resources import files
 from pathlib import Path
 from string import Template
 from typing import Callable
@@ -670,7 +670,7 @@ def cnms_files_template():
 
 
 def _open_text(anchor, name):
-    for t in files(anchor).iterdir():
+    for t in importlib.resources.files(anchor).iterdir():
         if t.name == name:
             return t.read_text()
     return None
