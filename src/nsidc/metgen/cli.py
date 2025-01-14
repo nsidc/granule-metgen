@@ -70,19 +70,6 @@ def validate(config_filename, content_type):
 
 @cli.command()
 @click.option(
-    "-f",
-    "--file",
-    "data_filename",
-    help="Path to sample data file",
-    required=True,
-)
-def assess():
-    """Examine a sample data file for metadata completeness"""
-    return True
-
-
-@cli.command()
-@click.option(
     "-c",
     "--config",
     "config_filename",

@@ -31,9 +31,7 @@ def extract_metadata(netcdf_path, configuration):
 
 def time_range(netcdf_filename, netcdf, configuration):
     """Return an array of datetime strings"""
-    # datetimes.append(time_coverage_start(netcdf_filename, netcdf, configuration))
     coverage_start = time_coverage_start(netcdf_filename, netcdf, configuration)
-    # datetimes.append(ensure_iso(netcdf.attrs["time_coverage_end"]))
     coverage_end = time_coverage_end(netcdf, configuration, coverage_start)
 
     if coverage_start and coverage_end:
@@ -170,7 +168,7 @@ def index_subset(original_length):
 # if no date modified in netcdf global attributes, then retrieve from configuration
 # should errors be added to ledger for summary purposes, or simply plopped into log?
 def date_modified(netcdf, configuration):
-    if "date_modified" in netcdf.attrs:
+    if "date_modified" in netcdf.attrs.keys():
         datetime_str = netcdf.attrs["date_modified"]
     else:
         datetime_str = configuration.date_modified
@@ -179,6 +177,7 @@ def date_modified(netcdf, configuration):
         return ensure_iso(datetime_str)
 
     log_error("No date modified value exists.")
+    return None
 
 
 def log_error(err):
