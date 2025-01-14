@@ -668,14 +668,17 @@ def cnms_body_template():
 def cnms_files_template():
     return initialize_template(constants.CNM_FILES_TEMPLATE)
 
+
 def _open_text(anchor, name):
     for t in files(anchor).iterdir():
         if t.name == name:
             return t.read_text()
     return None
 
+
 def initialize_template(resource_location):
     return Template(_open_text(*resource_location))
+
 
 def validate(configuration, content_type):
     """
