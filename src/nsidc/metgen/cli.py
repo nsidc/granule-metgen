@@ -21,8 +21,6 @@ def init(config):
     """Populates a configuration file based on user input."""
     click.echo(metgen.banner())
     config = metgen.init_config(config)
-    # add step here to evaluate input files?
-    # if netcdf: header information
     click.echo(f"Initialized the metgen configuration file {config}")
 
 

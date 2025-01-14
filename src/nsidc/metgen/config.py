@@ -3,9 +3,10 @@ import dataclasses
 import logging
 import os.path
 from pathlib import Path
+
 from returns.maybe import Maybe, Nothing
 
-from nsidc.metgen import aws, constants, netcdf_reader
+from nsidc.metgen import aws, constants
 
 
 class ValidationError(Exception):
