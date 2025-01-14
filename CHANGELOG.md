@@ -1,5 +1,16 @@
 MetGenC Changelog
 
+## v1.0.0
+
+* Adds command-line option to:
+  * Validate the generated CNM message against the JSON schema
+  * Validate the generated UMM-G metadata against the JSON schema
+  * Skip staging the UMM-G files and sending the CNM message
+  * Overwrite any existing UMM-G files for granules it is processing
+* Adds code linting and formatting checks
+* Adds a new release proces for the project
+* Now publishes releases to [PyPI](https://pypi.org/project/nsidc-metgenc/)
+
 ## v0.6.0
 
 This is the Minimum Viable Product (MVP) release of MetGenC. The
