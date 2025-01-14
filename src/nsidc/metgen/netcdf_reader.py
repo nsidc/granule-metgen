@@ -73,14 +73,17 @@ def spatial_values(netcdf, configuration):
     general-use module.
     """
 
-    # wkt exists in netcdf but in polar_stereographic variable (look for grid_mapping_name)
-    # assume only one grid mapping and stop once a variable is found with that attribute
-    # see xarray Dataset.filter_by_attrs()
-    data_crs = CRS.from_wkt(netcdf.crs.crs_wkt)
+    # We currently assume only one grid mapping coordinate variable exists.
+    grid_mapping_name = lambda v: v is not None
+    grid_mapping_var = netcdf.filter_by_attrs(grid_mapping_name=grid_mapping_name)
+    grid_mapping_var_name = list(grid_mapping_var.coords)[0]
+    wkt = netcdf.variables[grid_mapping_var_name].attrs['crs_wkt']
+
+    data_crs = CRS.from_wkt(wkt)
     crs_4326 = CRS.from_epsg(4326)
     xformer = Transformer.from_crs(data_crs, crs_4326, always_xy=True)
 
-    pad = pixel_padding(netcdf, configuration)
+    pad = pixel_padding(netcdf.variables[grid_mapping_var_name], configuration)
     xdata = [x - pad if x < 0 else x + pad for x in netcdf.x.data]
     ydata = [y - pad if y < 0 else y + pad for y in netcdf.y.data]
 
@@ -93,16 +96,20 @@ def spatial_values(netcdf, configuration):
     ]
 
 
-def pixel_padding(netcdf, configuration):
+def pixel_padding(netcdf_var, configuration):
     # Adding padding should give us values that match up to the
     # netcdf.attrs.geospatial_bounds
     # instead of using Geotransform:
-    # if x and y have atrributes valid_range then different between
+    # if x and y have attributes valid_range then difference between
     # valid range and first x value for example should be padding
     # if no valid range attribute then look for pixel size value in ini
+    if netcdf_var.attrs['GeoTransform'] is None:
+        geotransform = configuration.geotransform
+    else:
+        geotransform = netcdf_var.attrs['GeoTransform']
 
     # in ini file: geospatial_x_resolution, geospatial_y_resolution
-    return abs(float(netcdf.crs.GeoTransform.split()[1])) / 2
+    return abs(float(geotransform.split()[1])) / 2
 
 
 def thinned_perimeter(xdata, ydata):
