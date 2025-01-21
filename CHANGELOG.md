@@ -1,8 +1,14 @@
 MetGenC Changelog
 
+## UNRELEASED
+
+* Creates and publishes documentation to
+  [ReadTheDocs](https://granule-metgen.readthedocs.io/en/latest/)
+* Internal updates to no longer rely on a deprecated Python function
+
 ## v1.0.0
 
-* Adds command-line option to:
+* Adds command-line options to:
   * Validate the generated CNM message against the JSON schema
   * Validate the generated UMM-G metadata against the JSON schema
   * Skip staging the UMM-G files and sending the CNM message
