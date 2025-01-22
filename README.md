@@ -21,7 +21,7 @@ This repository is fully supported by NSIDC. If you discover any problems or bug
 please submit an Issue. If you would like to contribute to this repository, you may fork
 the repository and submit a pull request.
 
-See the [LICENSE](LICENSE) for details on permissions and warranties. Please contact
+See the [LICENSE](LICENSE.md) for details on permissions and warranties. Please contact
 nsidc@nsidc.org for more information.
 
 ## Requirements
