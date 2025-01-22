@@ -8,12 +8,12 @@ import configparser
 import dataclasses
 import datetime as dt
 import hashlib
+import importlib.resources
 import json
 import logging
 import os.path
 import sys
 import uuid
-from importlib.resources import open_text
 from pathlib import Path
 from string import Template
 from typing import Callable
@@ -675,11 +675,15 @@ def cnms_files_template():
     return initialize_template(constants.CNM_FILES_TEMPLATE)
 
 
-def initialize_template(resource_location):
-    with open_text(*resource_location) as template_file:
-        template_str = template_file.read()
+def _open_text(anchor, name):
+    for t in importlib.resources.files(anchor).iterdir():
+        if t.name == name:
+            return t.read_text()
+    return None
 
-    return Template(template_str)
+
+def initialize_template(resource_location):
+    return Template(_open_text(*resource_location))
 
 
 def validate(configuration, content_type):
@@ -692,12 +696,11 @@ def validate(configuration, content_type):
     logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.info("")
     logger.info(f"Validating files in {output_file_path}...")
-    with open_text(*schema_resource_location) as sf:
-        schema = json.load(sf)
 
-        # loop through all files and validate each one
-        for json_file in output_file_path.glob("*.json"):
-            apply_schema(schema, json_file, dummy_json)
+    schema = json.load(_open_text(*schema_resource_location))
+    # loop through all files and validate each one
+    for json_file in output_file_path.glob("*.json"):
+        apply_schema(schema, json_file, dummy_json)
 
     logger.info("Validations complete.")
     return True

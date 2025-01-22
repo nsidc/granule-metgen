@@ -2,6 +2,7 @@
 
 * Creates and publishes documentation to
   [ReadTheDocs](https://granule-metgen.readthedocs.io/en/latest/)
+* Internal updates to no longer rely on a deprecated Python function
 
 ## v1.0.0
 
