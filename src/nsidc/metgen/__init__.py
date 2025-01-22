@@ -11,9 +11,4 @@ __all__ = [
     "netcdf_reader",
 ]
 
-from . import aws
-from . import cli
-from . import config
-from . import constants
-from . import metgen
-from . import netcdf_reader
+from . import aws, cli, config, constants, metgen, netcdf_reader

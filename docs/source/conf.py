@@ -2,8 +2,6 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path("..", "..", "src").resolve()))
-print(sys.path)
-import nsidc.metgen
 
 project = "MetGenC"
 copyright = "2024, NSIDC"
