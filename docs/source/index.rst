@@ -1,19 +1,12 @@
-Welcome to MetGenC's documentation!
-===================================
+NSIDC Granule Metadata Generator for the Cloud
+----------------------------------------------
 
-**MetGenC** solves all your problems.
+.. include:: ../../README.md
+   :parser: myst_parser.sphinx_
 
-Check out the :doc:`usage` section for further information, including
-how to :ref:`installation` the project.
-
-.. note::
-
-   This project is under active development.
-
-Contents
---------
+.. _releases:
 
 .. toctree::
 
-   usage
-   api
+   releases
+   developer-documentation

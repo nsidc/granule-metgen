@@ -5,7 +5,9 @@
 # MetGenC
 
 ![build & test workflow](https://github.com/nsidc/granule-metgen/actions/workflows/build-test.yml/badge.svg)
-![workflow workflow](https://github.com/nsidc/granule-metgen/actions/workflows/publish.yml/badge.svg)
+![publish workflow](https://github.com/nsidc/granule-metgen/actions/workflows/publish.yml/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/granule-metgen/badge/?version=latest)](https://granule-metgen.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/granule-metgen/badge/?version=stable)](https://granule-metgen.readthedocs.io/en/stable/?badge=stable)
 
 The `MetGenC` toolkit enables Operations staff and data
 producers to create metadata files conforming to NASA's Common Metadata Repository UMM-G
@@ -19,7 +21,7 @@ This repository is fully supported by NSIDC. If you discover any problems or bug
 please submit an Issue. If you would like to contribute to this repository, you may fork
 the repository and submit a pull request.
 
-See the [LICENSE](LICENSE) for details on permissions and warranties. Please contact
+See the [LICENSE](LICENSE.md) for details on permissions and warranties. Please contact
 nsidc@nsidc.org for more information.
 
 ## Requirements
@@ -181,7 +183,7 @@ and replace `TBD` with the public and secret key values.
 ### Option 2: Using the AWS CLI to Create Configuration Files
 
 You may install (or already have it installed) the AWS Command Line Interface on the
-machine where you are running the tool. Follow the 
+machine where you are running the tool. Follow the
 [AWS CLI Install instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 for the platform on which you are running.
 
@@ -196,7 +198,7 @@ and files with your values.
 
 If you require access to multiple AWS accounts, each with their own configuration--for
 example, different accounts for pre-production vs. production--you can use the AWS CLI
-'profile' feature to manage settings for each account. See the [AWS configuration 
+'profile' feature to manage settings for each account. See the [AWS configuration
 documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles)
 for the details.
 
@@ -337,7 +339,7 @@ integrated with the editor of your choice. See the
 ### Releasing
 
 * Update the CHANGELOG to include details of the changes included in the new
-  release. The version should be the string literal 'UNRELEASED' (without 
+  release. The version should be the string literal 'UNRELEASED' (without
   single-quotes). It will be replaced with the actual version number after
   we bump the version below. Commit the CHANGELOG so the working directory is
   clean.
@@ -358,13 +360,13 @@ integrated with the editor of your choice. See the
   workflow.
 
 * On the [GitHub repository](https://github.com/nsidc/granule-metgen), click
-  'Releases' and follow the steps documented on the 
+  'Releases' and follow the steps documented on the
   [GitHub Releases page](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release).
   Draft a new Release using the version tag created above. After you have
   published the release, the MetGenC Publish GHA workflow will be started.
   Check that the workflow succeeds on the
   [MetGenC Actions page](https://github.com/nsidc/granule-metgen/actions),
-  and verify that the 
+  and verify that the
   [new MetGenC release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
 
 ## Credit
