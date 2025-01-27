@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if (( $# != 1 )); then
-    echo "Usage: source env.sh aws_profile_name"
+    echo "Usage: source metgenc-env.sh aws_profile_name"
     echo "       where aws_profile_name is an AWS CLI named profile"
     echo "       https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html"
     exit 1

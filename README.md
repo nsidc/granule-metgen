@@ -234,7 +234,7 @@ Options:
 * Process science data and stage it for Cumulus:
 
         # Source the AWS profile (once) before running 'process'-- use 'default' or a named profile
-        $ source scripts/env.sh default
+        $ source metgenc-env.sh default
         $ metgenc process --config example/modscg.ini
 
 * Validate JSON output

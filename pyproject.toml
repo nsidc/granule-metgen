@@ -96,3 +96,4 @@ addopts = [
 
 [tool.poetry.scripts]
 metgenc = 'nsidc.metgen.cli:cli'
+metgenc-env = { reference = "scripts/metgenc-env.sh", type= "file" }
