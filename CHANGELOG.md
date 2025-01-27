@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.0.1
 
 * Creates and publishes documentation to
   [ReadTheDocs](https://granule-metgen.readthedocs.io/en/latest/)
