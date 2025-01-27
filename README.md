@@ -158,7 +158,7 @@ Finally, restrict the permissions of the directory and files:
 
     $ chmod -R go-rwx ~/.aws
 
-When you obtain the AWS key pair (not covered here), edit the `~/.aws/credentials` file
+When you obtain the AWS key pair ([covered here](https://nsidc.atlassian.net/l/cp/4LNZPggJ)), edit the `~/.aws/credentials` file
 and replace `TBD` with the public and secret key values.
 
 ### Option 2: Using the AWS CLI to Create Configuration Files
