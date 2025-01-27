@@ -36,12 +36,6 @@ or
 
     $ python3 --version
 
-Next, install the AWS commandline interface (CLI) by [following the appropriate
-instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
-
-Lastly, you will need to create & setup AWS credentials for yourself. The ways in which
-this can be accomplished are detailed in the **AWS Credentials** section below.
-
 ## Assumptions
 
 * Checksums are all SHA256
@@ -130,30 +124,17 @@ MetGenC can be installed from [PyPI](https://pypi.org/). First, create a
 Python virtual environment in a directory of your choice, then activate
 it:
 
-    $ python -m venv path-to-venv-name-i-chose
-    $ source path-to-venv-name-i-chose/bin/activate
+    $ python -m venv /Users/afitzger/metgenc (i.e. provide the path to and name of the virtual environment to house MetgenC)
+    $ source ~/metgenc/bin/activate (i.e., source your newly created virtual environment name)
 
 Now install MetGenC into the virtual environment using `pip`:
 
     $ pip install nsidc-metgenc
 
-That's it! Now we're ready to run MetGenC and see what it can do:
-
-    $ metgenc --help
-    Usage: metgenc [OPTIONS] COMMAND [ARGS]...
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      info
-      init
-      process
-
 ## AWS Credentials
 
 In order to process science data and stage it for Cumulus, you must first create & setup your AWS
-credentials. Two options for doing this are detailed here:
+credentials. Two options for doing this are:
 
 ### Option 1: Manually Creating Configuration Files
 
@@ -226,6 +207,7 @@ Commands:
   info     Summarizes the contents of a configuration file.
   init     Populates a configuration file based on user input.
   process  Processes science data files based on configuration file...
+  validate Validates the contents of local JSON files.
 ```
 
   For detailed help on each command, run: metgenc <command> --help`, for example:
