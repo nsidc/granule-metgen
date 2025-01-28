@@ -253,9 +253,10 @@ Options:
 
 TBD
 
-## Contributing
+## For Developers
+### Contributing
 
-### Requirements
+#### Requirements
 
 * [Python](https://www.python.org/) v3.12+
 * [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
@@ -269,7 +270,7 @@ installed, you should be able to run:
     $ poetry --version
     Poetry (version 1.8.3)
 
-### Installing Dependencies
+#### Installing Dependencies
 
 * Use Poetry to create and activate a virtual environment
 
@@ -279,15 +280,15 @@ installed, you should be able to run:
 
         $ poetry install
 
-### Run tests
+#### Run tests
 
         $ poetry run pytest
 
-### Run tests when source changes (uses [pytest-watcher](https://github.com/olzhasar/pytest-watcher)):
+#### Run tests when source changes (uses [pytest-watcher](https://github.com/olzhasar/pytest-watcher)):
 
         $ poetry run ptw . --now --clear
 
-### Running the linter for code style issues:
+#### Running the linter for code style issues:
 
         $ poetry run ruff check
 
@@ -300,7 +301,7 @@ The CI/CD pipeline will run these checks whenever new commits are
 pushed to GitHub, and the results will be available in the GitHub
 Actions output.
 
-### Running the code formatter
+#### Running the code formatter
 
         $ poetry run ruff format
 
@@ -312,13 +313,13 @@ so you can review the changes prior to adding them to the codebase.
 As with the linter, the CI/CD pipeline will run the formatter when
 commits are pushed to GitHub.
 
-### Ruff integration with your editor
+#### Ruff integration with your editor
 
 Rather than running `ruff` manually from the commandline, it can be
 integrated with the editor of your choice. See the
 [ruff editor integration](https://docs.astral.sh/ruff/editors/) guide.
 
-### Releasing
+#### Releasing
 
 * Update the CHANGELOG to include details of the changes included in the new
   release. The version should be the string literal 'UNRELEASED' (without
