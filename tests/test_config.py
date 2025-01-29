@@ -34,8 +34,8 @@ def expected_keys():
             "dry_run",
             "filename_regex",
             "time_coverage_duration",
+            "pixel_size",
             "date_modified",
-            "geotransform",
         ]
     )
 

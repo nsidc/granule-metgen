@@ -34,7 +34,7 @@ class Config:
     dry_run: bool
     filename_regex: Maybe[str] = Maybe.empty
     time_coverage_duration: Maybe[str] = Maybe.empty
-    geotransform: Maybe[str] = Maybe.empty
+    pixel_size: Maybe[str] = Maybe.empty
     date_modified: Maybe[str] = Maybe.empty
 
     def show(self):
@@ -114,7 +114,7 @@ def configuration(
         "dry_run": constants.DEFAULT_DRY_RUN,
         "filename_regex": Nothing,
         "time_coverage_duration": Nothing,
-        "geotransform": Nothing,
+        "pixel_size": Nothing,
         "date_modified": Nothing,
     }
     try:
@@ -201,7 +201,12 @@ def configuration(
                 overrides,
             ),
             _get_configuration_value(
-                environment, "Collection", "geotransform", str, config_parser, overrides
+                environment,
+                "Collection",
+                "pixel_size",
+                str,
+                config_parser,
+                overrides,
             ),
             _get_configuration_value(
                 environment,

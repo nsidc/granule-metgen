@@ -8,6 +8,7 @@ import xarray as xr
 from dateutil.parser import parse
 from isoduration import parse_duration
 from pyproj import CRS, Transformer
+from shapely import LineString
 
 from nsidc.metgen import constants
 
@@ -41,7 +42,7 @@ def time_range(netcdf_filename, netcdf, configuration):
 
 
 def time_coverage_start(netcdf_filename, netcdf, configuration):
-    if "time_coverage_start" in netcdf.attrs.keys():
+    if "time_coverage_start" in netcdf.attrs:
         return ensure_iso(netcdf.attrs["time_coverage_start"])
 
     if configuration.filename_regex:
@@ -52,13 +53,13 @@ def time_coverage_start(netcdf_filename, netcdf, configuration):
 
 
 def time_coverage_end(netcdf, configuration, time_coverage_start):
-    if "time_coverage_end" in netcdf.attrs.keys():
+    if "time_coverage_end" in netcdf.attrs:
         return ensure_iso(netcdf.attrs["time_coverage_end"])
 
     if configuration.time_coverage_duration and time_coverage_start:
         duration = parse_duration(configuration.time_coverage_duration)
-        time_obj = parse(time_coverage_start) + duration
-        return ensure_iso(time_obj.isoformat())
+        coverage_end = parse(time_coverage_start) + duration
+        return ensure_iso(coverage_end.isoformat())
 
     return None
 
@@ -71,98 +72,128 @@ def spatial_values(netcdf, configuration):
             "Longitude: float,
             "Latitude: float
         }
-    Eventually this can/should be pulled out of the netCDF-specific code into a
+    Eventually this should be pulled out of the netCDF-specific code into a
     general-use module.
     """
 
-    # We currently assume only one grid mapping coordinate variable exists.
-    grid_mapping_var = netcdf.filter_by_attrs(grid_mapping_name=lambda v: v is not None)
-    grid_mapping_var_name = list(grid_mapping_var.coords)[0]
-    wkt = netcdf.variables[grid_mapping_var_name].attrs["crs_wkt"]
-
-    data_crs = CRS.from_wkt(wkt)
-    crs_4326 = CRS.from_epsg(4326)
-    xformer = Transformer.from_crs(data_crs, crs_4326, always_xy=True)
-
-    pad = pixel_padding(netcdf.variables[grid_mapping_var_name], configuration)
-    xdata = [x - pad if x < 0 else x + pad for x in netcdf.x.data]
-    ydata = [y - pad if y < 0 else y + pad for y in netcdf.y.data]
+    grid_mapping_name = find_grid_mapping(netcdf)
+    xformer = crs_transformer(netcdf[grid_mapping_name])
+    pad = pixel_padding(netcdf[grid_mapping_name], configuration)
+    xdata = find_coordinate_data_by_standard_name(netcdf, "projection_x_coordinate")
+    ydata = find_coordinate_data_by_standard_name(netcdf, "projection_y_coordinate")
 
     # Extract the perimeter points and transform to lon, lat
-    perimeter = [xformer.transform(x, y) for (x, y) in thinned_perimeter(xdata, ydata)]
+    perimeter = [
+        xformer.transform(x, y) for (x, y) in thinned_perimeter(xdata, ydata, pad)
+    ]
 
     return [
         {"Longitude": round(lon, 8), "Latitude": round(lat, 8)}
         for (lon, lat) in perimeter
     ]
 
+def find_grid_mapping(netcdf):
+    # We currently assume only one grid mapping variable exists, it's a
+    # data variable, and it has a grid_mapping_name attribute.
+    grid_mapping_var = netcdf.filter_by_attrs(grid_mapping_name=lambda v: v is not None)
+
+    if grid_mapping_var is None or grid_mapping_var.variables is None:
+        log_error("No grid mapping exists to transform coordinates.")
+
+    for var in grid_mapping_var.variables:
+        if "crs_wkt" in netcdf[var].attrs:
+            return var
+
+    return None
+
+
+def crs_transformer(grid_mapping_var):
+    data_crs = CRS.from_wkt(grid_mapping_var.attrs["crs_wkt"])
+    return Transformer.from_crs(data_crs, CRS.from_epsg(4326), always_xy=True)
+
+
+def find_coordinate_data_by_standard_name(netcdf, standard_name_value):
+    matched = netcdf.filter_by_attrs(standard_name=standard_name_value)
+    data = []
+
+    if matched is not None and matched.coords is not None:
+        for coord in matched.coords:
+            if "standard_name" in netcdf[coord].attrs:
+                data = netcdf[coord].data
+                break
+
+    return data
+
 
 def pixel_padding(netcdf_var, configuration):
-    # We could also calculate padding from the geospatial_bounds global attribute
-    # rather than GeoTransform.
-    if "GeoTransform" in netcdf_var.attrs.keys():
+    if "GeoTransform" in netcdf_var.attrs:
         geotransform = netcdf_var.attrs["GeoTransform"]
+        pixel_size = abs(float(geotransform.split()[1]))
     else:
-        geotransform = configuration.geotransform
+        pixel_size = configuration.pixel_size
 
-    return abs(float(geotransform.split()[1])) / 2
+    return pixel_size / 2
 
 
-def thinned_perimeter(xdata, ydata):
+def thinned_perimeter(rawx, rawy, pad = 0):
     """
-    Extract the thinned perimeter of a grid.
+    Generate the thinned perimeter of a grid.
     """
-    xindices = index_subset(len(xdata))
-    yindices = index_subset(len(ydata))
-    xlen = len(xindices)
-    ylen = len(yindices)
 
-    # Pull out just the perimeter of the grid, counter-clockwise direction,
-    # starting at top left.
-    # xindex[0], yindex[0]..yindex[-2]
-    left = [(x, y) for x in xdata[:1] for i in yindices[: ylen - 1] for y in [ydata[i]]]
+    # Breaking this out into excruciating detail so someone can check my logic.
+    # Padding approach assumes upper left of grid is represented at array
+    # elements[0, 0]. Points are ordered in a counter-clockwise direction.
+    # left: all x at x[0]-pad, prepend y[0] + pad, append y[-1] - pad
+    # bottom: prepend x[0] - pad, append x[-1] + pad, all y at y[-1] - pad
+    # right: all x at x[-1] + pad, prepend y[-1] - pad, append y[0] + pad
+    # top: prepend x[-1] + pad, append x[0] - pad, all y at y[0] + pad
+    leftx = rawx[0] - pad
+    rightx = rawx[-1] + pad
+    uppery = rawy[0] + pad
+    lowery = rawy[-1] - pad
 
-    # xindex[0]..xindex[-2], yindex[-1]
-    bottom = [
-        (x, y) for i in xindices[: xlen - 1] for x in [xdata[i]] for y in ydata[-1:]
+    ul = [leftx, uppery]
+    ll = [leftx, lowery]
+    lr = [rightx, lowery]
+    ur = [rightx, uppery]
+
+    left = LineString([ul, ll])
+    bottom = LineString([ll, lr])
+    right = LineString([lr, ur])
+    top = LineString([ur, ul])
+
+    # Previous code used actual values from xdata and ydata, but only selected a
+    # subset of the array entries. The current code takes advantage of LineString's
+    # ability to interpolate points, but I'm not convinced it's a better approach.
+    # Discuss!
+    leftpts = [
+        left.interpolate(fract, normalized=True) for fract in [0, 0.2, 0.4, 0.6, 0.8]
+    ]
+    bottompts = [
+        bottom.interpolate(fract, normalized=True) for fract in [0, 0.2, 0.4, 0.6, 0.8]
+    ]
+    rightpts = [
+        right.interpolate(fract, normalized=True) for fract in [0, 0.2, 0.4, 0.6, 0.8]
     ]
 
-    # xindex[-1], yindex[-1]..yindex[1]
-    right = [
-        (x, y)
-        for x in xdata[-1:]
-        for i in yindices[ylen - 1 : 0 : -1]
-        for y in [ydata[i]]
+    # Interpolate all the way to "1" so first and last points in the perimeter are the
+    # same for Polygon creation purposes.
+    toppts = [
+        top.interpolate(fract, normalized=True) for fract in [0, 0.2, 0.4, 0.6, 0.8, 1]
     ]
 
-    # xindex[-1]..xindex[0], yindex[0]
-    top = [
-        (x, y) for i in xindices[xlen - 1 :: -1] for x in [xdata[i]] for y in ydata[:1]
-    ]
-
-    # The last point should already be the same as the first, given that top
-    # uses all of the xindices, but just in case...
-    if top[-1] != left[0]:
-        top.append(left[0])
-
-    # concatenate the "sides" and return the perimeter points
-    return left + bottom + right + top
-
-
-def index_subset(original_length):
-    """
-    Pluck out the values for the first and last index of an array, plus a
-    somewhat arbitrary, and approximately evenly spaced, additional number
-    of indices in between the beginning and end.
-    """
-    if original_length > 6:
-        return [
-            round(index * count * 0.2)
-            for count in range(constants.DEFAULT_SPATIAL_AXIS_SIZE)
-            for index in [original_length - 1]
-        ]
-    else:
-        return list(range(original_length))
+    # need tests:
+    # leftpts[0] should be upper left point
+    # bottompts[0] should be lower left point
+    # rightpts[0] should be lower right point
+    # toppts[0] should be upper right point
+    # toppts[-1] should equal leftpts[0]
+    return (
+        [(pt.x, pt.y) for pt in leftpts]
+        + [(pt.x, pt.y) for pt in bottompts]
+        + [(pt.x, pt.y) for pt in rightpts]
+        + [(pt.x, pt.y) for pt in toppts]
+    )
 
 
 # if no date modified in netcdf global attributes, then retrieve from configuration
