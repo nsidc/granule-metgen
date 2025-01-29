@@ -136,7 +136,7 @@ def pixel_padding(netcdf_var, configuration):
         geotransform = netcdf_var.attrs["GeoTransform"]
         pixel_size = abs(float(geotransform.split()[1]))
     else:
-        pixel_size = configuration.pixel_size
+        pixel_size = int(configuration.pixel_size)
 
     return pixel_size / 2
 
