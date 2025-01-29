@@ -92,6 +92,7 @@ def spatial_values(netcdf, configuration):
         for (lon, lat) in perimeter
     ]
 
+
 def find_grid_mapping(netcdf):
     # We currently assume only one grid mapping variable exists, it's a
     # data variable, and it has a grid_mapping_name attribute.
@@ -135,7 +136,7 @@ def pixel_padding(netcdf_var, configuration):
     return pixel_size / 2
 
 
-def thinned_perimeter(rawx, rawy, pad = 0):
+def thinned_perimeter(rawx, rawy, pad=0):
     """
     Generate the thinned perimeter of a grid.
     """
