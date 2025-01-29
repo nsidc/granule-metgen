@@ -7,8 +7,8 @@ project = "MetGenC"
 copyright = "2024, NSIDC"
 author = "National Snow and Ice Data Center"
 author = "NSIDC"
-release = "v1.0.1"
-version = "v1.0.1"
+release = "v1.0.2"
+version = "v1.0.2"
 
 extensions = [
     "myst_parser",
