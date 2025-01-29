@@ -184,12 +184,6 @@ documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-fi
 for the details.
 
 ## Usage
-When you have data files, a Cumulus Collection and its Rules established in the Cumulus Dashboard, you’re ready to run
-MetGenC to generate umm-g files, cnm messages, and kick off data ingest directly to Cumulus! Note: MetGenC can be run without
-a Cumulus Collection ready, it will only function to output umm-g metadata files and cnm messages.
-
-### Familiarizing Yourself with MetGenC
-
 * Show the help text:
 
         $ metgenc --help
@@ -201,7 +195,7 @@ a Cumulus Collection ready, it will only function to output umm-g metadata files
   messages.
 
 Options:
-  --help  Show this message and exit.`
+  --help  Show this message and exit.
 
 Commands:
   info     Summarizes the contents of a configuration file.
@@ -210,7 +204,7 @@ Commands:
   validate Validates the contents of local JSON files.
 ```
 
-  For detailed help on each command, run: metgenc <command> --help`, for example:
+  For detailed help on each command, run: metgenc <command> --help, for example:
 
         $ metgenc process --help
   ```
@@ -220,6 +214,7 @@ Commands:
 
 Options:
   -c, --config TEXT   Path to configuration file  [required]
+  -d, --dry-run       Don't stage files on S3 or publish messages to Kinesis
   -e, --env TEXT      environment  [default: uat]
   -n, --number count  Process at most 'count' granules.
   -wc, --write-cnm    Write CNM messages to files.
@@ -227,27 +222,47 @@ Options:
   --help              Show this message and exit.
   ```
 
-* Show summary information about a `metgenc` configuration file. Here we use the example configuration file provided in the repo:
+### Commands, In-depth
+The **init** command will generate a metgenc configuration (i.e., .ini) file for
+your data set. You can skip this step if you've already made an .ini file, or have
+copied one from another data set that you've tweaked to meet the needs of the data set
+you’re working on.
+
+        $ metgenc init -c ./init/<name the file you’d like to create or modify>.ini
+#
+The **info** command can be used to display the information within the configuration file.
+The following example assumes a modscg.ini file has already been created.
 
         $ metgenc info --config example/modscg.ini
+#
+The **process** command is used to inspect or kick off ingest to Cumulus. Before running
+this, you must source your AWS profile (just once when you're working on ingest...not every
+time you run process in a session):
 
-* Process science data and stage it for Cumulus:
-
-        # Source the AWS profile (once) before running 'process'-- use 'default' or a named profile
         $ source metgenc-env.sh default
         $ metgenc process --config example/modscg.ini
+When run, ummg and and cnm files are generated and ingested along with the data files
+for a collection into Cumulus. The process command offers a -d (--dry run) option that 
+only runs the process steps locally, thus actual Cumulus ingest is not started. This is
+meant to allow you to check your .ini details, validate that ummg and cnm file content
+is as you intend it to be, etc.
 
-* Validate JSON output
+        $ metgenc process -c ./init/test.ini -e uat  -d -n 3 
+The above command does a dry run of three granules in the data directory specified in the .ini file I've pointed to.
 
-        $ metgenc validate -c example/modscg.ini -t cnm
 
-  The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file:
+        $ metgenc process -c ./init/test.ini -e uat  
+The above command starts Cumulus ingest for all granules in my data/<name> directory I've specified in the .ini file I'm pointing to.
+#
+The **validate** command lets you view the JSON cnm or ummg output files created when process
+has been run.
 
-        $ check-jsonschema --schemafile <path to schema file> <path to CNM file>
+        $ metgenc validate -c example/modscg.ini -t ummg
 
-* Exit the Poetry shell:
+The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file:
 
-        $ exit
+        $ check-jsonschema --schemafile <path to schema file> <path to cnm file>
+
 
 ## Troubleshooting
 
