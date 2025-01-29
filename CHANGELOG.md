@@ -1,3 +1,7 @@
+## v1.0.2
+
+* Fixes bug with JSON output validation
+
 ## v1.0.1
 
 * Creates and publishes documentation to
