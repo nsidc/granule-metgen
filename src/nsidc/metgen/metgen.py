@@ -697,7 +697,7 @@ def validate(configuration, content_type):
     logger.info("")
     logger.info(f"Validating files in {output_file_path}...")
 
-    schema = json.load(_open_text(*schema_resource_location))
+    schema = json.loads(_open_text(*schema_resource_location))
     # loop through all files and validate each one
     for json_file in output_file_path.glob("*.json"):
         apply_schema(schema, json_file, dummy_json)
