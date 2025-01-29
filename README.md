@@ -5,7 +5,9 @@
 # MetGenC
 
 ![build & test workflow](https://github.com/nsidc/granule-metgen/actions/workflows/build-test.yml/badge.svg)
-![workflow workflow](https://github.com/nsidc/granule-metgen/actions/workflows/publish.yml/badge.svg)
+![publish workflow](https://github.com/nsidc/granule-metgen/actions/workflows/publish.yml/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/granule-metgen/badge/?version=latest)](https://granule-metgen.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/granule-metgen/badge/?version=stable)](https://granule-metgen.readthedocs.io/en/stable/?badge=stable)
 
 The `MetGenC` toolkit enables Operations staff and data
 producers to create metadata files conforming to NASA's Common Metadata Repository UMM-G
@@ -19,7 +21,7 @@ This repository is fully supported by NSIDC. If you discover any problems or bug
 please submit an Issue. If you would like to contribute to this repository, you may fork
 the repository and submit a pull request.
 
-See the [LICENSE](LICENSE) for details on permissions and warranties. Please contact
+See the [LICENSE](LICENSE.md) for details on permissions and warranties. Please contact
 nsidc@nsidc.org for more information.
 
 ## Requirements
@@ -33,12 +35,6 @@ this at the command-line:
 or
 
     $ python3 --version
-
-Next, install the AWS commandline interface (CLI) by [following the appropriate
-instructions for your platform](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
-
-Lastly, you will need to create & setup AWS credentials for yourself. The ways in which
-this can be accomplished are detailed in the **AWS Credentials** section below.
 
 ## Assumptions
 
@@ -120,30 +116,17 @@ MetGenC can be installed from [PyPI](https://pypi.org/). First, create a
 Python virtual environment in a directory of your choice, then activate
 it:
 
-    $ python -m venv path-to-venv-name-i-chose
-    $ source path-to-venv-name-i-chose/bin/activate
+    $ python -m venv /Users/afitzger/metgenc (i.e. provide the path to and name of the virtual environment to house MetgenC)
+    $ source ~/metgenc/bin/activate (i.e., source your newly created virtual environment name)
 
 Now install MetGenC into the virtual environment using `pip`:
 
     $ pip install nsidc-metgenc
 
-That's it! Now we're ready to run MetGenC and see what it can do:
-
-    $ metgenc --help
-    Usage: metgenc [OPTIONS] COMMAND [ARGS]...
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      info
-      init
-      process
-
 ## AWS Credentials
 
 In order to process science data and stage it for Cumulus, you must first create & setup your AWS
-credentials. Two options for doing this are detailed here:
+credentials. Two options for doing this are:
 
 ### Option 1: Manually Creating Configuration Files
 
@@ -167,13 +150,13 @@ Finally, restrict the permissions of the directory and files:
 
     $ chmod -R go-rwx ~/.aws
 
-When you obtain the AWS key pair (not covered here), edit the `~/.aws/credentials` file
+When you obtain the AWS key pair ([covered here](https://nsidc.atlassian.net/l/cp/4LNZPggJ)), edit the `~/.aws/credentials` file
 and replace `TBD` with the public and secret key values.
 
 ### Option 2: Using the AWS CLI to Create Configuration Files
 
 You may install (or already have it installed) the AWS Command Line Interface on the
-machine where you are running the tool. Follow the 
+machine where you are running the tool. Follow the
 [AWS CLI Install instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 for the platform on which you are running.
 
@@ -188,7 +171,7 @@ and files with your values.
 
 If you require access to multiple AWS accounts, each with their own configuration--for
 example, different accounts for pre-production vs. production--you can use the AWS CLI
-'profile' feature to manage settings for each account. See the [AWS configuration 
+'profile' feature to manage settings for each account. See the [AWS configuration
 documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles)
 for the details.
 
@@ -216,6 +199,7 @@ Commands:
   info     Summarizes the contents of a configuration file.
   init     Populates a configuration file based on user input.
   process  Processes science data files based on configuration file...
+  validate Validates the contents of local JSON files.
 ```
 
   For detailed help on each command, run: metgenc <command> --help`, for example:
@@ -242,7 +226,7 @@ Options:
 * Process science data and stage it for Cumulus:
 
         # Source the AWS profile (once) before running 'process'-- use 'default' or a named profile
-        $ source scripts/env.sh default
+        $ source metgenc-env.sh default
         $ metgenc process --config example/modscg.ini
 
 * Validate JSON output
@@ -261,9 +245,10 @@ Options:
 
 TBD
 
-## Contributing
+## For Developers
+### Contributing
 
-### Requirements
+#### Requirements
 
 * [Python](https://www.python.org/) v3.12+
 * [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
@@ -277,7 +262,7 @@ installed, you should be able to run:
     $ poetry --version
     Poetry (version 1.8.3)
 
-### Installing Dependencies
+#### Installing Dependencies
 
 * Use Poetry to create and activate a virtual environment
 
@@ -287,15 +272,15 @@ installed, you should be able to run:
 
         $ poetry install
 
-### Run tests
+#### Run tests
 
         $ poetry run pytest
 
-### Run tests when source changes (uses [pytest-watcher](https://github.com/olzhasar/pytest-watcher)):
+#### Run tests when source changes (uses [pytest-watcher](https://github.com/olzhasar/pytest-watcher)):
 
         $ poetry run ptw . --now --clear
 
-### Running the linter for code style issues:
+#### Running the linter for code style issues:
 
         $ poetry run ruff check
 
@@ -308,7 +293,7 @@ The CI/CD pipeline will run these checks whenever new commits are
 pushed to GitHub, and the results will be available in the GitHub
 Actions output.
 
-### Running the code formatter
+#### Running the code formatter
 
         $ poetry run ruff format
 
@@ -320,16 +305,16 @@ so you can review the changes prior to adding them to the codebase.
 As with the linter, the CI/CD pipeline will run the formatter when
 commits are pushed to GitHub.
 
-### Ruff integration with your editor
+#### Ruff integration with your editor
 
 Rather than running `ruff` manually from the commandline, it can be
 integrated with the editor of your choice. See the
 [ruff editor integration](https://docs.astral.sh/ruff/editors/) guide.
 
-### Releasing
+#### Releasing
 
 * Update the CHANGELOG to include details of the changes included in the new
-  release. The version should be the string literal 'UNRELEASED' (without 
+  release. The version should be the string literal 'UNRELEASED' (without
   single-quotes). It will be replaced with the actual version number after
   we bump the version below. Commit the CHANGELOG so the working directory is
   clean.
@@ -350,13 +335,13 @@ integrated with the editor of your choice. See the
   workflow.
 
 * On the [GitHub repository](https://github.com/nsidc/granule-metgen), click
-  'Releases' and follow the steps documented on the 
+  'Releases' and follow the steps documented on the
   [GitHub Releases page](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release).
   Draft a new Release using the version tag created above. After you have
   published the release, the MetGenC Publish GHA workflow will be started.
   Check that the workflow succeeds on the
   [MetGenC Actions page](https://github.com/nsidc/granule-metgen/actions),
-  and verify that the 
+  and verify that the
   [new MetGenC release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
 
 ## Credit

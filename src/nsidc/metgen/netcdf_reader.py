@@ -1,3 +1,8 @@
+"""
+Interface functions that read various metadata attribute values
+from source science data files.
+"""
+
 import json
 import logging
 import os.path
