@@ -207,8 +207,44 @@ Commands:
   For detailed help on each command, run: metgenc <command> --help, for example:
 
         $ metgenc process --help
-  ```
-  Usage: metgenc process [OPTIONS]
+
+### Commands, In-depth
+The **init** command will generate a metgenc configuration (i.e., .ini) file for
+your data set. You can skip this step if you've already made an .ini file, or have
+copied one from another data set that you've tweaked to meet the needs of the data set
+you’re working on.
+```
+init --help
+Usage: metgenc init [OPTIONS]
+
+  Populates a configuration file based on user input.
+
+Options:
+  -c, --config TEXT  Path to configuration file to create or replace
+  --help             Show this message and exit
+```
+        $ metgenc init -c ./init/<name the file you’d like to create or modify>.ini
+#
+The **info** command can be used to display the information within the configuration file.
+The following example assumes a modscg.ini file has already been created.
+```
+metgenc info --help
+Usage: metgenc info [OPTIONS]
+
+  Summarizes the contents of a configuration file.
+
+Options:
+  -c, --config TEXT  Path to configuration file to display  [required]
+  --help             Show this message and exit.
+```
+        $ metgenc info --config example/modscg.ini
+#
+The **process** command is used to inspect or kick off ingest to Cumulus. Before running
+this, you must source your AWS profile (just once when you're working on ingest...not every
+time you run process in a session).
+```
+metgenc process --help
+Usage: metgenc process [OPTIONS]
 
   Processes science data files based on configuration file contents.
 
@@ -220,25 +256,7 @@ Options:
   -wc, --write-cnm    Write CNM messages to files.
   -o, --overwrite     Overwrite existing UMM-G files.
   --help              Show this message and exit.
-  ```
-
-### Commands, In-depth
-The **init** command will generate a metgenc configuration (i.e., .ini) file for
-your data set. You can skip this step if you've already made an .ini file, or have
-copied one from another data set that you've tweaked to meet the needs of the data set
-you’re working on.
-
-        $ metgenc init -c ./init/<name the file you’d like to create or modify>.ini
-#
-The **info** command can be used to display the information within the configuration file.
-The following example assumes a modscg.ini file has already been created.
-
-        $ metgenc info --config example/modscg.ini
-#
-The **process** command is used to inspect or kick off ingest to Cumulus. Before running
-this, you must source your AWS profile (just once when you're working on ingest...not every
-time you run process in a session):
-
+```
         $ source metgenc-env.sh default
         $ metgenc process --config example/modscg.ini
 When run, ummg and and cnm files are generated and ingested along with the data files
@@ -248,15 +266,26 @@ meant to allow you to check your .ini details, validate that ummg and cnm file c
 is as you intend it to be, etc.
 
         $ metgenc process -c ./init/test.ini -e uat  -d -n 3 
-The above command does a dry run of three granules in the data directory specified in the .ini file I've pointed to.
+The above command does a dry run of three granules in the data directory specified in the .ini file pointed to.
 
 
         $ metgenc process -c ./init/test.ini -e uat  
-The above command starts Cumulus ingest for all granules in my data/<name> directory I've specified in the .ini file I'm pointing to.
+The above command starts Cumulus ingest for all granules in my data/<name> directory
+specified within the .ini file pointed to.
 #
 The **validate** command lets you view the JSON cnm or ummg output files created when process
 has been run.
+```
+metgenc validate --help
+Usage: metgenc validate [OPTIONS]
 
+  Validates the contents of local JSON files.
+
+Options:
+  -c, --config TEXT  Path to configuration file  [required]
+  -t, --type TEXT    JSON content type  [default: cnm]
+  --help             Show this message and exit.
+```
         $ metgenc validate -c example/modscg.ini -t ummg
 
 The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file:
