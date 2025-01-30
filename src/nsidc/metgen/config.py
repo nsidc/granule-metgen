@@ -38,10 +38,10 @@ class Config:
     checksum_type: str
     number: int
     dry_run: bool
-    filename_regex: Maybe[str] = Maybe.empty
-    time_coverage_duration: Maybe[str] = Maybe.empty
+    filename_regex: Optional[str] = None
+    time_coverage_duration: Optional[str] = None
     pixel_size: Optional[int] = None
-    date_modified: Maybe[str] = Maybe.empty
+    date_modified: Optional[str] = None
 
     def show(self):
         # TODO: add section headings in the right spot
@@ -121,9 +121,6 @@ def configuration(
         "checksum_type": constants.DEFAULT_CHECKSUM_TYPE,
         "number": constants.DEFAULT_NUMBER,
         "dry_run": constants.DEFAULT_DRY_RUN,
-        "filename_regex": Nothing,
-        "time_coverage_duration": Nothing,
-        "date_modified": Nothing,
     }
     try:
         return Config(
