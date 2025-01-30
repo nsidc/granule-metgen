@@ -45,6 +45,8 @@ or
   `projection_y_coordinate` attribute.
 * (x[0],y[0]) represents the upper left corner of the spatial coverage.
 * Spatial coordinate values represent the center of the area covered by a measurement.
+* If a `pixel_size` value is present in the `ini` file, its units are assumed to be
+  the same as the units of the spatial coordinate variables.
 * Date/time strings can be parsed using `datetime.fromisoformat`
 * Only one coordinate system is used by all data variables in all data files
   (i.e. only one grid mapping variable is present in a file, and the content of
@@ -65,12 +67,12 @@ or
 
 | Attribute in use (location)   | ACDD | CF Conventions | NSIDC Guidelines | Note    |
 | ----------------------------- | ---- | -------------- | ---------------- | ------- |
-| date_modified (global)        | S    |                | R                | 1       |
-| time_coverage_start (global)  | R    |                | R                | 2       |
-| time_coverage_end (global)    | R    |                | R                | 2       |
+| date_modified (global)        | S    |                | R                | 1, OC   |
+| time_coverage_start (global)  | R    |                | R                | 2, OC   |
+| time_coverage_end (global)    | R    |                | R                | 2, OC   |
 | grid_mapping_name (variable)  |      | RequiredC      | R+               | 3       |
 | crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 4       |
-| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 5       |
+| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 5, OC   |
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 6       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
 
@@ -91,6 +93,9 @@ or
 | geospatial_lon_units (global) | R    |                | R                |
 
 Notes:
+`OC`: These attributes (or elements of them) can be represented in the `ini` file.
+See [Optional Configuration Elements.](#optional-configuration-elements)
+
 1. Used to populate the production date and time values in UMM-G output.
 2. Used to populate the time begin and end UMM-G values.
 3. A grid mapping variable is required if the horizontal spatial coordinates are not
@@ -201,7 +206,7 @@ Commands:
         $ metgenc process --help
 
 ### Commands, In-depth
-The **init** command will generate a metgenc configuration (i.e., .ini) file for
+The **init** command will generate a metgenc configuration (i.e., `.ini`) file for
 your data set. You can skip this step if you've already made an .ini file, or have
 copied one from another data set that you've tweaked to meet the needs of the data set
 you’re working on.
@@ -216,6 +221,19 @@ Options:
   --help             Show this message and exit
 ```
         $ metgenc init -c ./init/<name the file you’d like to create or modify>.ini
+
+#### Optional Configuration Elements
+
+Several NetCDF attributes may be represented in the `ini` file if they don't exist
+in the granule data file(s). See the file `fixtures/test.ini` for an example.
+
+| Attribute           | `ini` section | `ini` element |
+| --------------------|-------------- | ------------- |
+| date_modified       | Collection    | date_modified |
+| time_coverage_start | Collection    | filename_regex |
+| time_coverage_end   | Collection    | time_coverage_duration |
+| GeoTransform        | Collection    | pixel_size |
+
 #
 The **info** command can be used to display the information within the configuration file.
 The following example assumes a modscg.ini file has already been created.
@@ -260,13 +278,12 @@ is as you intend it to be, etc.
         $ metgenc process -c ./init/test.ini -e uat  -d -n 3 
 The above command does a dry run of three granules in the data directory specified in the .ini file pointed to.
 
-
         $ metgenc process -c ./init/test.ini -e uat  
 The above command starts Cumulus ingest for all granules in my data/<name> directory
 specified within the .ini file pointed to.
 #
-The **validate** command lets you view the JSON cnm or ummg output files created when process
-has been run.
+The **validate** command lets you review the JSON cnm or ummg output files created by
+running `process`.
 ```
 metgenc validate --help
 Usage: metgenc validate [OPTIONS]
