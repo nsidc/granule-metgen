@@ -164,6 +164,7 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
         ("Destination", "write_cnm_file", constants.DEFAULT_WRITE_CNM_FILE),
         ("Settings", "checksum_type", constants.DEFAULT_CHECKSUM_TYPE),
         ("Settings", "number", constants.DEFAULT_NUMBER),
+        ("Collection", "pixel_size", None),
     ],
 )
 def test_configuration_has_good_defaults(cfg_parser, section, option, expected):

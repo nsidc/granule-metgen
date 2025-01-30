@@ -8,6 +8,7 @@ import dataclasses
 import logging
 import os.path
 from pathlib import Path
+from typing import Optional
 
 from returns.maybe import Maybe, Nothing
 
@@ -39,7 +40,7 @@ class Config:
     dry_run: bool
     filename_regex: Maybe[str] = Maybe.empty
     time_coverage_duration: Maybe[str] = Maybe.empty
-    pixel_size: Maybe[str] = Maybe.empty
+    pixel_size: Optional[int] = None
     date_modified: Maybe[str] = Maybe.empty
 
     def show(self):
@@ -90,13 +91,16 @@ def _get_configuration_value(
     """
     vars = {"environment": environment}
     if overrides.get(name) is None:
-        if value_type is bool:
-            return config_parser.getboolean(section, name)
-        elif value_type is int:
-            return config_parser.getint(section, name)
-        else:
-            value = config_parser.get(section, name, vars=vars)
-            return value
+        try:
+            if value_type is bool:
+                return config_parser.getboolean(section, name)
+            elif value_type is int:
+                return config_parser.getint(section, name)
+            else:
+                value = config_parser.get(section, name, vars=vars)
+                return value
+        except Exception as e:
+            return None
     else:
         return overrides.get(name)
 
@@ -119,7 +123,6 @@ def configuration(
         "dry_run": constants.DEFAULT_DRY_RUN,
         "filename_regex": Nothing,
         "time_coverage_duration": Nothing,
-        "pixel_size": Nothing,
         "date_modified": Nothing,
     }
     try:
@@ -209,7 +212,7 @@ def configuration(
                 environment,
                 "Collection",
                 "pixel_size",
-                str,
+                int,
                 config_parser,
                 overrides,
             ),
@@ -249,12 +252,12 @@ def validate(configuration):
         # ],
         [
             "kinesis_stream_name",
-            lambda name: aws.kinesis_stream_exists(name),
+            lambda name: aws.kinesis_stream_exists(name) if not configuration.dry_run else lambda _: True,
             "The kinesis stream does not exist.",
         ],
         [
             "staging_bucket_name",
-            lambda name: aws.staging_bucket_exists(name),
+            lambda name: aws.staging_bucket_exists(name) if not configuration.dry_run else lambda _: True,
             "The staging bucket does not exist.",
         ],
         [

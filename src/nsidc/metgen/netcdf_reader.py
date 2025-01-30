@@ -135,8 +135,10 @@ def pixel_padding(netcdf_var, configuration):
     if "GeoTransform" in netcdf_var.attrs:
         geotransform = netcdf_var.attrs["GeoTransform"]
         pixel_size = abs(float(geotransform.split()[1]))
+    elif configuration.pixel_size is not None:
+        pixel_size = configuration.pixel_size
     else:
-        pixel_size = int(configuration.pixel_size)
+        raise Exception("Data does not have `GeoTransform` attribute. Set `pixel_size` in the configuration.")
 
     return pixel_size / 2
 
