@@ -44,7 +44,10 @@ def time_range(netcdf_filename, netcdf, configuration):
         return [coverage_start, coverage_end]
     else:
         # In theory, we should never get here.
-        log_and_raise_error("Could not determine time coverage from NetCDF attributes. Ensure filename_regex and time_coverage_duration are set in the configuration file.")
+        log_and_raise_error(
+            "Could not determine time coverage from NetCDF attributes. Ensure \
+filename_regex and time_coverage_duration are set in the configuration file."
+        )
 
 
 def time_coverage_start(netcdf_filename, netcdf, configuration):
@@ -58,7 +61,10 @@ def time_coverage_start(netcdf_filename, netcdf, configuration):
     if coverage_start is not None:
         return ensure_iso(coverage_start)
     else:
-        log_and_raise_error("NetCDF file does not have `time_coverage_start` global attribute. Set `filename_regex` in the configuration file.")
+        log_and_raise_error(
+            "NetCDF file does not have `time_coverage_start` global attribute. \
+Set `filename_regex` in the configuration file."
+        )
 
 
 def time_coverage_end(netcdf, configuration, time_coverage_start):
@@ -71,7 +77,10 @@ def time_coverage_end(netcdf, configuration, time_coverage_start):
             coverage_end = parse(time_coverage_start) + duration
             return ensure_iso(coverage_end.isoformat())
         except Exception:
-            log_and_raise_error("NetCDF file does not have `time_coverage_end` global attribute. Set `time_coverage_duration` in the configuration file.")
+            log_and_raise_error(
+                "NetCDF file does not have `time_coverage_end` global attribute. \
+Set `time_coverage_duration` in the configuration file."
+            )
 
 
 def spatial_values(netcdf, configuration):
@@ -149,7 +158,10 @@ def pixel_padding(netcdf_var, configuration):
     elif configuration.pixel_size is not None:
         pixel_size = configuration.pixel_size
     else:
-        log_and_raise_error("NetCDF grid mapping variable does not have `GeoTransform` attribute. Set `pixel_size` in the configuration file.")
+        log_and_raise_error(
+            "NetCDF grid mapping variable does not have `GeoTransform` attribute. \
+Set `pixel_size` in the configuration file."
+        )
 
     return pixel_size / 2
 
@@ -226,7 +238,10 @@ def date_modified(netcdf, configuration):
     if datetime_str:
         return ensure_iso(datetime_str)
     else:
-        log_and_raise_error("NetCDF file does not have `date_modified` global attribute. Set `date_modified` in the configuration file.")
+        log_and_raise_error(
+            "NetCDF file does not have `date_modified` global attribute. \
+Set `date_modified` in the configuration file."
+        )
 
 
 def log_and_raise_error(err):

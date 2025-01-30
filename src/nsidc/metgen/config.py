@@ -10,8 +10,6 @@ import os.path
 from pathlib import Path
 from typing import Optional
 
-from returns.maybe import Maybe, Nothing
-
 from nsidc.metgen import aws, constants
 
 
@@ -99,7 +97,7 @@ def _get_configuration_value(
             else:
                 value = config_parser.get(section, name, vars=vars)
                 return value
-        except Exception as e:
+        except Exception:
             return None
     else:
         return overrides.get(name)
@@ -249,12 +247,16 @@ def validate(configuration):
         # ],
         [
             "kinesis_stream_name",
-            lambda name: aws.kinesis_stream_exists(name) if not configuration.dry_run else lambda _: True,
+            lambda name: aws.kinesis_stream_exists(name)
+            if not configuration.dry_run
+            else lambda _: True,
             "The kinesis stream does not exist.",
         ],
         [
             "staging_bucket_name",
-            lambda name: aws.staging_bucket_exists(name) if not configuration.dry_run else lambda _: True,
+            lambda name: aws.staging_bucket_exists(name)
+            if not configuration.dry_run
+            else lambda _: True,
             "The staging bucket does not exist.",
         ],
         [
