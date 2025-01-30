@@ -42,19 +42,23 @@ def time_range(netcdf_filename, netcdf, configuration):
 
     if coverage_start and coverage_end:
         return [coverage_start, coverage_end]
-
-    return []
+    else:
+        # In theory, we should never get here.
+        log_and_raise_error("Could not determine time coverage from NetCDF attributes. Ensure filename_regex and time_coverage_duration are set in the configuration file.")
 
 
 def time_coverage_start(netcdf_filename, netcdf, configuration):
     if "time_coverage_start" in netcdf.attrs:
-        return ensure_iso(netcdf.attrs["time_coverage_start"])
+        coverage_start = netcdf.attrs["time_coverage_start"]
 
-    if configuration.filename_regex:
+    elif configuration.filename_regex:
         m = re.match(configuration.filename_regex, netcdf_filename)
-        return ensure_iso(m.group("time_coverage_start"))
+        coverage_start = m.group("time_coverage_start")
 
-    return None
+    if coverage_start is not None:
+        return ensure_iso(coverage_start)
+    else:
+        log_and_raise_error("NetCDF file does not have `time_coverage_start` global attribute. Set `filename_regex` in the configuration file.")
 
 
 def time_coverage_end(netcdf, configuration, time_coverage_start):
@@ -62,11 +66,12 @@ def time_coverage_end(netcdf, configuration, time_coverage_start):
         return ensure_iso(netcdf.attrs["time_coverage_end"])
 
     if configuration.time_coverage_duration and time_coverage_start:
-        duration = parse_duration(configuration.time_coverage_duration)
-        coverage_end = parse(time_coverage_start) + duration
-        return ensure_iso(coverage_end.isoformat())
-
-    return None
+        try:
+            duration = parse_duration(configuration.time_coverage_duration)
+            coverage_end = parse(time_coverage_start) + duration
+            return ensure_iso(coverage_end.isoformat())
+        except Exception:
+            log_and_raise_error("NetCDF file does not have `time_coverage_end` global attribute. Set `time_coverage_duration` in the configuration file.")
 
 
 def spatial_values(netcdf, configuration):
@@ -101,10 +106,15 @@ def spatial_values(netcdf, configuration):
 def find_grid_mapping(netcdf):
     # We currently assume only one grid mapping variable exists, it's a
     # data variable, and it has a grid_mapping_name attribute.
+    # Possible TODO: filter_by_attrs isn't really all that helpful since it doesn't
+    # return *just* the variable (coordinate or data variable) of interest. The
+    # subsequent "for" loop ensures the correct variable is actually identified.
+    # We could just stick with the "for" loop (or whatever would be python better
+    # practice).
     grid_mapping_var = netcdf.filter_by_attrs(grid_mapping_name=lambda v: v is not None)
 
     if grid_mapping_var is None or grid_mapping_var.variables is None:
-        log_error("No grid mapping exists to transform coordinates.")
+        log_and_raise_error("No grid mapping exists to transform coordinates.")
 
     for var in grid_mapping_var.variables:
         if "crs_wkt" in netcdf[var].attrs:
@@ -119,6 +129,7 @@ def crs_transformer(grid_mapping_var):
 
 
 def find_coordinate_data_by_standard_name(netcdf, standard_name_value):
+    # TODO: See comments in find_grid_mapping re: use of filter_by_attrs
     matched = netcdf.filter_by_attrs(standard_name=standard_name_value)
     data = []
 
@@ -138,7 +149,7 @@ def pixel_padding(netcdf_var, configuration):
     elif configuration.pixel_size is not None:
         pixel_size = configuration.pixel_size
     else:
-        raise Exception("Data does not have `GeoTransform` attribute. Set `pixel_size` in the configuration.")
+        log_and_raise_error("NetCDF grid mapping variable does not have `GeoTransform` attribute. Set `pixel_size` in the configuration file.")
 
     return pixel_size / 2
 
@@ -214,15 +225,15 @@ def date_modified(netcdf, configuration):
 
     if datetime_str:
         return ensure_iso(datetime_str)
+    else:
+        log_and_raise_error("NetCDF file does not have `date_modified` global attribute. Set `date_modified` in the configuration file.")
 
-    log_error("No date modified value exists.")
-    return None
 
-
-def log_error(err):
+def log_and_raise_error(err):
     logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.error(err)
-    exit(1)
+
+    raise Exception(err)
 
 
 def ensure_iso(datetime_str):
