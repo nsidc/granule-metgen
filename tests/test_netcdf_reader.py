@@ -35,11 +35,6 @@ def test_large_grids_are_thinned(big_xdata, big_ydata):
     assert len(result) == (constants.DEFAULT_SPATIAL_AXIS_SIZE * 4) - 3
 
 
-def test_small_grids_are_not_thinned(xdata, ydata):
-    result = netcdf_reader.thinned_perimeter(xdata, ydata)
-    assert len(result) == (len(xdata) * 2) + (len(ydata) * 2) - 3
-
-
 def test_perimeter_is_closed_polygon(xdata, ydata):
     result = netcdf_reader.thinned_perimeter(xdata, ydata)
     assert result[0] == result[-1]

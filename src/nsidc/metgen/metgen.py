@@ -14,9 +14,10 @@ import logging
 import os.path
 import sys
 import uuid
+from collections.abc import Callable
+from functools import cache
 from pathlib import Path
 from string import Template
-from typing import Callable
 
 import jsonschema
 from funcy import all, filter, partial, rcompose, take
@@ -181,31 +182,6 @@ def init_config(configuration_file):
     return configuration_file
 
 
-def prepare_output_dirs(configuration):
-    """
-    Generate paths to ummg and cnm output directories.
-    Remove any existing UMM-G files if needed.
-    TODO: create local_output_dir, ummg_dir, and cnm subdir if they don't exist
-    """
-    ummg_path = Path(configuration.local_output_dir, configuration.ummg_dir)
-    cnm_path = Path(configuration.local_output_dir, "cnm")
-
-    if configuration.overwrite_ummg:
-        scrub_json_files(ummg_path)
-
-    return (ummg_path, cnm_path)
-
-
-def scrub_json_files(path):
-    print(f"Removing existing files in {path}")
-    for file_path in path.glob("*.json"):
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-        except Exception as e:
-            print("Failed to delete %s: %s" % (file_path, e))
-
-
 # -------------------------------------------------------------------
 # Data structures for processing Granules and recording results
 # -------------------------------------------------------------------
@@ -230,6 +206,7 @@ class Granule:
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
     cnm_message: Maybe[str] = Maybe.empty
+    data_reader: Callable[[str], dict] = Maybe.empty
 
 
 @dataclasses.dataclass
@@ -287,8 +264,11 @@ def process(configuration: config.Config) -> None:
 
     # Find all of the input granule files, limit the size of the list based
     # on the configuration, and execute the pipeline on each of the granules.
+    # TODO: Nicely manage reader and glob pattern for other file types.
     candidate_granules = [
-        Granule(p.name, data_filenames=[str(p)])
+        Granule(
+            p.name, data_filenames=[str(p)], data_reader=netcdf_reader.extract_metadata
+        )
         for p in Path(configuration.data_dir).glob("*.nc")
     ]
     granules = take(configuration.number, candidate_granules)
@@ -365,15 +345,21 @@ def null_operation(configuration: config.Config, granule: Granule) -> Granule:
     return granule
 
 
+@cache
+def retrieve_collection(auth_id: str, version: int):
+    # TODO: Issue request to CMR for UMM-C record, pull out fields from UMM-C
+    # response and use to create collection object with more than just auth_id
+    # and version number.
+    return Collection(auth_id, version)
+
+
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
     """
-    Find the Granule's Collection and add it to the Granule.
+    Associate collection information with the Granule.
     """
-    # TODO: When we start querying CMR, refactor the pipeline to retrieve
-    # collection information from CMR once, then associate it with each
-    # granule.
     return dataclasses.replace(
-        granule, collection=Collection(configuration.auth_id, configuration.version)
+        granule,
+        collection=retrieve_collection(configuration.auth_id, configuration.version),
     )
 
 
@@ -424,7 +410,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     # }
     metadata_details = {}
     for data_file in granule.data_filenames:
-        metadata_details[data_file] = netcdf_reader.extract_metadata(data_file)
+        metadata_details[data_file] = granule.data_reader(data_file, configuration)
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)

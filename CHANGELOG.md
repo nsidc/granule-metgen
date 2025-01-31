@@ -1,3 +1,8 @@
+## UNRELEASED
+
+* Extend `ini` file to include values for attributes missing from a minimal,
+  CF-compliant netCDF file. (Issue-104)
+
 ## v1.0.2
 
 * Fixes bug with JSON output validation

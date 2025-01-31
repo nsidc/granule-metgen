@@ -21,6 +21,8 @@ check-jsonschema = "^0.29.4"
 returns = "^0.23.0"
 toolz = "^1.0.0"
 funcy = "^2.0"
+isoduration = "^20.11.0"
+shapely = "^2.0.6"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.2"
