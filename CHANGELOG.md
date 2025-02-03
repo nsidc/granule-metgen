@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.1.0
 
 * Extend `ini` file to include values for attributes missing from a minimal,
   CF-compliant netCDF file. (Issue-104)
