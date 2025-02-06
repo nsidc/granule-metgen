@@ -4,17 +4,21 @@ from source science data files.
 """
 
 import json
+import logging
 import os.path
+import re
 from datetime import timezone
 
 import xarray as xr
 from dateutil.parser import parse
+from isoduration import parse_duration
 from pyproj import CRS, Transformer
+from shapely import LineString
 
 from nsidc.metgen import constants
 
 
-def extract_metadata(netcdf_path):
+def extract_metadata(netcdf_path, configuration):
     """
     Read the content at netcdf_path and return a structure with temporal coverage
     information, spatial coverage information, file size, and production datetime.
@@ -25,22 +29,61 @@ def extract_metadata(netcdf_path):
 
     return {
         "size_in_bytes": os.path.getsize(netcdf_path),
-        "production_date_time": ensure_iso(netcdf.attrs["date_modified"]),
-        "temporal": time_range(netcdf),
-        "geometry": {"points": json.dumps(spatial_values(netcdf))},
+        "production_date_time": date_modified(netcdf, configuration),
+        "temporal": time_range(os.path.basename(netcdf_path), netcdf, configuration),
+        "geometry": {"points": json.dumps(spatial_values(netcdf, configuration))},
     }
 
 
-def time_range(netcdf):
+def time_range(netcdf_filename, netcdf, configuration):
     """Return an array of datetime strings"""
-    datetimes = []
-    datetimes.append(ensure_iso(netcdf.attrs["time_coverage_start"]))
-    datetimes.append(ensure_iso(netcdf.attrs["time_coverage_end"]))
+    coverage_start = time_coverage_start(netcdf_filename, netcdf, configuration)
+    coverage_end = time_coverage_end(netcdf, configuration, coverage_start)
 
-    return datetimes
+    if coverage_start and coverage_end:
+        return [coverage_start, coverage_end]
+    else:
+        # In theory, we should never get here.
+        log_and_raise_error(
+            "Could not determine time coverage from NetCDF attributes. Ensure \
+filename_regex and time_coverage_duration are set in the configuration file."
+        )
 
 
-def spatial_values(netcdf):
+def time_coverage_start(netcdf_filename, netcdf, configuration):
+    if "time_coverage_start" in netcdf.attrs:
+        coverage_start = netcdf.attrs["time_coverage_start"]
+
+    elif configuration.filename_regex:
+        m = re.match(configuration.filename_regex, netcdf_filename)
+        coverage_start = m.group("time_coverage_start")
+
+    if coverage_start is not None:
+        return ensure_iso(coverage_start)
+    else:
+        log_and_raise_error(
+            "NetCDF file does not have `time_coverage_start` global attribute. \
+Set `filename_regex` in the configuration file."
+        )
+
+
+def time_coverage_end(netcdf, configuration, time_coverage_start):
+    if "time_coverage_end" in netcdf.attrs:
+        return ensure_iso(netcdf.attrs["time_coverage_end"])
+
+    if configuration.time_coverage_duration and time_coverage_start:
+        try:
+            duration = parse_duration(configuration.time_coverage_duration)
+            coverage_end = parse(time_coverage_start) + duration
+            return ensure_iso(coverage_end.isoformat())
+        except Exception:
+            log_and_raise_error(
+                "NetCDF file does not have `time_coverage_end` global attribute. \
+Set `time_coverage_duration` in the configuration file."
+            )
+
+
+def spatial_values(netcdf, configuration):
     """
     Return an array of dicts, each dict representing one lat/lon pair like so:
 
@@ -48,22 +91,20 @@ def spatial_values(netcdf):
             "Longitude: float,
             "Latitude: float
         }
-    Eventually this can/should be pulled out of the netCDF-specific code into a
+    Eventually this should be pulled out of the netCDF-specific code into a
     general-use module.
     """
 
-    data_crs = CRS.from_wkt(netcdf.crs.crs_wkt)
-    crs_4326 = CRS.from_epsg(4326)
-    xformer = Transformer.from_crs(data_crs, crs_4326, always_xy=True)
-
-    # Adding padding should give us values that match up to the
-    # netcdf.attrs.geospatial_bounds
-    pad = abs(float(netcdf.crs.GeoTransform.split()[1])) / 2
-    xdata = [x - pad if x < 0 else x + pad for x in netcdf.x.data]
-    ydata = [y - pad if y < 0 else y + pad for y in netcdf.y.data]
+    grid_mapping_name = find_grid_mapping(netcdf)
+    xformer = crs_transformer(netcdf[grid_mapping_name])
+    pad = pixel_padding(netcdf[grid_mapping_name], configuration)
+    xdata = find_coordinate_data_by_standard_name(netcdf, "projection_x_coordinate")
+    ydata = find_coordinate_data_by_standard_name(netcdf, "projection_y_coordinate")
 
     # Extract the perimeter points and transform to lon, lat
-    perimeter = [xformer.transform(x, y) for (x, y) in thinned_perimeter(xdata, ydata)]
+    perimeter = [
+        xformer.transform(x, y) for (x, y) in thinned_perimeter(xdata, ydata, pad)
+    ]
 
     return [
         {"Longitude": round(lon, 8), "Latitude": round(lat, 8)}
@@ -71,61 +112,143 @@ def spatial_values(netcdf):
     ]
 
 
-def thinned_perimeter(xdata, ydata):
-    """
-    Extract the thinned perimeter of a grid.
-    """
-    xindices = index_subset(len(xdata))
-    yindices = index_subset(len(ydata))
-    xlen = len(xindices)
-    ylen = len(yindices)
+def find_grid_mapping(netcdf):
+    # We currently assume only one grid mapping variable exists, it's a
+    # data variable, and it has a grid_mapping_name attribute.
+    # Possible TODO: filter_by_attrs isn't really all that helpful since it doesn't
+    # return *just* the variable (coordinate or data variable) of interest. The
+    # subsequent "for" loop ensures the correct variable is actually identified.
+    # We could just stick with the "for" loop (or whatever would be python better
+    # practice).
+    grid_mapping_var = netcdf.filter_by_attrs(grid_mapping_name=lambda v: v is not None)
 
-    # Pull out just the perimeter of the grid, counter-clockwise direction,
-    # starting at top left.
-    # xindex[0], yindex[0]..yindex[-2]
-    left = [(x, y) for x in xdata[:1] for i in yindices[: ylen - 1] for y in [ydata[i]]]
+    if grid_mapping_var is None or grid_mapping_var.variables is None:
+        log_and_raise_error("No grid mapping exists to transform coordinates.")
 
-    # xindex[0]..xindex[-2], yindex[-1]
-    bottom = [
-        (x, y) for i in xindices[: xlen - 1] for x in [xdata[i]] for y in ydata[-1:]
-    ]
+    for var in grid_mapping_var.variables:
+        if "crs_wkt" in netcdf[var].attrs:
+            return var
 
-    # xindex[-1], yindex[-1]..yindex[1]
-    right = [
-        (x, y)
-        for x in xdata[-1:]
-        for i in yindices[ylen - 1 : 0 : -1]
-        for y in [ydata[i]]
-    ]
-
-    # xindex[-1]..xindex[0], yindex[0]
-    top = [
-        (x, y) for i in xindices[xlen - 1 :: -1] for x in [xdata[i]] for y in ydata[:1]
-    ]
-
-    # The last point should already be the same as the first, given that top
-    # uses all of the xindices, but just in case...
-    if top[-1] != left[0]:
-        top.append(left[0])
-
-    # concatenate the "sides" and return the perimeter points
-    return left + bottom + right + top
+    return None
 
 
-def index_subset(original_length):
-    """
-    Pluck out the values for the first and last index of an array, plus a
-    somewhat arbitrary, and approximately evenly spaced, additional number
-    of indices in between the beginning and end.
-    """
-    if original_length > 6:
-        return [
-            round(index * count * 0.2)
-            for count in range(constants.DEFAULT_SPATIAL_AXIS_SIZE)
-            for index in [original_length - 1]
-        ]
+def crs_transformer(grid_mapping_var):
+    data_crs = CRS.from_wkt(grid_mapping_var.attrs["crs_wkt"])
+    return Transformer.from_crs(data_crs, CRS.from_epsg(4326), always_xy=True)
+
+
+def find_coordinate_data_by_standard_name(netcdf, standard_name_value):
+    # TODO: See comments in find_grid_mapping re: use of filter_by_attrs
+    matched = netcdf.filter_by_attrs(standard_name=standard_name_value)
+    data = []
+
+    if matched is not None and matched.coords is not None:
+        for coord in matched.coords:
+            if "standard_name" in netcdf[coord].attrs:
+                data = netcdf[coord].data
+                break
+
+    return data
+
+
+def pixel_padding(netcdf_var, configuration):
+    if "GeoTransform" in netcdf_var.attrs:
+        geotransform = netcdf_var.attrs["GeoTransform"]
+        pixel_size = abs(float(geotransform.split()[1]))
+    elif configuration.pixel_size is not None:
+        pixel_size = configuration.pixel_size
     else:
-        return list(range(original_length))
+        log_and_raise_error(
+            "NetCDF grid mapping variable does not have `GeoTransform` attribute. \
+Set `pixel_size` in the configuration file."
+        )
+
+    return pixel_size / 2
+
+
+def thinned_perimeter(rawx, rawy, pad=0):
+    """
+    Generate the thinned perimeter of a grid.
+    """
+
+    # Breaking this out into excruciating detail so someone can check my logic.
+    # Padding approach assumes upper left of grid is represented at array
+    # elements[0, 0]. Points are ordered in a counter-clockwise direction.
+    # left: all x at x[0]-pad, prepend y[0] + pad, append y[-1] - pad
+    # bottom: prepend x[0] - pad, append x[-1] + pad, all y at y[-1] - pad
+    # right: all x at x[-1] + pad, prepend y[-1] - pad, append y[0] + pad
+    # top: prepend x[-1] + pad, append x[0] - pad, all y at y[0] + pad
+    leftx = rawx[0] - pad
+    rightx = rawx[-1] + pad
+    uppery = rawy[0] + pad
+    lowery = rawy[-1] - pad
+
+    ul = [leftx, uppery]
+    ll = [leftx, lowery]
+    lr = [rightx, lowery]
+    ur = [rightx, uppery]
+
+    left = LineString([ul, ll])
+    bottom = LineString([ll, lr])
+    right = LineString([lr, ur])
+    top = LineString([ur, ul])
+
+    # Previous code used actual values from xdata and ydata, but only selected a
+    # subset of the array entries. The current code takes advantage of LineString's
+    # ability to interpolate points, but I'm not convinced it's a better approach.
+    # Discuss!
+    leftpts = [
+        left.interpolate(fract, normalized=True) for fract in [0, 0.2, 0.4, 0.6, 0.8]
+    ]
+    bottompts = [
+        bottom.interpolate(fract, normalized=True) for fract in [0, 0.2, 0.4, 0.6, 0.8]
+    ]
+    rightpts = [
+        right.interpolate(fract, normalized=True) for fract in [0, 0.2, 0.4, 0.6, 0.8]
+    ]
+
+    # Interpolate all the way to "1" so first and last points in the perimeter are the
+    # same for Polygon creation purposes.
+    toppts = [
+        top.interpolate(fract, normalized=True) for fract in [0, 0.2, 0.4, 0.6, 0.8, 1]
+    ]
+
+    # need tests:
+    # leftpts[0] should be upper left point
+    # bottompts[0] should be lower left point
+    # rightpts[0] should be lower right point
+    # toppts[0] should be upper right point
+    # toppts[-1] should equal leftpts[0]
+    return (
+        [(pt.x, pt.y) for pt in leftpts]
+        + [(pt.x, pt.y) for pt in bottompts]
+        + [(pt.x, pt.y) for pt in rightpts]
+        + [(pt.x, pt.y) for pt in toppts]
+    )
+
+
+# if no date modified in netcdf global attributes, then retrieve from configuration
+# should errors be added to ledger for summary purposes, or simply plopped into log?
+def date_modified(netcdf, configuration):
+    if "date_modified" in netcdf.attrs.keys():
+        datetime_str = netcdf.attrs["date_modified"]
+    else:
+        datetime_str = configuration.date_modified
+
+    if datetime_str:
+        return ensure_iso(datetime_str)
+    else:
+        log_and_raise_error(
+            "NetCDF file does not have `date_modified` global attribute. \
+Set `date_modified` in the configuration file."
+        )
+
+
+def log_and_raise_error(err):
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+    logger.error(err)
+
+    raise Exception(err)
 
 
 def ensure_iso(datetime_str):

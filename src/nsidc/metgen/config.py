@@ -8,6 +8,7 @@ import dataclasses
 import logging
 import os.path
 from pathlib import Path
+from typing import Optional
 
 from nsidc.metgen import aws, constants
 
@@ -35,6 +36,10 @@ class Config:
     checksum_type: str
     number: int
     dry_run: bool
+    filename_regex: Optional[str] = None
+    time_coverage_duration: Optional[str] = None
+    pixel_size: Optional[int] = None
+    date_modified: Optional[str] = None
 
     def show(self):
         # TODO: add section headings in the right spot
@@ -48,8 +53,8 @@ class Config:
         if self.dry_run:
             LOGGER.info("")
             LOGGER.info(
-                "Note: The dry-run option was included, so no files will be "
-                "staged and no CNM messages published."
+                "Note: The dry-run option was included, so no files will be \
+staged and no CNM messages published."
             )
             LOGGER.info("")
 
@@ -84,13 +89,16 @@ def _get_configuration_value(
     """
     vars = {"environment": environment}
     if overrides.get(name) is None:
-        if value_type is bool:
-            return config_parser.getboolean(section, name)
-        elif value_type is int:
-            return config_parser.getint(section, name)
-        else:
-            value = config_parser.get(section, name, vars=vars)
-            return value
+        try:
+            if value_type is bool:
+                return config_parser.getboolean(section, name)
+            elif value_type is int:
+                return config_parser.getint(section, name)
+            else:
+                value = config_parser.get(section, name, vars=vars)
+                return value
+        except Exception:
+            return None
     else:
         return overrides.get(name)
 
@@ -179,6 +187,38 @@ def configuration(
             _get_configuration_value(
                 environment, "Settings", "dry_run", bool, config_parser, overrides
             ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "filename_regex",
+                str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "time_coverage_duration",
+                str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "pixel_size",
+                int,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "date_modified",
+                str,
+                config_parser,
+                overrides,
+            ),
         )
     except Exception as e:
         raise Exception("Unable to read the configuration file", e)
@@ -207,12 +247,16 @@ def validate(configuration):
         # ],
         [
             "kinesis_stream_name",
-            lambda name: aws.kinesis_stream_exists(name),
+            lambda name: aws.kinesis_stream_exists(name)
+            if not configuration.dry_run
+            else lambda _: True,
             "The kinesis stream does not exist.",
         ],
         [
             "staging_bucket_name",
-            lambda name: aws.staging_bucket_exists(name),
+            lambda name: aws.staging_bucket_exists(name)
+            if not configuration.dry_run
+            else lambda _: True,
             "The staging bucket does not exist.",
         ],
         [

@@ -39,12 +39,18 @@ or
 ## Assumptions
 
 * Checksums are all SHA256
-* NetCDF files have an extension of `.nc` (required by CF conventions)
+* NetCDF files have an extension of `.nc` (required by CF conventions).
+* Projected spatial information is available in coordinate variables having
+  a `standard_name` attribute value of `projection_x_coordinate` or
+  `projection_y_coordinate` attribute.
 * (x[0],y[0]) represents the upper left corner of the spatial coverage.
-* x and y coordinate values represent the center of the pixel
+* Spatial coordinate values represent the center of the area covered by a measurement.
+* If a `pixel_size` value is present in the `ini` file, its units are assumed to be
+  the same as the units of the spatial coordinate variables.
 * Date/time strings can be parsed using `datetime.fromisoformat`
-* Only one coordinate system is used by all data variables (i.e. only one grid
-  mapping variable is present in a file)
+* Only one coordinate system is used by all data variables in all data files
+  (i.e. only one grid mapping variable is present in a file, and the content of
+  that variable is the same in every data file).
 
 ### Reference links
 
@@ -61,62 +67,53 @@ or
 
 | Attribute in use (location)   | ACDD | CF Conventions | NSIDC Guidelines | Note    |
 | ----------------------------- | ---- | -------------- | ---------------- | ------- |
-| date_modified (global)        | S    |                | R                | 1       |
-| time_coverage_start (global)  | R    |                | R                | 2       |
-| time_coverage_end (global)    | R    |                | R                | 2       |
-| crs_wkt (`crs` variable)      |      |                | R                | 3       |
-| GeoTransform (`crs` variable) |      |                | R                | 4       |
-| data (`x` variable)           |      |                | R                | 5       |
-| data (`y` variable)           |      |                | R                | 6       |
+| date_modified (global)        | S    |                | R                | 1, OC   |
+| time_coverage_start (global)  | R    |                | R                | 2, OC   |
+| time_coverage_end (global)    | R    |                | R                | 2, OC   |
+| grid_mapping_name (variable)  |      | RequiredC      | R+               | 3       |
+| crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 4       |
+| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 5, OC   |
+| standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 6       |
+| standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
 
 
-| Attributes not currently used | ACDD | CF Conventions | NSIDC Guidelines | Comments |
-| ----------------------------- | ---- | -------------- | ---------------- | -------- |
-| Conventions (global)          | R+   | Required       | R                |          |
-| standard_name (variable)      | R+   | R+             |                  |          |
-| grid_mapping (data variable)  |      | RequiredC      | R+               | 7        |
-| grid_mapping_name (variable)  |      | RequiredC      | R+               | 7        |
-| `projection_x_coordinate` standard name (variable) |  | RequiredC  |     | 8        |
-| `projection_y_coordinate` standard name (variable) |  | RequiredC  |     | 9        |
-| axis (variable)               |      | R              |                  | 8, 9     |
-| geospatial_bounds (global)    | R    |                | R                |          |
-| geospatial_bounds_crs (global)| R    |                | R                |          |
-| geospatial_lat_min (global)   | R    |                | R                |          |
-| geospatial_lat_max (global)   | R    |                | R                |          |
-| geospatial_lat_units (global) | R    |                | R                |          |
-| geospatial_lon_min (global)   | R    |                | R                |          |
-| geospatial_lon_max (global)   | R    |                | R                |          |
-| geospatial_lon_units (global) | R    |                | R                |          |
+| Attributes not currently used | ACDD | CF Conventions | NSIDC Guidelines |
+| ----------------------------- | ---- | -------------- | ---------------- |
+| Conventions (global)          | R+   | Required       | R                |
+| standard_name (data variable) | R+   | R+             |                  |
+| grid_mapping (data variable)  |      | RequiredC      | R+               |
+| axis (variable)               |      | R              |                  |
+| geospatial_bounds (global)    | R    |                | R                |
+| geospatial_bounds_crs (global)| R    |                | R                |
+| geospatial_lat_min (global)   | R    |                | R                |
+| geospatial_lat_max (global)   | R    |                | R                |
+| geospatial_lat_units (global) | R    |                | R                |
+| geospatial_lon_min (global)   | R    |                | R                |
+| geospatial_lon_max (global)   | R    |                | R                |
+| geospatial_lon_units (global) | R    |                | R                |
 
 Notes:
+`OC`: These attributes (or elements of them) can be represented in the `ini` file.
+See [Optional Configuration Elements.](#optional-configuration-elements)
+
 1. Used to populate the production date and time values in UMM-G output.
 2. Used to populate the time begin and end UMM-G values.
-3. The `crs_wkt` ("well known text") value is handed to the
-   `CRS` and `Transformer` modules in `pyproj` to conveniently deal
-   with the reprojection of (y,x) values to EPSG 4326 (lon, lat) values.
-4. The `GeoTransform` value provides the pixel size per data value, which is then used
-   to calculate the padding added to x and y values to create a GPolygon enclosing all
-   of the data.
-5. The `x` coordinate variable values are reprojected and thinned to create a GPolygon.
-6. The `y` coordinate variable values are reprojected and thinned to create a GPolygon.
-7. A grid mapping variable is required if the horizontal spatial coordinates are not
+3. A grid mapping variable is required if the horizontal spatial coordinates are not
    longitude and latitude and the intent of the data provider is to geolocate
    the data. `grid_mapping` and `grid_mapping_name` allow programmatic identification of
    the variable holding information about the horizontal coordinate reference system.
-   `metgenc` code currently assumes a variable named `crs` exists with grid
-   information. **TODO:** Identify the coordinate reference system variable by
-   looking for the `grid_mapping_name` or `grid_mapping` attribute.
-8. `metgenc` code currently assumes a coordinate variable `x` exists whose
-   data values represent spatial information in meters.
-   **TODO:** Identify the x-axis coordinate variable by looking for the `standard_name`
-   attribute with a value of `projection_x_coordinate`, or an `axis` attribute with
-   the value `X`, rather than assuming the variable is named `x`.
-9. `metgenc` code currently assumes a coordinate variable `y` exists whose
-   data values represent spatial information in meters.
-   **TODO:** Identify the y-axis coordinate variable by looking for the `standard_name`
-   attribute with a value of `projection_y_coordinate`, or an `axis` attribute with
-   the value `Y`, rather than assuming the variable is named `x`.
-
+4. The `crs_wkt` ("well known text") value is handed to the
+   `CRS` and `Transformer` modules in `pyproj` to conveniently deal
+   with the reprojection of (y,x) values to EPSG 4326 (lon, lat) values.
+5. The `GeoTransform` value provides the pixel size per data value, which is then used
+   to calculate the padding added to x and y values to create a GPolygon enclosing all
+   of the data.
+6. The values of the coordinate variable identified by the `standard_name` attribute
+   with a value of `projection_x_coordinate` are reprojected and thinned to create a
+   GPolygon, bounding box, etc.
+7. The values of the coordinate variable identified by the `standard_name` attribute
+   with a value of `projection_y_coordinate` are reprojected and thinned to create a
+   GPolygon, bounding box, etc.
 
 ## Installing MetGenC
 
@@ -209,7 +206,7 @@ Commands:
         $ metgenc process --help
 
 ### Commands, In-depth
-The **init** command will generate a metgenc configuration (i.e., .ini) file for
+The **init** command will generate a metgenc configuration (i.e., `.ini`) file for
 your data set. You can skip this step if you've already made an .ini file, or have
 copied one from another data set that you've tweaked to meet the needs of the data set
 you’re working on.
@@ -224,6 +221,19 @@ Options:
   --help             Show this message and exit
 ```
         $ metgenc init -c ./init/<name the file you’d like to create or modify>.ini
+
+#### Optional Configuration Elements
+
+Several NetCDF attributes may be represented in the `ini` file if they don't exist
+in the granule data file(s). See the file `fixtures/test.ini` for an example.
+
+| Attribute           | `ini` section | `ini` element |
+| --------------------|-------------- | ------------- |
+| date_modified       | Collection    | date_modified |
+| time_coverage_start | Collection    | filename_regex |
+| time_coverage_end   | Collection    | time_coverage_duration |
+| GeoTransform        | Collection    | pixel_size |
+
 #
 The **info** command can be used to display the information within the configuration file.
 The following example assumes a modscg.ini file has already been created.
@@ -268,13 +278,12 @@ is as you intend it to be, etc.
         $ metgenc process -c ./init/test.ini -e uat  -d -n 3 
 The above command does a dry run of three granules in the data directory specified in the .ini file pointed to.
 
-
         $ metgenc process -c ./init/test.ini -e uat  
 The above command starts Cumulus ingest for all granules in my data/<name> directory
 specified within the .ini file pointed to.
 #
-The **validate** command lets you view the JSON cnm or ummg output files created when process
-has been run.
+The **validate** command lets you review the JSON cnm or ummg output files created by
+running `process`.
 ```
 metgenc validate --help
 Usage: metgenc validate [OPTIONS]
