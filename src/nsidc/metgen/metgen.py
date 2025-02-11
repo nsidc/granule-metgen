@@ -194,7 +194,8 @@ class Collection:
     """
     Collection metadata relevant to generating UMM-G content
 
-    spatial_extent and temporal_extent are currently holding a JSON structure.
+    spatial_extent and temporal_extent currently contain the relevant
+    JSON structure from the collection metadata (if it exists).
     Additional work is still needed to parse out the relevant fields.
     """
 

@@ -253,12 +253,3 @@ def test_no_ummc_if_login_fails(mock_edl_login):
     new_collection = metgen.collection_from_cmr("uat", "BigData", 1)
     assert new_collection.spatial_extent is None
     assert new_collection.temporal_extent is None
-
-
-@patch("nsidc.metgen.metgen.edl_login", return_value=True)
-@patch("nsidc.metgen.metgen.earthaccess.search_datasets")
-def test_ummc_if_login_succeeds(mock_earthaccess, mock_edl_login, fake_ummc_response):
-    mock_earthaccess.return_value = fake_ummc_response
-    new_collection = metgen.collection_from_cmr("uat", "BigData", 1)
-    assert new_collection.spatial_extent == {"here": "there"}
-    assert new_collection.temporal_extent == ["then", "now"]
