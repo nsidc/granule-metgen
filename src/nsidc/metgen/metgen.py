@@ -25,7 +25,7 @@ from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
-from nsidc.metgen import aws, config, constants, netcdf_reader
+from nsidc.metgen import aws, config, constants, csv_reader, netcdf_reader
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -265,11 +265,20 @@ def process(configuration: config.Config) -> None:
     # Find all of the input granule files, limit the size of the list based
     # on the configuration, and execute the pipeline on each of the granules.
     # TODO: Nicely manage reader and glob pattern for other file types.
+    readers = {
+        ".nc": netcdf_reader.extract_metadata,
+        ".csv": csv_reader.extract_metadata,
+    }
+    # TODO: Regex or <something> to find data files
+    pattern = "*.nc"
+    reader = readers[pattern]
+    data_files = Path(configuration.data_dir).glob(pattern)
+
     candidate_granules = [
         Granule(
-            p.name, data_filenames=[str(p)], data_reader=netcdf_reader.extract_metadata
+            p.name, data_filenames=[str(p)], data_reader=reader
         )
-        for p in Path(configuration.data_dir).glob("*.nc")
+        for p in data_files
     ]
     granules = take(configuration.number, candidate_granules)
     results = [pipeline(g) for g in granules]
