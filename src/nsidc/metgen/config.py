@@ -36,6 +36,7 @@ class Config:
     checksum_type: str
     number: int
     dry_run: bool
+    data_filename_pattern: str
     filename_regex: Optional[str] = None
     time_coverage_duration: Optional[str] = None
     pixel_size: Optional[int] = None
@@ -119,6 +120,7 @@ def configuration(
         "checksum_type": constants.DEFAULT_CHECKSUM_TYPE,
         "number": constants.DEFAULT_NUMBER,
         "dry_run": constants.DEFAULT_DRY_RUN,
+        "data_filename_pattern": constants.DEFAULT_DATA_FILENAME_PATTERN,
     }
     try:
         return Config(
@@ -186,6 +188,14 @@ def configuration(
             ),
             _get_configuration_value(
                 environment, "Settings", "dry_run", bool, config_parser, overrides
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "data_filename_pattern",
+                str,
+                config_parser,
+                overrides,
             ),
             _get_configuration_value(
                 environment,
