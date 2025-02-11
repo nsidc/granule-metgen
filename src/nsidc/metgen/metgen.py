@@ -18,7 +18,9 @@ from collections.abc import Callable
 from functools import cache
 from pathlib import Path
 from string import Template
+from typing import Optional
 
+import earthaccess
 import jsonschema
 from funcy import all, filter, partial, rcompose, take
 from pyfiglet import Figlet
@@ -189,10 +191,17 @@ def init_config(configuration_file):
 
 @dataclasses.dataclass
 class Collection:
-    """Collection info required to ingest a granule"""
+    """
+    Collection metadata relevant to generating UMM-G content
+
+    spatial_extent and temporal_extent are currently holding a JSON structure.
+    Additional work is still needed to parse out the relevant fields.
+    """
 
     auth_id: str
     version: int
+    spatial_extent: Optional[dict] = None
+    temporal_extent: Optional[dict] = None
 
 
 @dataclasses.dataclass
@@ -345,12 +354,76 @@ def null_operation(configuration: config.Config, granule: Granule) -> Granule:
     return granule
 
 
+def edl_login(environment):
+    """
+    Authenticate with Earthdata using user name and password retrieved
+    from environment variables.
+    """
+
+    auth = earthaccess.login(
+        strategy="environment", system=getattr(earthaccess, environment)
+    )
+    return True if auth.authenticated else False
+
+
+def ummc_content(umm: list, key: str):
+    val = None
+
+    if not umm:
+        return val
+
+    # if more than one response, log error, use first one?
+    if not isinstance(umm[0], dict):
+        return val
+
+    try:
+        val = umm[0]["umm"][key]
+    except KeyError:
+        logger = logging.getLogger(constants.ROOT_LOGGER)
+        logger.info(f"No {key} information in umm-c response from CMR.")
+
+    return val
+
+
+def edl_environment(environment):
+    """
+    Map a cumulus ingest environment to the environment string needed for
+    Earthdata login
+    """
+    if environment.lower() != "prod":
+        environment = "uat"
+
+    return environment.upper()
+
+
 @cache
-def retrieve_collection(auth_id: str, version: int):
-    # TODO: Issue request to CMR for UMM-C record, pull out fields from UMM-C
-    # response and use to create collection object with more than just auth_id
-    # and version number.
-    return Collection(auth_id, version)
+def collection_from_cmr(environment: str, auth_id: str, version: int):
+    """
+    Retrieve collection metadata in UMM-C format if it exists.
+    """
+
+    # Setting has_granules to None should find collections both with and
+    # without associated granules.
+    if edl_login(edl_environment(environment)):
+        ummc = earthaccess.search_datasets(
+            short_name=auth_id,
+            version=version,
+            has_granules=None,
+        )
+    else:
+        logger = logging.getLogger(constants.ROOT_LOGGER)
+        logger.info("Earthdata login failed, UMM-C metadata will not be used.")
+        logger.info("")
+        ummc = []
+
+    # FYI: data format (e.g. NetCDF) is available in the umm-c response in
+    # ArchiveAndDistributionInformation should we decide to use it.
+    return Collection(
+        auth_id,
+        version,
+        ummc_content(ummc, "SpatialExtent"),
+        ummc_content(ummc, "TemporalExtents"),
+    )
 
 
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
@@ -359,7 +432,9 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
     """
     return dataclasses.replace(
         granule,
-        collection=retrieve_collection(configuration.auth_id, configuration.version),
+        collection=collection_from_cmr(
+            configuration.environment, configuration.auth_id, configuration.version
+        ),
     )
 
 
@@ -542,7 +617,7 @@ def summarize_results(ledgers: list[Ledger]) -> None:
         start = dt.datetime.now()
         end = dt.datetime.now()
 
-    logger = logging.getLogger("metgenc")
+    logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.info("Processing Summary")
     logger.info("==================")
     logger.info(f"Granules  : {len(ledgers)}")

@@ -180,6 +180,12 @@ example, different accounts for pre-production vs. production--you can use the A
 documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles)
 for the details.
 
+## CMR authentication
+
+Authentication currently handled with environment variables $EARTHDATA_USERNAME and $EARTHDATA_PASSWORD
+int environment will hit UAT CMR
+If authentication fails no additional effort will be made to retrieve information from CMR.
+
 ## Usage
 * Show the help text:
 
