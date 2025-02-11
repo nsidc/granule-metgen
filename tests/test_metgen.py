@@ -256,7 +256,7 @@ def test_no_ummc_if_login_fails(mock_edl_login):
 
 
 @patch("nsidc.metgen.metgen.edl_login", return_value=True)
-@patch("nsidc.metgen.metgen.earthaccess.search_datasets", return_value=[{'umm': {}}])
+@patch("nsidc.metgen.metgen.earthaccess.search_datasets")
 def test_ummc_if_login_succeeds(mock_earthaccess, mock_edl_login, fake_ummc_response):
     mock_earthaccess.return_value = fake_ummc_response
     new_collection = metgen.collection_from_cmr("uat", "BigData", 1)

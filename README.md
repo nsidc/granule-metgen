@@ -180,11 +180,26 @@ example, different accounts for pre-production vs. production--you can use the A
 documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles)
 for the details.
 
-## CMR authentication
+## CMR Authentication and use of Collection Metadata
 
-Authentication currently handled with environment variables $EARTHDATA_USERNAME and $EARTHDATA_PASSWORD
-int environment will hit UAT CMR
-If authentication fails no additional effort will be made to retrieve information from CMR.
+MetGenC will attempt to authenticate with Earthdata using credentials retrieved
+from the environment and retrieve collection metadata. If authentication fails,
+collection metadata will not be available to compensate for metadata elements 
+missing from `ini` files or the data files themselves.
+
+Export the following variables to your environment before you kick off MetGenC:
+
+        $ export EARTHDATA_USERNAME=your-EDL-user-name
+        $ export EARTHDATA_PASSWORD=your-EDL-password
+
+If you have a different user name and password for the UAT and production
+environments, be sure to set the values appropriate for the environment option
+passed to `metgenc process`.
+
+If collection metadata are unavailable, either due to an authentication failure
+or because the collection information doesn't yet exist in CMR, MetGenC will
+continue processing with the information available from the `ini` file and the
+data files.
 
 ## Usage
 * Show the help text:
