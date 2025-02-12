@@ -22,6 +22,7 @@ from typing import Optional
 
 import earthaccess
 import jsonschema
+from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
 from funcy import all, filter, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
@@ -361,10 +362,24 @@ def edl_login(environment):
     from environment variables.
     """
 
-    auth = earthaccess.login(
-        strategy="environment", system=getattr(earthaccess, environment)
-    )
-    return True if auth.authenticated else False
+    try:
+        earthaccess.login(
+            strategy="environment", system=getattr(earthaccess, environment)
+        )
+        auth = True
+    except LoginStrategyUnavailable:
+        logger = logging.getLogger(constants.ROOT_LOGGER)
+        logger.info(
+            "Environment variables EARTHDATA_USERNAME and EARTHDATA_PASSWORD \
+are missing."
+        )
+    except LoginAttemptFailure as e:
+        logger = logging.getLogger(constants.ROOT_LOGGER)
+        logger.info(e)
+    finally:
+        auth = False
+
+    return auth
 
 
 def ummc_content(umm: list, key: str):
@@ -397,6 +412,10 @@ def edl_environment(environment):
     return environment.upper()
 
 
+def edl_provider(environment):
+    return "NSIDC_PROD" if environment.lower() == "prod" else "NSIDC_CUAT"
+
+
 @cache
 def collection_from_cmr(environment: str, auth_id: str, version: int):
     """
@@ -410,6 +429,7 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
             short_name=auth_id,
             version=version,
             has_granules=None,
+            provider=edl_provider(environment),
         )
     else:
         logger = logging.getLogger(constants.ROOT_LOGGER)
