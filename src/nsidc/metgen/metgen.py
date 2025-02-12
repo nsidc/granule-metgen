@@ -373,10 +373,10 @@ def edl_login(environment):
             "Environment variables EARTHDATA_USERNAME and EARTHDATA_PASSWORD \
 are missing."
         )
+        auth = False
     except LoginAttemptFailure as e:
         logger = logging.getLogger(constants.ROOT_LOGGER)
         logger.info(e)
-    finally:
         auth = False
 
     return auth
