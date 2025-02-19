@@ -362,20 +362,19 @@ def edl_login(environment):
     from environment variables.
     """
 
+    logger = logging.getLogger(constants.ROOT_LOGGER)
     try:
         earthaccess.login(
             strategy="environment", system=getattr(earthaccess, environment)
         )
         auth = True
     except LoginStrategyUnavailable:
-        logger = logging.getLogger(constants.ROOT_LOGGER)
         logger.info(
             "Environment variables EARTHDATA_USERNAME and EARTHDATA_PASSWORD \
 are missing."
         )
         auth = False
     except LoginAttemptFailure as e:
-        logger = logging.getLogger(constants.ROOT_LOGGER)
         logger.info(e)
         auth = False
 
@@ -392,10 +391,11 @@ def ummc_content(umm: list, key: str):
     if not isinstance(umm[0], dict):
         return val
 
+    logger = logging.getLogger(constants.ROOT_LOGGER)
     try:
         val = umm[0]["umm"][key]
+        logger.info(f"Found {key} information in umm-c response from CMR.")
     except KeyError:
-        logger = logging.getLogger(constants.ROOT_LOGGER)
         logger.info(f"No {key} information in umm-c response from CMR.")
 
     return val
@@ -422,9 +422,13 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
     Retrieve collection metadata in UMM-C format if it exists.
     """
 
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+
     # Setting has_granules to None should find collections both with and
     # without associated granules.
     if edl_login(edl_environment(environment)):
+        logger.info("Earthdata login succeeded.")
+        logger.info("")
         ummc = earthaccess.search_datasets(
             short_name=auth_id,
             version=version,
@@ -432,7 +436,6 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
             provider=edl_provider(environment),
         )
     else:
-        logger = logging.getLogger(constants.ROOT_LOGGER)
         logger.info("Earthdata login failed, UMM-C metadata will not be used.")
         logger.info("")
         ummc = []
