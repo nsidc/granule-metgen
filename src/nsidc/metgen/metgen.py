@@ -428,7 +428,6 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
     # without associated granules.
     if edl_login(edl_environment(environment)):
         logger.info("Earthdata login succeeded.")
-        logger.info("")
         ummc = earthaccess.search_datasets(
             short_name=auth_id,
             version=version,
@@ -437,7 +436,6 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
         )
     else:
         logger.info("Earthdata login failed, UMM-C metadata will not be used.")
-        logger.info("")
         ummc = []
 
     # FYI: data format (e.g. NetCDF) is available in the umm-c response in
@@ -611,6 +609,7 @@ def publish_cnm(configuration: config.Config, granule: Granule) -> Granule:
 def log_ledger(ledger: Ledger) -> Ledger:
     """Log a Ledger of the operations performed on a Granule."""
     logger = logging.getLogger(constants.ROOT_LOGGER)
+    logger.info("")
     logger.info(f"Granule: {ledger.granule.producer_granule_id}")
     logger.info(f"  * UUID           : {ledger.granule.uuid}")
     logger.info(f"  * Submission time: {ledger.granule.submission_time}")
