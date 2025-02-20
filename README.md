@@ -36,95 +36,22 @@ or
 
     $ python3 --version
 
-## Assumptions
-
-* Checksums are all SHA256
-* NetCDF files have an extension of `.nc` (required by CF conventions).
-* Projected spatial information is available in coordinate variables having
-  a `standard_name` attribute value of `projection_x_coordinate` or
-  `projection_y_coordinate` attribute.
-* (x[0],y[0]) represents the upper left corner of the spatial coverage.
-* Spatial coordinate values represent the center of the area covered by a measurement.
-* If a `pixel_size` value is present in the `ini` file, its units are assumed to be
-  the same as the units of the spatial coordinate variables.
-* Date/time strings can be parsed using `datetime.fromisoformat`
-* Only one coordinate system is used by all data variables in all data files
-  (i.e. only one grid mapping variable is present in a file, and the content of
-  that variable is the same in every data file).
-
-### Reference links
-
-* https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3
-* https://cfconventions.org/Data/cf-conventions/cf-conventions-1.11/cf-conventions.html
-
-### NetCDF Attributes Used to Populate UMM-G
-
-- **Required** required
-- **RequiredC** conditionally required
-- **R+** highly or strongly recommended
-- **R** recommended
-- **S** suggested
-
-| Attribute in use (location)   | ACDD | CF Conventions | NSIDC Guidelines | Note    |
-| ----------------------------- | ---- | -------------- | ---------------- | ------- |
-| date_modified (global)        | S    |                | R                | 1, OC   |
-| time_coverage_start (global)  | R    |                | R                | 2, OC   |
-| time_coverage_end (global)    | R    |                | R                | 2, OC   |
-| grid_mapping_name (variable)  |      | RequiredC      | R+               | 3       |
-| crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 4       |
-| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 5, OC   |
-| standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 6       |
-| standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
-
-
-| Attributes not currently used | ACDD | CF Conventions | NSIDC Guidelines |
-| ----------------------------- | ---- | -------------- | ---------------- |
-| Conventions (global)          | R+   | Required       | R                |
-| standard_name (data variable) | R+   | R+             |                  |
-| grid_mapping (data variable)  |      | RequiredC      | R+               |
-| axis (variable)               |      | R              |                  |
-| geospatial_bounds (global)    | R    |                | R                |
-| geospatial_bounds_crs (global)| R    |                | R                |
-| geospatial_lat_min (global)   | R    |                | R                |
-| geospatial_lat_max (global)   | R    |                | R                |
-| geospatial_lat_units (global) | R    |                | R                |
-| geospatial_lon_min (global)   | R    |                | R                |
-| geospatial_lon_max (global)   | R    |                | R                |
-| geospatial_lon_units (global) | R    |                | R                |
-
-Notes:
-`OC`: These attributes (or elements of them) can be represented in the `ini` file.
-See [Optional Configuration Elements.](#optional-configuration-elements)
-
-1. Used to populate the production date and time values in UMM-G output.
-2. Used to populate the time begin and end UMM-G values.
-3. A grid mapping variable is required if the horizontal spatial coordinates are not
-   longitude and latitude and the intent of the data provider is to geolocate
-   the data. `grid_mapping` and `grid_mapping_name` allow programmatic identification of
-   the variable holding information about the horizontal coordinate reference system.
-4. The `crs_wkt` ("well known text") value is handed to the
-   `CRS` and `Transformer` modules in `pyproj` to conveniently deal
-   with the reprojection of (y,x) values to EPSG 4326 (lon, lat) values.
-5. The `GeoTransform` value provides the pixel size per data value, which is then used
-   to calculate the padding added to x and y values to create a GPolygon enclosing all
-   of the data.
-6. The values of the coordinate variable identified by the `standard_name` attribute
-   with a value of `projection_x_coordinate` are reprojected and thinned to create a
-   GPolygon, bounding box, etc.
-7. The values of the coordinate variable identified by the `standard_name` attribute
-   with a value of `projection_y_coordinate` are reprojected and thinned to create a
-   GPolygon, bounding box, etc.
-
 ## Installing MetGenC
 
 MetGenC can be installed from [PyPI](https://pypi.org/). First, create a
-Python virtual environment in a directory of your choice, then activate
-it:
+Python virtual environment (venv) in a directory of your choice, then activate it. To do this...
 
-    $ python -m venv /Users/afitzger/metgenc (i.e. provide the path to and name of the virtual environment to house MetgenC)
-    $ source ~/metgenc/bin/activate (i.e., source your newly created virtual environment name)
+On a Mac, open Terminal and run:
 
-Now install MetGenC into the virtual environment using `pip`:
+    $ python -m venv /Users/afitzger/metgenc (i.e. provide the path and name of the venv where you'll house MetGenC)
+    $ source ~/metgenc/bin/activate (i.e., activates your newly created metgenc venv)
+
+On a Windows machine, open a command prompt, navigate to the desired project directory in which to create your venv, then run:
+
+    > python -m venv metgenc (i.e., in this case, a venv named "metgenc" is created within the current directory)
+    > .\<path to venv>\Scripts\activate (i.e., activates your newly created metgenc venv) 
+
+Now, whatever your OS, install MetGenC into the virtual environment using `pip`:
 
     $ pip install nsidc-metgenc
 
@@ -155,8 +82,9 @@ Finally, restrict the permissions of the directory and files:
 
     $ chmod -R go-rwx ~/.aws
 
-When you obtain the AWS key pair ([covered here](https://nsidc.atlassian.net/l/cp/4LNZPggJ)), edit the `~/.aws/credentials` file
-and replace `TBD` with the public and secret key values.
+When you've obtained the AWS key pair ([covered here]([https://nsidc.atlassian.net/l/cp/YYj1gGsp]), 
+edit your newly created `~/.aws/credentials` file and replace `TBD` with the public and secret
+key values.
 
 ### Option 2: Using the AWS CLI to Create Configuration Files
 
@@ -180,7 +108,7 @@ example, different accounts for pre-production vs. production--you can use the A
 documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles)
 for the details.
 
-## Usage
+## Before Running MetGenC: Tips and Assumptions
 * Show the help text:
 
         $ metgenc --help
@@ -204,12 +132,95 @@ Commands:
   For detailed help on each command, run: metgenc <command> --help, for example:
 
         $ metgenc process --help
+        
+### Assumptions for netCDF files for MetGenC
 
-### Commands, In-depth
-The **init** command will generate a metgenc configuration (i.e., `.ini`) file for
-your data set. You can skip this step if you've already made an .ini file, or have
-copied one from another data set that you've tweaked to meet the needs of the data set
-you’re working on.
+* NetCDF files have an extension of `.nc` (per CF conventions).
+* Projected spatial information is available in coordinate variables having
+  a `standard_name` attribute value of `projection_x_coordinate` or
+  `projection_y_coordinate` attribute.
+* (x[0],y[0]) represents the upper left corner of the spatial coverage.
+* Spatial coordinate values represent the center of the area covered by a measurement.
+* Only one coordinate system is used by all data variables in all data files
+  (i.e. only one grid mapping variable is present in a file, and the content of
+  that variable is the same in every data file).
+
+### MetGenC File Assumtions
+* If a `pixel_size` value is present in the `ini` file, its units are assumed to be
+  the same as the units of the spatial coordinate variables.
+* Date/time strings can be parsed using `datetime.fromisoformat`
+* Checksums are all SHA256
+  
+### Reference links
+
+* https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3
+* https://cfconventions.org/Data/cf-conventions/cf-conventions-1.11/cf-conventions.html
+
+### NetCDF Attributes Used to Populate the UMM-G files generated by MetGenC
+
+- **Required** required
+- **RequiredC** conditionally required
+- **R+** highly or strongly recommended
+- **R** recommended
+- **S** suggested
+
+| Attribute in use (location)   | ACDD | CF Conventions | NSIDC Guidelines | Note    |
+| ----------------------------- | ---- | -------------- | ---------------- | ------- |
+| date_modified (global)        | S    |                | R                | 1, OC   |
+| time_coverage_start (global)  | R    |                | R                | 2, OC   |
+| time_coverage_end (global)    | R    |                | R                | 2, OC   |
+| grid_mapping_name (variable)  |      | RequiredC      | R+               | 3       |
+| crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 4       |
+| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 5, OC   |
+| standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 6       |
+| standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
+
+Notes:
+OC = Attributes (or elements of them) that can be represented in the `ini` file.
+See [Optional Configuration Elements](#optional-configuration-elements)
+
+1. Used to populate the production date and time values in UMM-G output.
+2. Used to populate the time begin and end UMM-G values.
+3. A grid mapping variable is required if the horizontal spatial coordinates are not
+   longitude and latitude and the intent of the data provider is to geolocate
+   the data. `grid_mapping` and `grid_mapping_name` allow programmatic identification of
+   the variable holding information about the horizontal coordinate reference system.
+4. The `crs_wkt` ("well known text") value is handed to the
+   `CRS` and `Transformer` modules in `pyproj` to conveniently deal
+   with the reprojection of (y,x) values to EPSG 4326 (lon, lat) values.
+5. The `GeoTransform` value provides the pixel size per data value, which is then used
+   to calculate the padding added to x and y values to create a GPolygon enclosing all
+   of the data.
+6. The values of the coordinate variable identified by the `standard_name` attribute
+   with a value of `projection_x_coordinate` are reprojected and thinned to create a
+   GPolygon, bounding box, etc.
+7. The values of the coordinate variable identified by the `standard_name` attribute
+   with a value of `projection_y_coordinate` are reprojected and thinned to create a
+   GPolygon, bounding box, etc.
+   
+| Attributes not currently used | ACDD | CF Conventions | NSIDC Guidelines |
+| ----------------------------- | ---- | -------------- | ---------------- |
+| Conventions (global)          | R+   | Required       | R                |
+| standard_name (data variable) | R+   | R+             |                  |
+| grid_mapping (data variable)  |      | RequiredC      | R+               |
+| axis (variable)               |      | R              |                  |
+| geospatial_bounds (global)    | R    |                | R                |
+| geospatial_bounds_crs (global)| R    |                | R                |
+| geospatial_lat_min (global)   | R    |                | R                |
+| geospatial_lat_max (global)   | R    |                | R                |
+| geospatial_lat_units (global) | R    |                | R                |
+| geospatial_lon_min (global)   | R    |                | R                |
+| geospatial_lon_max (global)   | R    |                | R                |
+| geospatial_lon_units (global) | R    |                | R                |
+
+## Running MetGenC: Its Commands In-depth
+The **init** command can be used to generate a metgenc configuration (i.e., `.ini`) file for
+your data set, or edit an existing .ini file. 
+* You can skip this step if you've already made an .ini file and prefer editing it
+  manually (any text editor will work).
+* An existing configuration file can also be copied and renamed to be used for a different
+  data set, just be sure to update the data_dir, auth_id, version, and provider!
+* Make sure to confirm the configuration file's checksum_type is set to SHA256.
 ```
 init --help
 Usage: metgenc init [OPTIONS]
@@ -220,7 +231,9 @@ Options:
   -c, --config TEXT  Path to configuration file to create or replace
   --help             Show this message and exit
 ```
-        $ metgenc init -c ./init/<name the file you’d like to create or modify>.ini
+Running **init**
+
+        $ metgenc init -c ./init/<name of the config file you’d like to create or modify>.ini
 
 #### Optional Configuration Elements
 
@@ -235,8 +248,8 @@ in the granule data file(s). See the file `fixtures/test.ini` for an example.
 | GeoTransform        | Collection    | pixel_size |
 
 #
+#
 The **info** command can be used to display the information within the configuration file.
-The following example assumes a modscg.ini file has already been created.
 ```
 metgenc info --help
 Usage: metgenc info [OPTIONS]
@@ -247,11 +260,19 @@ Options:
   -c, --config TEXT  Path to configuration file to display  [required]
   --help             Show this message and exit.
 ```
+Running **info**
+
         $ metgenc info --config example/modscg.ini
 #
-The **process** command is used to inspect or kick off ingest to Cumulus. Before running
-this, you must source your AWS profile (just once when you're working on ingest...not every
-time you run process in a session).
+#
+The **process** command is used either to generate UMM-G and CNM files locally to give
+you a chance to review them before ingesting them (with -d or --dry-run option), or to
+kick off ingest of data and UMM-G files. 
+
+Note: Before running **process**, you'll need to source your AWS profile, see example
+  below at Running process. If you can't remember if you've sourced your AWS profile,
+  it won't harm anything to run it again. Once run though, it's all set for your
+  working session in your active venv.
 ```
 metgenc process --help
 Usage: metgenc process [OPTIONS]
@@ -267,6 +288,8 @@ Options:
   -o, --overwrite     Overwrite existing UMM-G files.
   --help              Show this message and exit.
 ```
+Running **process**
+
         $ source metgenc-env.sh default
         $ metgenc process --config example/modscg.ini
 When run, ummg and and cnm files are generated and ingested along with the data files
@@ -282,6 +305,7 @@ The above command does a dry run of three granules in the data directory specifi
 The above command starts Cumulus ingest for all granules in my data/<name> directory
 specified within the .ini file pointed to.
 #
+#
 The **validate** command lets you review the JSON cnm or ummg output files created by
 running `process`.
 ```
@@ -295,6 +319,8 @@ Options:
   -t, --type TEXT    JSON content type  [default: cnm]
   --help             Show this message and exit.
 ```
+Running **validate**
+
         $ metgenc validate -c example/modscg.ini -t ummg
 
 The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file:
