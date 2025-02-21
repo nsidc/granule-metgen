@@ -231,7 +231,7 @@ Options:
   -c, --config TEXT  Path to configuration file to create or replace
   --help             Show this message and exit
 ```
-Running **init**
+Example running **init**
 
         $ metgenc init -c ./init/<name of the config file you’d like to create or modify>.ini
 
@@ -260,19 +260,14 @@ Options:
   -c, --config TEXT  Path to configuration file to display  [required]
   --help             Show this message and exit.
 ```
-Running **info**
+Example running **info**
 
         $ metgenc info --config example/modscg.ini
 #
 #
 The **process** command is used either to generate UMM-G and CNM files locally to give
-you a chance to review them before ingesting them (with -d or --dry-run option), or to
-kick off ingest of data and UMM-G files. 
-
-Note: Before running **process**, you'll need to source your AWS profile, see example
-  below at Running process. If you can't remember if you've sourced your AWS profile,
-  it won't harm anything to run it again. Once run though, it's all set for your
-  working session in your active venv.
+you a chance to review them before ingesting them (with either -d, --dry-run option), or to
+kick off end-to-end ingest of data and UMM-G files to Cumulus UAT. 
 ```
 metgenc process --help
 Usage: metgenc process [OPTIONS]
@@ -288,22 +283,27 @@ Options:
   -o, --overwrite     Overwrite existing UMM-G files.
   --help              Show this message and exit.
 ```
-Running **process**
+Notes: 
+* Before running **process**, remember to source your AWS profile by running
+  `$ source metgenc-env.sh cumulus-uat`—in this case `cumulus-uat` is the name I specified
+  in my AWS credential and config files; use whatever name you've specified for it in your 
+  config and credential files!
+* If you can't remember whether you've sourced your AWS profile yet in a given MetGenC session,
+  there's no harm in sourcing it again. Once run though, you'll be all set for however long
+  you're working in your active venv.
+* Before running end-to-end ingest, as a courtesy send a Slack message to NSIDC's #Cumulus
+  channel so if they happen to notice activity, they know it's your handiwork.
+  
+Examples running **process**
 
-        $ source metgenc-env.sh default
-        $ metgenc process --config example/modscg.ini
-When run, ummg and and cnm files are generated and ingested along with the data files
-for a collection into Cumulus. The process command offers a -d (--dry run) option that 
-only runs the process steps locally, thus actual Cumulus ingest is not started. This is
-meant to allow you to check your .ini details, validate that ummg and cnm file content
-is as you intend it to be, etc.
+The following is an example of using the dry run option for three granules:
 
         $ metgenc process -c ./init/test.ini -e uat  -d -n 3 
-The above command does a dry run of three granules in the data directory specified in the .ini file pointed to.
+
+This next example runs an end-to-end ingest of granules and their ummg files into 
+Cumulus UAT:
 
         $ metgenc process -c ./init/test.ini -e uat  
-The above command starts Cumulus ingest for all granules in my data/<name> directory
-specified within the .ini file pointed to.
 #
 #
 The **validate** command lets you review the JSON cnm or ummg output files created by
@@ -319,7 +319,7 @@ Options:
   -t, --type TEXT    JSON content type  [default: cnm]
   --help             Show this message and exit.
 ```
-Running **validate**
+Example running **validate**
 
         $ metgenc validate -c example/modscg.ini -t ummg
 
@@ -330,7 +330,9 @@ The package `check-jsonschema` is also installed by MetGenC and can be used to v
 
 ## Troubleshooting
 
-TBD
+If you run `$ metgenc process -c ./init/test.ini` to test end-to-end ingest, but you get a flurry of errors, run: 
+source metgenc-env.sh cumulus-uat  
+If you've been running other metgenc commands successfully (even `metgenc process` but with the --dry-run option), having forgotten to set up communications between MetGenC and AWS is very easy to do, but thankfully, very easy to resolve. 
 
 ## For Developers
 ### Contributing
