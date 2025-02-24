@@ -278,7 +278,9 @@ def process(configuration: config.Config) -> None:
             browse_filenames=browse_files,
             data_reader=netcdf_reader.extract_metadata,
         )
-        for name, data_files, browse_files in grouped_granule_files(configuration).items()
+        for name, data_files, browse_files in grouped_granule_files(
+            configuration
+        ).items()
     ]
     granules = take(configuration.number, candidate_granules)
     results = [pipeline(g) for g in granules]
@@ -389,9 +391,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
 
 
 def granule_tuple(granule_id: str, browse_regex: str, file_list: list) -> tuple:
-    """
-
-    """
+    """ """
     data_files = [
         file_name
         for file_name in file_list
