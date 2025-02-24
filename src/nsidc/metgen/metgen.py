@@ -11,6 +11,7 @@ import hashlib
 import importlib.resources
 import json
 import logging
+import re
 import os.path
 import sys
 import uuid
@@ -114,6 +115,11 @@ def init_config(configuration_file):
     cfg_parser.set(
         constants.COLLECTION_SECTION_NAME, "provider", Prompt.ask("Provider")
     )
+    cfg_parser.set(
+        constants.COLLECTION_SECTION_NAME,
+        "browse_regex",
+        Prompt.ask("Browse regex", default=constants.DEFAULT_BROWSE_REGEX),
+    )
     print()
 
     print()
@@ -202,6 +208,7 @@ class Granule:
     producer_granule_id: str
     collection: Maybe[Collection] = Maybe.empty
     data_filenames: list[str] = dataclasses.field(default_factory=list)
+    browse_filenames: list[str] = Maybe.empty
     ummg_filename: Maybe[str] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
@@ -264,12 +271,14 @@ def process(configuration: config.Config) -> None:
 
     # Find all of the input granule files, limit the size of the list based
     # on the configuration, and execute the pipeline on each of the granules.
-    # TODO: Nicely manage reader and glob pattern for other file types.
     candidate_granules = [
         Granule(
-            p.name, data_filenames=[str(p)], data_reader=netcdf_reader.extract_metadata
+            name,
+            data_filenames=data_files,
+            browse_filenames=browse_files,
+            data_reader=netcdf_reader.extract_metadata,
         )
-        for p in Path(configuration.data_dir).glob("*.nc")
+        for name, data_files, browse_files in grouped_granule_files(configuration).items()
     ]
     granules = take(configuration.number, candidate_granules)
     results = [pipeline(g) for g in granules]
@@ -353,6 +362,53 @@ def retrieve_collection(auth_id: str, version: int):
     return Collection(auth_id, version)
 
 
+def grouped_granule_files(configuration: config.Config) -> list[tuple]:
+    """
+    Identify data file(s) and browse file(s) related to each granule.
+    """
+    file_list = [p.name for p in Path(configuration.data_dir).glob("*")]
+
+    if configuration.granule_regex:
+        # get all unique granule name string elements
+        granule_ids = {
+            re.search(configuration.granule_regex, file).group("granuleid")
+            for file in file_list
+        }
+    else:
+        # assume one data file per granule
+        granule_ids = set(
+            file
+            for file in file_list
+            if not re.search(configuration.browse_regex, file)
+        )
+
+    return [
+        granule_tuple(granule_id, configuration.browse_regex, file_list)
+        for granule_id in granule_ids
+    ]
+
+
+def granule_tuple(granule_id: str, browse_regex: str, file_list: list) -> tuple:
+    """
+
+    """
+    data_files = [
+        file_name
+        for file_name in file_list
+        if re.search(granule_id, file_name) and not re.search(browse_regex, file_name)
+    ]
+    browse_files = [
+        file_name
+        for file_name in file_list
+        if re.search(granule_id, file_name) and re.search(browse_regex, file_name)
+    ]
+    # need to split extension or remove dangling periods if using commonprefix
+    # b, e = os.path.splitext('NSIDC0081_SEAICE_PS_N25km_20211105_v2.0_DUCk.nc')
+    gname = os.path.commonprefix(data_files) if len(data_files) > 1 else data_files[0]
+
+    return (gname, data_files, browse_files)
+
+
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
     """
     Associate collection information with the Granule.
@@ -430,6 +486,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     return dataclasses.replace(granule, ummg_filename=ummg_file_path)
 
 
+# need to stage browse as well
 def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     """
     Stage a set of files for the Granule in S3.
