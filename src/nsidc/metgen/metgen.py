@@ -404,7 +404,7 @@ def ummc_content(umm: list, key: str):
 def edl_environment(environment):
     """
     Map a cumulus ingest environment to the environment string needed for
-    Earthdata login
+    Earthdata login via earthaccess.
     """
     if environment.lower() != "prod":
         environment = "uat"
@@ -413,7 +413,7 @@ def edl_environment(environment):
 
 
 def edl_provider(environment):
-    return "NSIDC_PROD" if environment.lower() == "prod" else "NSIDC_CUAT"
+    return "NSIDC_CPRD" if environment.lower() == "prod" else "NSIDC_CUAT"
 
 
 @cache
