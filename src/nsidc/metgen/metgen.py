@@ -413,7 +413,11 @@ def edl_environment(environment):
 
 
 def edl_provider(environment):
-    return "NSIDC_CPRD" if environment.lower() == "prod" else "NSIDC_CUAT"
+    return (
+        constants.CMR_PROD_PROVIDER
+        if environment.lower() == "prod"
+        else constants.CMR_UAT_PROVIDER
+    )
 
 
 @cache

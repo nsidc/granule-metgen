@@ -1,3 +1,8 @@
+## Unreleased
+
+* Adds support for Earthdata login and retrieval of collection-level metadata
+  from CMR. (Issue-15)
+
 ## v1.1.0
 
 * Extend `ini` file to include values for attributes missing from a minimal,
