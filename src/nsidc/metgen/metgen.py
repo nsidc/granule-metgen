@@ -11,8 +11,8 @@ import hashlib
 import importlib.resources
 import json
 import logging
-import re
 import os.path
+import re
 import sys
 import uuid
 from collections.abc import Callable
