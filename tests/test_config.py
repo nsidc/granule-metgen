@@ -37,7 +37,7 @@ def expected_keys():
             "pixel_size",
             "date_modified",
             "browse_regex",
-            "granule_regex"
+            "granule_regex",
         ]
     )
 
@@ -167,6 +167,8 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
         ("Settings", "checksum_type", constants.DEFAULT_CHECKSUM_TYPE),
         ("Settings", "number", constants.DEFAULT_NUMBER),
         ("Collection", "filename_regex", None),
+        ("Collection", "granule_regex", None),
+        ("Collection", "browse_regex", constants.DEFAULT_BROWSE_REGEX),
         ("Collection", "time_coverage_duration", None),
         ("Collection", "pixel_size", None),
         ("Collection", "time_coverage_duration", None),

@@ -1,6 +1,11 @@
+## Unreleased
+
+* Adds browse file names to CNM content and stages them to Cumulus if they
+  exist. (Issue-61)
+
 ## v1.1.0
 
-* Extend `ini` file to include values for attributes missing from a minimal,
+* Extends `ini` file to include values for attributes missing from a minimal,
   CF-compliant netCDF file. (Issue-104)
 
 ## v1.0.2

@@ -208,7 +208,7 @@ class Granule:
     producer_granule_id: str
     collection: Maybe[Collection] = Maybe.empty
     data_filenames: list[str] = dataclasses.field(default_factory=list)
-    browse_filenames: list[str] = Maybe.empty
+    browse_filenames: list[str] = dataclasses.field(default_factory=list)
     ummg_filename: Maybe[str] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
@@ -371,15 +371,17 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     file_list = [p.name for p in Path(configuration.data_dir).glob("*")]
 
     if configuration.granule_regex:
-        # get all unique granule name string elements
+        # get all unique granule name fragments identified by the regex
         granule_ids = {
             re.search(configuration.granule_regex, file).group("granuleid")
             for file in file_list
         }
     else:
-        # assume one data file per granule
+        # Assume one data file per granule.
+        # If there are browse files they must match the browse regex as well as
+        # the data file name less its extension.
         granule_ids = set(
-            file
+            os.path.splitext(file)[0]
             for file in file_list
             if not re.search(configuration.browse_regex, file)
         )
@@ -391,7 +393,13 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
 
 
 def granule_tuple(granule_id: str, browse_regex: str, file_list: list) -> tuple:
-    """ """
+    """
+    Return a tuple representing a granule, including:
+        - The "provider granule ID" (the granule file name in the case of a
+          single data file, otherwise the common basename for all data files)
+        - A list of one or more data file(s)
+        - A list of one or more associated browse file(s), if any exist
+    """
     data_files = [
         file_name
         for file_name in file_list
@@ -402,9 +410,13 @@ def granule_tuple(granule_id: str, browse_regex: str, file_list: list) -> tuple:
         for file_name in file_list
         if re.search(granule_id, file_name) and re.search(browse_regex, file_name)
     ]
-    # need to split extension or remove dangling periods if using commonprefix
-    # b, e = os.path.splitext('NSIDC0081_SEAICE_PS_N25km_20211105_v2.0_DUCk.nc')
-    gname = os.path.commonprefix(data_files) if len(data_files) > 1 else data_files[0]
+
+    # Splitting off the "extension" here to get rid of a trailing '.'
+    gname = (
+        os.path.splitext(os.path.commonprefix(data_files))[0]
+        if len(data_files) > 1
+        else data_files[0]
+    )
 
     return (gname, data_files, browse_files)
 
@@ -486,12 +498,11 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     return dataclasses.replace(granule, ummg_filename=ummg_file_path)
 
 
-# need to stage browse as well
 def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     """
     Stage a set of files for the Granule in S3.
     """
-    stuff = granule.data_filenames + [granule.ummg_filename]
+    stuff = granule.data_filenames + [granule.ummg_filename] + granule.browse_filenames
     for fn in stuff:
         filename = os.path.basename(fn)
         bucket_path = s3_object_path(granule, filename)
@@ -512,6 +523,7 @@ def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
     granule_files = {
         "data": granule.data_filenames,
         "metadata": [granule.ummg_filename],
+        "browse": granule.browse_filenames,
     }
     for type, files in granule_files.items():
         for file in files:
