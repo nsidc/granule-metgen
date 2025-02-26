@@ -63,6 +63,20 @@ def fake_config():
     )
 
 
+@pytest.fixture
+def fake_ummc_response():
+    return [
+        {
+            "umm": {
+                "ShortName": "BigData",
+                "Version": 1,
+                "TemporalExtents": ["then", "now"],
+                "SpatialExtent": {"here": "there"},
+            }
+        }
+    ]
+
+
 def test_banner():
     assert len(metgen.banner()) > 0
 
@@ -211,3 +225,31 @@ def test_dummy_json_used(mock_validate, mock_open):
         mock_validate.assert_called_once_with(
             instance=fake_json | fake_dummy_json, schema="schema file"
         )
+
+
+@pytest.mark.parametrize(
+    "ingest_env,edl_env",
+    [("int", "UAT"), ("uat", "UAT"), ("prod", "PROD")],
+)
+def test_edl_login_environment(ingest_env, edl_env):
+    environment = metgen.edl_environment(ingest_env)
+    assert (environment) == edl_env
+
+    environment = metgen.edl_environment(ingest_env.upper())
+    assert (environment) == edl_env
+
+
+def test_handles_no_cmr_response(fake_ummc_response):
+    assert metgen.ummc_content([], "fakekey") is None
+    assert metgen.ummc_content(fake_ummc_response, "DOI") is None
+
+
+def test_handles_good_cmr_response(fake_ummc_response):
+    assert metgen.ummc_content(fake_ummc_response, "Version") == 1
+
+
+@patch("nsidc.metgen.metgen.edl_login", return_value=False)
+def test_no_ummc_if_login_fails(mock_edl_login):
+    new_collection = metgen.collection_from_cmr("uat", "BigData", 1)
+    assert new_collection.spatial_extent is None
+    assert new_collection.temporal_extent is None

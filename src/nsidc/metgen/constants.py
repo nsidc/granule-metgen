@@ -15,6 +15,11 @@ DEFAULT_DRY_RUN = False
 # Logging
 ROOT_LOGGER = "metgenc"
 
+# Currently we support one CMR production cloud provider (NSIDC_CPRD) and one
+# UAT cloud provider (NSIDC_CPRD).
+CMR_PROD_PROVIDER = "NSIDC_CPRD"
+CMR_UAT_PROVIDER = "NSIDC_CUAT"
+
 # JSON schema locations and versions
 CNM_JSON_SCHEMA = ("nsidc.metgen.json-schema", "cumulus_sns_schema.json")
 CNM_JSON_SCHEMA_VERSION = "1.6.1"
