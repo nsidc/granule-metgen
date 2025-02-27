@@ -3,6 +3,11 @@
 * Adds browse file names to CNM content and stages them to Cumulus if they
   exist. (Issue-61)
 
+## v1.2.1
+
+* Adds support for Earthdata login and retrieval of collection-level metadata
+  from CMR. (Issue-15)
+
 ## v1.1.0
 
 * Extends `ini` file to include values for attributes missing from a minimal,
