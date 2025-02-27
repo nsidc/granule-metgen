@@ -40,6 +40,8 @@ class Config:
     time_coverage_duration: Optional[str] = None
     pixel_size: Optional[int] = None
     date_modified: Optional[str] = None
+    browse_regex: Optional[str] = None
+    granule_regex: Optional[str] = None
 
     def show(self):
         # TODO: add section headings in the right spot
@@ -119,6 +121,7 @@ def configuration(
         "checksum_type": constants.DEFAULT_CHECKSUM_TYPE,
         "number": constants.DEFAULT_NUMBER,
         "dry_run": constants.DEFAULT_DRY_RUN,
+        "browse_regex": constants.DEFAULT_BROWSE_REGEX,
     }
     try:
         return Config(
@@ -215,6 +218,22 @@ def configuration(
                 environment,
                 "Collection",
                 "date_modified",
+                str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "browse_regex",
+                str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "granule_regex",
                 str,
                 config_parser,
                 overrides,
