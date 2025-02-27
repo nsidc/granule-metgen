@@ -1,4 +1,4 @@
-## Unreleased
+## UNRELEASED
 
 * Adds support for Earthdata login and retrieval of collection-level metadata
   from CMR. (Issue-15)
