@@ -493,7 +493,7 @@ def granule_tuple(
 ) -> tuple:
     """
     Return a tuple representing a granule:
-        - The "provider granule ID" (the granule file name in the case of a
+        - The "producer granule ID" (the granule file name in the case of a
           single data file, otherwise the common basename for all data files)
         - A list of one or more full paths to data file(s)
         - A list of zero or more full paths to associated browse file(s)
