@@ -71,6 +71,13 @@ Set `filename_regex` in the configuration file."
 
 
 def time_coverage_end(netcdf, configuration, time_coverage_start):
+    """
+    Use time_coverage_end attribute if it exists, otherwise use a duration
+    value from the ini file to calculate the time_coverage_end.
+
+    TODO: Look for time_coverage_duration attribute in the netCDF file before
+    using a value from the ini file.
+    """
     if "time_coverage_end" in netcdf.attrs:
         return ensure_iso(netcdf.attrs["time_coverage_end"])
 
