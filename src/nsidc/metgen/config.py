@@ -97,8 +97,7 @@ def _get_configuration_value(
             elif value_type is int:
                 return config_parser.getint(section, name)
             else:
-                value = config_parser.get(section, name, vars=vars)
-                return value
+                return config_parser.get(section, name, vars=vars)
         except Exception:
             return None
     else:

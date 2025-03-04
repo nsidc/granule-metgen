@@ -1,4 +1,5 @@
 import datetime as dt
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -89,15 +90,32 @@ def test_returns_single_datetime():
     assert '"SingleDateTime": "123"' in result
 
 
+def test_granule_id_for_one_file():
+    granule_id = metgen.derived_granule_id(["path1.xyz"])
+    assert granule_id == "path1.xyz"
+
+
+def test_granule_id_for_multiple_files():
+    granule_id = metgen.derived_granule_id(["path1.xyz", "path2.xyz", "path3.xyz"])
+    assert granule_id == "path"
+
+
 @pytest.mark.parametrize(
-    "granule_id,data_files,browse_files,expected",
+    "granule_str,data_files,browse_files,expected",
     [
         ("gfile", ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
+        ("gfile.nc", ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
         (
             "gfile",
             ["gfile.nc"],
-            ["gfile_browse_image.png"],
-            ("gfile.nc", ["gfile.nc"], ["gfile_browse_image.png"]),
+            ["gfile_browse.png"],
+            ("gfile.nc", ["gfile.nc"], ["gfile_browse.png"]),
+        ),
+        (
+            "gfile.nc",
+            ["gfile.nc"],
+            ["browse.png"],
+            ("gfile.nc", ["gfile.nc"], []),
         ),
         (
             "gfile",
@@ -111,10 +129,22 @@ def test_returns_single_datetime():
             ["gfile_browse.png"],
             ("gfile", ["gfile.nc", "gfile.tif"], ["gfile_browse.png"]),
         ),
+        (
+            "gfile",
+            ["gfile.nc", "gfile.tif"],
+            ["gfile_browse.png", "gfile_browse.tif"],
+            (
+                "gfile",
+                ["gfile.nc", "gfile.tif"],
+                ["gfile_browse.png", "gfile_browse.tif"],
+            ),
+        ),
     ],
 )
-def test_granule_file_combinations(granule_id, data_files, browse_files, expected):
-    granule = metgen.granule_tuple(granule_id, "browse", data_files + browse_files)
+def test_granule_file_combinations(granule_str, data_files, browse_files, expected):
+    granule = metgen.granule_tuple(
+        granule_str, "browse", [Path(p) for p in data_files + browse_files]
+    )
     assert granule == expected
 
 
