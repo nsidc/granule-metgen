@@ -49,7 +49,7 @@ def time_range(netcdf_filename, netcdf, configuration):
         # In theory, we should never get here.
         log_and_raise_error(
             "Could not determine time coverage from NetCDF attributes. Ensure \
-filename_regex and time_coverage_duration are set in the configuration file."
+time_start_regex and time_coverage_duration are set in the configuration file."
         )
 
 
@@ -57,8 +57,8 @@ def time_coverage_start(netcdf_filename, netcdf, configuration):
     if "time_coverage_start" in netcdf.attrs:
         coverage_start = netcdf.attrs["time_coverage_start"]
 
-    elif configuration.filename_regex:
-        m = re.match(configuration.filename_regex, netcdf_filename)
+    elif configuration.time_start_regex:
+        m = re.match(configuration.time_start_regex, netcdf_filename)
         coverage_start = m.group("time_coverage_start")
 
     if coverage_start is not None:
@@ -66,7 +66,7 @@ def time_coverage_start(netcdf_filename, netcdf, configuration):
     else:
         log_and_raise_error(
             "NetCDF file does not have `time_coverage_start` global attribute. \
-Set `filename_regex` in the configuration file."
+Set `time_start_regex` in the configuration file."
         )
 
 

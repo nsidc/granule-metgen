@@ -261,15 +261,34 @@ Example running **init**
 
 #### Optional Configuration Elements
 
-Several NetCDF attributes may be represented in the `ini` file if they don't exist
-in the granule data file(s). See the file `fixtures/test.ini` for an example.
+Some attribute values may be read from the `ini` file if they don't exist
+in the granule data file(s). This approach assumes the attribute values
+are the same for all granules. These values must be manually added to the
+`ini` file; they are not included in the `metgenc init` functionality.
 
-| Attribute           | `ini` section | `ini` element |
-| --------------------|-------------- | ------------- |
-| date_modified       | Collection    | date_modified |
-| time_coverage_start | Collection    | filename_regex |
-| time_coverage_end   | Collection    | time_coverage_duration |
-| GeoTransform        | Collection    | pixel_size |
+See the file `fixtures/test.ini` for examples.
+
+| (NetCDF) Attribute  | `ini` section | `ini` element | Note |
+| --------------------|-------------- | ------------- | ----- |
+| date_modified       | Collection    | date_modified |       |
+| time_coverage_start | Collection    | time_start_regex | 1  |
+| time_coverage_end   | Collection    | time_coverage_duration | 2 |
+| GeoTransform        | Collection    | pixel_size |           |
+
+
+1. Matched against file name to determine time coverage start value. Must match using
+the named group `(?P<time_coverage_start>)`.
+
+2. Duration value applied to `time_coverage_start` to determine `time_coverage_end`.  Must be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
+
+Two additional `ini` values are used to identify browse files and the file name
+pattern (if any) that indicates which file(s) should be grouped together as a
+single granule (or browse file(s) associated with a granule).
+
+| `ini` section | `ini` element | Note |
+| ------------- | ------------- | ---- |
+| Collection    | browse_regex  | The file name pattern identifying a browse file. |
+| Collection    | granule_regex | The file name pattern identifying related files. Must match using the named group `(?P<granuleid>)`. |
 
 ---
 

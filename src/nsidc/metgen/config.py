@@ -36,7 +36,7 @@ class Config:
     checksum_type: str
     number: int
     dry_run: bool
-    filename_regex: Optional[str] = None
+    time_start_regex: Optional[str] = None
     time_coverage_duration: Optional[str] = None
     pixel_size: Optional[int] = None
     date_modified: Optional[str] = None
@@ -192,7 +192,7 @@ def configuration(
             _get_configuration_value(
                 environment,
                 "Collection",
-                "filename_regex",
+                "time_start_regex",
                 str,
                 config_parser,
                 overrides,
