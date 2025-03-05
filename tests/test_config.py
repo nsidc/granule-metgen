@@ -3,7 +3,6 @@ from configparser import ConfigParser, ExtendedInterpolation
 from unittest.mock import patch
 
 import pytest
-
 from nsidc.metgen import config, constants
 
 # Unit tests for the 'config' module functions.
@@ -170,7 +169,11 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
         ("Collection", "time_coverage_duration", None),
         ("Collection", "pixel_size", None),
         ("Collection", "time_coverage_duration", None),
-        ("Collection", "data_filename_pattern", constants.DEFAULT_DATA_FILENAME_PATTERN)
+        (
+            "Collection",
+            "data_filename_pattern",
+            constants.DEFAULT_DATA_FILENAME_PATTERN,
+        ),
     ],
 )
 def test_configuration_has_good_defaults(cfg_parser, section, option, expected):

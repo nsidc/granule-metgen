@@ -274,10 +274,7 @@ def process(configuration: config.Config) -> None:
     data_files = Path(configuration.data_dir).glob(configuration.data_filename_pattern)
 
     candidate_granules = [
-        Granule(
-            p.name, data_filenames=[str(p)], data_reader=reader
-        )
-        for p in data_files
+        Granule(p.name, data_filenames=[str(p)], data_reader=reader) for p in data_files
     ]
     granules = take(configuration.number, candidate_granules)
     results = [pipeline(g) for g in granules]

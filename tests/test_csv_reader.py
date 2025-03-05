@@ -1,5 +1,4 @@
 import pytest
-
 from nsidc.metgen import config, csv_reader
 
 # Unit tests for the 'netcdf_reader' module functions.
@@ -25,7 +24,7 @@ def csv(tmp_path):
     d = tmp_path / __name__
     d.mkdir()
     p = d / "test.csv"
-    p.write_text('\n'.join(content), encoding="utf-8")
+    p.write_text("\n".join(content), encoding="utf-8")
 
     return p
 
@@ -44,7 +43,7 @@ def test_config():
         "bucket",
         True,
         True,
-        'SHA256',
+        "SHA256",
         3,
         True,
         "data*.dat",
@@ -55,11 +54,9 @@ def test_config():
     )
 
 
-
 def test_extract_metadata(test_config, csv):
     metadata = csv_reader.extract_metadata(csv, test_config)
     assert metadata["size_in_bytes"] == 154
     assert metadata["production_date_time"] == test_config.date_modified
     assert metadata["temporal"] == "2023-03-06T11:00:00.000Z"
     assert metadata["geometry"] == {"point": (64.86197446452954, -147.71408586635164)}
-

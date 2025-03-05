@@ -30,7 +30,7 @@ def data_datetime(csvreader, configuration):
             dt.replace(tzinfo=timezone.utc)
             .isoformat(timespec="milliseconds")
             .replace("+00:00", "Z")
-            )
+        )
     else:
         return None
 
@@ -39,7 +39,7 @@ def spatial_values(csvreader, configuration):
     zone = get_key_value(csvreader, "^.*UTM_Zone")
     easting = get_key_value(csvreader, "^.*Easting")
     northing = get_key_value(csvreader, "^.*Northing")
-    utm_crs = CRS(proj='utm', zone=zone, ellps='WGS84')
+    utm_crs = CRS(proj="utm", zone=zone, ellps="WGS84")
     transformer = Transformer.from_crs(utm_crs, "EPSG:4326")
 
     return transformer.transform(easting, northing)
@@ -52,4 +52,3 @@ def get_key_value(csvreader, key_pattern):
             return row[1]
 
     return None
-
