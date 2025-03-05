@@ -12,6 +12,7 @@ import importlib.resources
 import json
 import logging
 import os.path
+import re
 import sys
 import uuid
 from collections.abc import Callable
@@ -117,6 +118,11 @@ def init_config(configuration_file):
     cfg_parser.set(
         constants.COLLECTION_SECTION_NAME, "provider", Prompt.ask("Provider")
     )
+    cfg_parser.set(
+        constants.COLLECTION_SECTION_NAME,
+        "browse_regex",
+        Prompt.ask("Browse regex", default=constants.DEFAULT_BROWSE_REGEX),
+    )
     print()
 
     print()
@@ -213,6 +219,7 @@ class Granule:
     producer_granule_id: str
     collection: Maybe[Collection] = Maybe.empty
     data_filenames: list[str] = dataclasses.field(default_factory=list)
+    browse_filenames: list[str] = dataclasses.field(default_factory=list)
     ummg_filename: Maybe[str] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
@@ -275,12 +282,14 @@ def process(configuration: config.Config) -> None:
 
     # Find all of the input granule files, limit the size of the list based
     # on the configuration, and execute the pipeline on each of the granules.
-    # TODO: Nicely manage reader and glob pattern for other file types.
     candidate_granules = [
         Granule(
-            p.name, data_filenames=[str(p)], data_reader=netcdf_reader.extract_metadata
+            name,
+            data_filenames=data_files,
+            browse_filenames=browse_files,
+            data_reader=netcdf_reader.extract_metadata,
         )
-        for p in Path(configuration.data_dir).glob("*.nc")
+        for name, data_files, browse_files in grouped_granule_files(configuration)
     ]
     granules = take(configuration.number, candidate_granules)
     results = [pipeline(g) for g in granules]
@@ -452,6 +461,73 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
     )
 
 
+def grouped_granule_files(configuration: config.Config) -> list[tuple]:
+    """
+    Identify data file(s) and browse file(s) related to each granule.
+    """
+    file_list = [p for p in Path(configuration.data_dir).glob("*")]
+
+    if configuration.granule_regex:
+        granule_name_fragments = set(
+            re.search(configuration.granule_regex, file.name).group("granuleid")
+            for file in file_list
+        )
+    else:
+        # Assume each data file represents a different granule.
+        # If there are browse files they must match the browse regex as well as
+        # the data file name less its extension.
+        granule_name_fragments = set(
+            os.path.splitext(file.name)[0]
+            for file in file_list
+            if not re.search(configuration.browse_regex, file.name)
+        )
+
+    return [
+        granule_tuple(granule_name_fragment, configuration.browse_regex, file_list)
+        for granule_name_fragment in granule_name_fragments
+    ]
+
+
+def granule_tuple(
+    granule_name_fragment: str, browse_regex: str, file_list: list
+) -> tuple:
+    """
+    Return a tuple representing a granule:
+        - The "producer granule ID" (the granule file name in the case of a
+          single data file, otherwise the common basename for all data files)
+        - A list of one or more full paths to data file(s)
+        - A list of zero or more full paths to associated browse file(s)
+    """
+    data_file_paths = [
+        str(file)
+        for file in file_list
+        if re.search(granule_name_fragment, file.name)
+        and not re.search(browse_regex, file.name)
+    ]
+
+    browse_file_paths = [
+        str(file)
+        for file in file_list
+        if re.search(granule_name_fragment, file.name)
+        and re.search(browse_regex, file.name)
+    ]
+    return (derived_granule_id(data_file_paths), data_file_paths, browse_file_paths)
+
+
+def derived_granule_id(data_file_paths):
+    """
+    Identify the string to use as the producer_granule_id
+    """
+    data_file_names = [os.path.basename(file_path) for file_path in data_file_paths]
+
+    if len(data_file_names) > 1:
+        # Splitting off the "extension" here to get rid of a trailing '.'
+        # returned by commonprefix
+        return os.path.splitext(os.path.commonprefix(data_file_names))[0]
+    else:
+        return data_file_names[0]
+
+
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
     """
     Associate collection information with the Granule.
@@ -535,7 +611,7 @@ def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     """
     Stage a set of files for the Granule in S3.
     """
-    stuff = granule.data_filenames + [granule.ummg_filename]
+    stuff = granule.data_filenames + [granule.ummg_filename] + granule.browse_filenames
     for fn in stuff:
         filename = os.path.basename(fn)
         bucket_path = s3_object_path(granule, filename)
@@ -556,6 +632,7 @@ def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
     granule_files = {
         "data": granule.data_filenames,
         "metadata": [granule.ummg_filename],
+        "browse": granule.browse_filenames,
     }
     for type, files in granule_files.items():
         for file in files:

@@ -78,11 +78,16 @@ In the `~/.aws` directory, create a file named `credentials` with the contents:
     aws_access_key_id = TBD
     aws_secret_access_key = TBD
 
+The examples above create a [default AWS profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-format-profile).
+If you require access to multiple AWS accounts, each with their own configuration--for example, different accounts for pre-production vs. production--you
+can use the [AWS CLI 'profile' feature to manage settings for each account](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles).
+
+
 Finally, restrict the permissions of the directory and files:
 
     $ chmod -R go-rwx ~/.aws
 
-When you've obtained the AWS key pair ([covered here]([https://nsidc.atlassian.net/l/cp/YYj1gGsp]), 
+When you've obtained the AWS key pair ([covered here]([https://nsidc.atlassian.net/l/cp/YYj1gGsp])),
 edit your newly created `~/.aws/credentials` file and replace `TBD` with the public and secret
 key values.
 
@@ -102,12 +107,6 @@ You will be prompted to enter your AWS public access and secret key values, alon
 the AWS region and CLI output format. The AWS CLI will create and populate the directory
 and files with your values.
 
-If you require access to multiple AWS accounts, each with their own configuration--for
-example, different accounts for pre-production vs. production--you can use the AWS CLI
-'profile' feature to manage settings for each account. See the [AWS configuration
-documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles)
-for the details.
-
 ## CMR Authentication and use of Collection Metadata
 
 MetGenC will attempt to authenticate with Earthdata using credentials retrieved
@@ -117,8 +116,8 @@ missing from `ini` files or the data files themselves.
 
 Export the following variables to your environment before you kick off MetGenC:
 
-        $ export EARTHDATA_USERNAME=your-EDL-user-name
-        $ export EARTHDATA_PASSWORD=your-EDL-password
+    $ export EARTHDATA_USERNAME=your-EDL-user-name
+    $ export EARTHDATA_PASSWORD=your-EDL-password
 
 If you have a different user name and password for the UAT and production
 environments, be sure to set the values appropriate for the environment option
@@ -134,24 +133,22 @@ data files.
 * Show the help text:
 
         $ metgenc --help
-```
-  Usage: metgenc [OPTIONS] COMMAND [ARGS]...
+        Usage: metgenc [OPTIONS] COMMAND [ARGS]...
 
-  The metgenc utility allows users to create granule-level metadata, stage
-  granule files and their associated metadata to Cumulus, and post CNM
-  messages.
+          The metgenc utility allows users to create granule-level metadata, stage
+          granule files and their associated metadata to Cumulus, and post CNM
+          messages.
 
-Options:
-  --help  Show this message and exit.
+        Options:
+          --help  Show this message and exit.
 
-Commands:
-  info     Summarizes the contents of a configuration file.
-  init     Populates a configuration file based on user input.
-  process  Processes science data files based on configuration file...
-  validate Validates the contents of local JSON files.
-```
+        Commands:
+          info     Summarizes the contents of a configuration file.
+          init     Populates a configuration file based on user input.
+          process  Processes science data files based on configuration file...
+          validate Validates the contents of local JSON files.
 
-  For detailed help on each command, run: metgenc <command> --help, for example:
+* For detailed help on each command, run: metgenc <command> --help, for example:
 
         $ metgenc process --help
         
@@ -161,7 +158,7 @@ Commands:
 * Projected spatial information is available in coordinate variables having
   a `standard_name` attribute value of `projection_x_coordinate` or
   `projection_y_coordinate` attribute.
-* (x[0],y[0]) represents the upper left corner of the spatial coverage.
+* (y[0],x[0]) represents the upper left corner of the spatial coverage.
 * Spatial coordinate values represent the center of the area covered by a measurement.
 * Only one coordinate system is used by all data variables in all data files
   (i.e. only one grid mapping variable is present in a file, and the content of
@@ -236,6 +233,9 @@ See [Optional Configuration Elements](#optional-configuration-elements)
 | geospatial_lon_units (global) | R    |                | R                |
 
 ## Running MetGenC: Its Commands In-depth
+
+### init
+
 The **init** command can be used to generate a metgenc configuration (i.e., `.ini`) file for
 your data set, or edit an existing .ini file. 
 * You can skip this step if you've already made an .ini file and prefer editing it
@@ -243,8 +243,9 @@ your data set, or edit an existing .ini file.
 * An existing configuration file can also be copied and renamed to be used for a different
   data set, just be sure to update the data_dir, auth_id, version, and provider!
 * Make sure to confirm the configuration file's checksum_type is set to SHA256.
+
 ```
-init --help
+metgenc init --help
 Usage: metgenc init [OPTIONS]
 
   Populates a configuration file based on user input.
@@ -253,25 +254,48 @@ Options:
   -c, --config TEXT  Path to configuration file to create or replace
   --help             Show this message and exit
 ```
+
 Example running **init**
 
-        $ metgenc init -c ./init/<name of the config file you’d like to create or modify>.ini
+    $ metgenc init -c ./init/<name of the config file you’d like to create or modify>.ini
 
 #### Optional Configuration Elements
 
-Several NetCDF attributes may be represented in the `ini` file if they don't exist
-in the granule data file(s). See the file `fixtures/test.ini` for an example.
+Some attribute values may be read from the `ini` file if they don't exist
+in the granule data file(s). This approach assumes the attribute values
+are the same for all granules. These values must be manually added to the
+`ini` file; they are not included in the `metgenc init` functionality.
 
-| Attribute           | `ini` section | `ini` element |
-| --------------------|-------------- | ------------- |
-| date_modified       | Collection    | date_modified |
-| time_coverage_start | Collection    | filename_regex |
-| time_coverage_end   | Collection    | time_coverage_duration |
-| GeoTransform        | Collection    | pixel_size |
+See the file `fixtures/test.ini` for examples.
 
-#
-#
+| (NetCDF) Attribute  | `ini` section | `ini` element | Note |
+| --------------------|-------------- | ------------- | ----- |
+| date_modified       | Collection    | date_modified |       |
+| time_coverage_start | Collection    | time_start_regex | 1  |
+| time_coverage_end   | Collection    | time_coverage_duration | 2 |
+| GeoTransform        | Collection    | pixel_size |           |
+
+
+1. Matched against file name to determine time coverage start value. Must match using
+the named group `(?P<time_coverage_start>)`.
+
+2. Duration value applied to `time_coverage_start` to determine `time_coverage_end`.  Must be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
+
+Two additional `ini` values are used to identify browse files and the file name
+pattern (if any) that indicates which file(s) should be grouped together as a
+single granule (or browse file(s) associated with a granule).
+
+| `ini` section | `ini` element | Note |
+| ------------- | ------------- | ---- |
+| Collection    | browse_regex  | The file name pattern identifying a browse file. |
+| Collection    | granule_regex | The file name pattern identifying related files. Must match using the named group `(?P<granuleid>)`. |
+
+---
+
+### info
+
 The **info** command can be used to display the information within the configuration file.
+
 ```
 metgenc info --help
 Usage: metgenc info [OPTIONS]
@@ -282,16 +306,22 @@ Options:
   -c, --config TEXT  Path to configuration file to display  [required]
   --help             Show this message and exit.
 ```
+
 Example running **info**
 
-        $ metgenc info --config example/modscg.ini
-#
-#
+    $ metgenc info --config example/modscg.ini
+
+---
+
+### process
+
 The **process** command is used either to generate UMM-G and CNM files locally to give
-you a chance to review them before ingesting them (with either -d, --dry-run option), or to
+you a chance to review them before ingesting them (with either `-d`, `--dry-run` option), or to
 kick off end-to-end ingest of data and UMM-G files to Cumulus UAT. 
+
 ```
 metgenc process --help
+
 Usage: metgenc process [OPTIONS]
 
   Processes science data files based on configuration file contents.
@@ -305,33 +335,39 @@ Options:
   -o, --overwrite     Overwrite existing UMM-G files.
   --help              Show this message and exit.
 ```
+
 Notes: 
 * Before running **process**, remember to source your AWS profile by running
-  `$ source metgenc-env.sh cumulus-uat`—in this case `cumulus-uat` is the name I specified
-  in my AWS credential and config files; use whatever name you've specified for it in your 
+  `$ source metgenc-env.sh cumulus-uat` — in this case `cumulus-uat` is the profile name I specified
+  in my AWS credential and config files; use whatever profile name you've specified for `uat` in your 
   config and credential files!
 * If you can't remember whether you've sourced your AWS profile yet in a given MetGenC session,
   there's no harm in sourcing it again. Once run though, you'll be all set for however long
   you're working in your active venv.
-* Before running end-to-end ingest, as a courtesy send a Slack message to NSIDC's #Cumulus
+* Before running end-to-end ingest, as a courtesy send a Slack message to NSIDC's `#Cumulus`
   channel so if they happen to notice activity, they know it's your handiwork.
   
 Examples running **process**
 
 The following is an example of using the dry run option for three granules:
 
-        $ metgenc process -c ./init/test.ini -e uat  -d -n 3 
+    $ metgenc process -c ./init/test.ini -e uat  -d -n 3
 
 This next example runs an end-to-end ingest of granules and their ummg files into 
 Cumulus UAT:
 
-        $ metgenc process -c ./init/test.ini -e uat  
-#
-#
+    $ metgenc process -c ./init/test.ini -e uat
+
+---
+
+### validate
+
 The **validate** command lets you review the JSON cnm or ummg output files created by
 running `process`.
+
 ```
 metgenc validate --help
+
 Usage: metgenc validate [OPTIONS]
 
   Validates the contents of local JSON files.
@@ -341,20 +377,27 @@ Options:
   -t, --type TEXT    JSON content type  [default: cnm]
   --help             Show this message and exit.
 ```
+
 Example running **validate**
 
-        $ metgenc validate -c example/modscg.ini -t ummg
+    $ metgenc validate -c example/modscg.ini -t ummg
 
 The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file:
 
-        $ check-jsonschema --schemafile <path to schema file> <path to cnm file>
+    $ check-jsonschema --schemafile <path to schema file> <path to cnm file>
 
 
 ## Troubleshooting
 
 If you run `$ metgenc process -c ./init/test.ini` to test end-to-end ingest, but you get a flurry of errors, run: 
-source metgenc-env.sh cumulus-uat  
-If you've been running other metgenc commands successfully (even `metgenc process` but with the --dry-run option), having forgotten to set up communications between MetGenC and AWS is very easy to do, but thankfully, very easy to resolve. 
+
+    source metgenc-env.sh cumulus-uat
+
+Replacing `cumulus-uat` (if necessary) with the name of the AWS credentials
+profile you set up for the Cumulus `uat` environment. If you've been running
+other metgenc commands successfully (even `metgenc process` but with the
+--dry-run option), having forgotten to set up communications between MetGenC and
+AWS is very easy to do, but thankfully, very easy to resolve.
 
 ## For Developers
 ### Contributing
@@ -377,23 +420,23 @@ installed, you should be able to run:
 
 * Use Poetry to create and activate a virtual environment
 
-        $ poetry shell
+      $ poetry shell
 
 * Install dependencies
 
-        $ poetry install
+      $ poetry install
 
 #### Run tests
 
-        $ poetry run pytest
+    $ poetry run pytest
 
 #### Run tests when source changes (uses [pytest-watcher](https://github.com/olzhasar/pytest-watcher)):
 
-        $ poetry run ptw . --now --clear
+    $ poetry run ptw . --now --clear
 
 #### Running the linter for code style issues:
 
-        $ poetry run ruff check
+    $ poetry run ruff check
 
 [The `ruff` tool](https://docs.astral.sh/ruff/linter/) will check
 the source code for conformity with various style rules. Some of
@@ -406,7 +449,7 @@ Actions output.
 
 #### Running the code formatter
 
-        $ poetry run ruff format
+    $ poetry run ruff format
 
 [The `ruff` tool](https://docs.astral.sh/ruff/formatter/) will check
 the source code for conformity with source code formatting rules. It

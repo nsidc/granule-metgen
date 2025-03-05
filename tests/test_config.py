@@ -32,10 +32,12 @@ def expected_keys():
             "checksum_type",
             "number",
             "dry_run",
-            "filename_regex",
+            "time_start_regex",
             "time_coverage_duration",
             "pixel_size",
             "date_modified",
+            "browse_regex",
+            "granule_regex",
         ]
     )
 
@@ -164,7 +166,9 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
         ("Destination", "write_cnm_file", constants.DEFAULT_WRITE_CNM_FILE),
         ("Settings", "checksum_type", constants.DEFAULT_CHECKSUM_TYPE),
         ("Settings", "number", constants.DEFAULT_NUMBER),
-        ("Collection", "filename_regex", None),
+        ("Collection", "time_start_regex", None),
+        ("Collection", "granule_regex", None),
+        ("Collection", "browse_regex", constants.DEFAULT_BROWSE_REGEX),
         ("Collection", "time_coverage_duration", None),
         ("Collection", "pixel_size", None),
         ("Collection", "time_coverage_duration", None),

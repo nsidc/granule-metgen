@@ -1,9 +1,10 @@
 import datetime as dt
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from funcy import identity, partial
-from nsidc.metgen import config, metgen
+from nsidc.metgen import metgen
 
 # Unit tests for the 'metgen' module functions.
 #
@@ -15,7 +16,7 @@ from nsidc.metgen import config, metgen
 
 
 @pytest.fixture
-def granule_metadata_list():
+def multi_file_granule():
     return {
         "first_id": {
             "size_in_bytes": 100,
@@ -33,7 +34,7 @@ def granule_metadata_list():
 
 
 @pytest.fixture
-def one_granule_metadata():
+def single_file_granule():
     return {
         "first_id": {
             "size_in_bytes": 150,
@@ -42,25 +43,6 @@ def one_granule_metadata():
             "geometry": "big",
         }
     }
-
-
-@pytest.fixture
-def fake_config():
-    return config.Config(
-        "uat",
-        "data",
-        "auth_id",
-        "version",
-        "foobar",
-        "output",
-        "ummg",
-        "stream",
-        "bucket",
-        True,
-        True,
-        "sha",
-        3,
-    )
 
 
 @pytest.fixture
@@ -81,18 +63,18 @@ def test_banner():
     assert len(metgen.banner()) > 0
 
 
-def test_gets_single_file_size(one_granule_metadata):
-    summary = metgen.metadata_summary(one_granule_metadata)
+def test_gets_single_file_size(single_file_granule):
+    summary = metgen.metadata_summary(single_file_granule)
     assert summary["size_in_bytes"] == 150
 
 
-def test_sums_multiple_file_sizes(granule_metadata_list):
-    summary = metgen.metadata_summary(granule_metadata_list)
+def test_sums_multiple_file_sizes(multi_file_granule):
+    summary = metgen.metadata_summary(multi_file_granule)
     assert summary["size_in_bytes"] == 300
 
 
-def test_uses_first_file_as_default(granule_metadata_list):
-    summary = metgen.metadata_summary(granule_metadata_list)
+def test_uses_first_file_as_default(multi_file_granule):
+    summary = metgen.metadata_summary(multi_file_granule)
     assert summary["production_date_time"] == "then"
     assert summary["temporal"] == "now"
     assert summary["geometry"] == "big"
@@ -106,6 +88,64 @@ def test_returns_only_gpolygon():
 def test_returns_single_datetime():
     result = metgen.populate_temporal([123])
     assert '"SingleDateTime": "123"' in result
+
+
+def test_granule_id_for_one_file():
+    granule_id = metgen.derived_granule_id(["path1.xyz"])
+    assert granule_id == "path1.xyz"
+
+
+def test_granule_id_for_multiple_files():
+    granule_id = metgen.derived_granule_id(["path1.xyz", "path2.xyz", "path3.xyz"])
+    assert granule_id == "path"
+
+
+@pytest.mark.parametrize(
+    "granule_str,data_files,browse_files,expected",
+    [
+        ("gfile", ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
+        ("gfile.nc", ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
+        (
+            "gfile",
+            ["gfile.nc"],
+            ["gfile_browse.png"],
+            ("gfile.nc", ["gfile.nc"], ["gfile_browse.png"]),
+        ),
+        (
+            "gfile.nc",
+            ["gfile.nc"],
+            ["browse.png"],
+            ("gfile.nc", ["gfile.nc"], []),
+        ),
+        (
+            "gfile",
+            ["gfile.nc", "gfile.tif"],
+            [],
+            ("gfile", ["gfile.nc", "gfile.tif"], []),
+        ),
+        (
+            "gfile",
+            ["gfile.nc", "gfile.tif"],
+            ["gfile_browse.png"],
+            ("gfile", ["gfile.nc", "gfile.tif"], ["gfile_browse.png"]),
+        ),
+        (
+            "gfile",
+            ["gfile.nc", "gfile.tif"],
+            ["gfile_browse.png", "gfile_browse.tif"],
+            (
+                "gfile",
+                ["gfile.nc", "gfile.tif"],
+                ["gfile_browse.png", "gfile_browse.tif"],
+            ),
+        ),
+    ],
+)
+def test_granule_file_combinations(granule_str, data_files, browse_files, expected):
+    granule = metgen.granule_tuple(
+        granule_str, "browse", [Path(p) for p in data_files + browse_files]
+    )
+    assert granule == expected
 
 
 def test_returns_datetime_range():
