@@ -266,13 +266,12 @@ def process(configuration: config.Config) -> None:
     # on the configuration, and execute the pipeline on each of the granules.
     # TODO: Nicely manage reader and glob pattern for other file types.
     readers = {
-        ".nc": netcdf_reader.extract_metadata,
-        ".csv": csv_reader.extract_metadata,
+        "*.nc": netcdf_reader.extract_metadata,
+        "*.csv": csv_reader.extract_metadata,
     }
     # TODO: Regex or <something> to find data files
-    pattern = "*.nc"
-    reader = readers[pattern]
-    data_files = Path(configuration.data_dir).glob(pattern)
+    reader = readers[configuration.data_filename_pattern]
+    data_files = Path(configuration.data_dir).glob(configuration.data_filename_pattern)
 
     candidate_granules = [
         Granule(
