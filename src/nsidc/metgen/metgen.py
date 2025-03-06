@@ -12,14 +12,18 @@ import importlib.resources
 import json
 import logging
 import os.path
+import re
 import sys
 import uuid
 from collections.abc import Callable
 from functools import cache
 from pathlib import Path
 from string import Template
+from typing import Optional
 
+import earthaccess
 import jsonschema
+from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
 from funcy import all, filter, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
@@ -114,6 +118,11 @@ def init_config(configuration_file):
     cfg_parser.set(
         constants.COLLECTION_SECTION_NAME, "provider", Prompt.ask("Provider")
     )
+    cfg_parser.set(
+        constants.COLLECTION_SECTION_NAME,
+        "browse_regex",
+        Prompt.ask("Browse regex", default=constants.DEFAULT_BROWSE_REGEX),
+    )
     print()
 
     print()
@@ -189,10 +198,18 @@ def init_config(configuration_file):
 
 @dataclasses.dataclass
 class Collection:
-    """Collection info required to ingest a granule"""
+    """
+    Collection metadata relevant to generating UMM-G content
+
+    spatial_extent and temporal_extent currently contain the relevant
+    JSON structure from the collection metadata (if it exists).
+    Additional work is still needed to parse out the relevant fields.
+    """
 
     auth_id: str
     version: int
+    spatial_extent: Optional[dict] = None
+    temporal_extent: Optional[dict] = None
 
 
 @dataclasses.dataclass
@@ -202,6 +219,7 @@ class Granule:
     producer_granule_id: str
     collection: Maybe[Collection] = Maybe.empty
     data_filenames: list[str] = dataclasses.field(default_factory=list)
+    browse_filenames: list[str] = dataclasses.field(default_factory=list)
     ummg_filename: Maybe[str] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
@@ -264,17 +282,21 @@ def process(configuration: config.Config) -> None:
 
     # Find all of the input granule files, limit the size of the list based
     # on the configuration, and execute the pipeline on each of the granules.
-    # TODO: Nicely manage reader and glob pattern for other file types.
+
     readers = {
         "*.nc": netcdf_reader.extract_metadata,
         "*.csv": csv_reader.extract_metadata,
     }
-    # TODO: Regex or <something> to find data files
     reader = readers[configuration.data_filename_pattern]
-    data_files = Path(configuration.data_dir).glob(configuration.data_filename_pattern)
 
     candidate_granules = [
-        Granule(p.name, data_filenames=[str(p)], data_reader=reader) for p in data_files
+        Granule(
+            name,
+            data_filenames=data_files,
+            browse_filenames=browse_files,
+            data_reader=reader,
+        )
+        for name, data_files, browse_files in grouped_granule_files(configuration)
     ]
     granules = take(configuration.number, candidate_granules)
     results = [pipeline(g) for g in granules]
@@ -350,12 +372,167 @@ def null_operation(configuration: config.Config, granule: Granule) -> Granule:
     return granule
 
 
+def edl_login(environment):
+    """
+    Authenticate with Earthdata using user name and password retrieved
+    from environment variables.
+    """
+
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+    try:
+        earthaccess.login(
+            strategy="environment", system=getattr(earthaccess, environment)
+        )
+        auth = True
+    except LoginStrategyUnavailable:
+        logger.info(
+            "Environment variables EARTHDATA_USERNAME and EARTHDATA_PASSWORD \
+are missing."
+        )
+        auth = False
+    except LoginAttemptFailure as e:
+        logger.info(e)
+        auth = False
+
+    return auth
+
+
+def ummc_content(umm: list, key: str):
+    val = None
+
+    if not umm:
+        return val
+
+    # if more than one response, log error, use first one?
+    if not isinstance(umm[0], dict):
+        return val
+
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+    try:
+        val = umm[0]["umm"][key]
+        logger.info(f"Found {key} information in umm-c response from CMR.")
+    except KeyError:
+        logger.info(f"No {key} information in umm-c response from CMR.")
+
+    return val
+
+
+def edl_environment(environment):
+    """
+    Map a cumulus ingest environment to the environment string needed for
+    Earthdata login via earthaccess.
+    """
+    if environment.lower() != "prod":
+        environment = "uat"
+
+    return environment.upper()
+
+
+def edl_provider(environment):
+    return (
+        constants.CMR_PROD_PROVIDER
+        if environment.lower() == "prod"
+        else constants.CMR_UAT_PROVIDER
+    )
+
+
 @cache
-def retrieve_collection(auth_id: str, version: int):
-    # TODO: Issue request to CMR for UMM-C record, pull out fields from UMM-C
-    # response and use to create collection object with more than just auth_id
-    # and version number.
-    return Collection(auth_id, version)
+def collection_from_cmr(environment: str, auth_id: str, version: int):
+    """
+    Retrieve collection metadata in UMM-C format if it exists.
+    """
+
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+
+    # Setting has_granules to None should find collections both with and
+    # without associated granules.
+    if edl_login(edl_environment(environment)):
+        logger.info("Earthdata login succeeded.")
+        ummc = earthaccess.search_datasets(
+            short_name=auth_id,
+            version=version,
+            has_granules=None,
+            provider=edl_provider(environment),
+        )
+    else:
+        logger.info("Earthdata login failed, UMM-C metadata will not be used.")
+        ummc = []
+
+    # FYI: data format (e.g. NetCDF) is available in the umm-c response in
+    # ArchiveAndDistributionInformation should we decide to use it.
+    return Collection(
+        auth_id,
+        version,
+        ummc_content(ummc, "SpatialExtent"),
+        ummc_content(ummc, "TemporalExtents"),
+    )
+
+
+def grouped_granule_files(configuration: config.Config) -> list[tuple]:
+    """
+    Identify data file(s) and browse file(s) related to each granule.
+    """
+    file_list = [p for p in Path(configuration.data_dir).glob("*")]
+
+    if configuration.granule_regex:
+        granule_name_fragments = set(
+            re.search(configuration.granule_regex, file.name).group("granuleid")
+            for file in file_list
+        )
+    else:
+        # Assume each data file represents a different granule.
+        # If there are browse files they must match the browse regex as well as
+        # the data file name less its extension.
+        granule_name_fragments = set(
+            os.path.splitext(file.name)[0]
+            for file in file_list
+            if not re.search(configuration.browse_regex, file.name)
+        )
+
+    return [
+        granule_tuple(granule_name_fragment, configuration.browse_regex, file_list)
+        for granule_name_fragment in granule_name_fragments
+    ]
+
+
+def granule_tuple(
+    granule_name_fragment: str, browse_regex: str, file_list: list
+) -> tuple:
+    """
+    Return a tuple representing a granule:
+        - The "producer granule ID" (the granule file name in the case of a
+          single data file, otherwise the common basename for all data files)
+        - A list of one or more full paths to data file(s)
+        - A list of zero or more full paths to associated browse file(s)
+    """
+    data_file_paths = [
+        str(file)
+        for file in file_list
+        if re.search(granule_name_fragment, file.name)
+        and not re.search(browse_regex, file.name)
+    ]
+
+    browse_file_paths = [
+        str(file)
+        for file in file_list
+        if re.search(granule_name_fragment, file.name)
+        and re.search(browse_regex, file.name)
+    ]
+    return (derived_granule_id(data_file_paths), data_file_paths, browse_file_paths)
+
+
+def derived_granule_id(data_file_paths):
+    """
+    Identify the string to use as the producer_granule_id
+    """
+    data_file_names = [os.path.basename(file_path) for file_path in data_file_paths]
+
+    if len(data_file_names) > 1:
+        # Splitting off the "extension" here to get rid of a trailing '.'
+        # returned by commonprefix
+        return os.path.splitext(os.path.commonprefix(data_file_names))[0]
+    else:
+        return data_file_names[0]
 
 
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
@@ -364,7 +541,9 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
     """
     return dataclasses.replace(
         granule,
-        collection=retrieve_collection(configuration.auth_id, configuration.version),
+        collection=collection_from_cmr(
+            configuration.environment, configuration.auth_id, configuration.version
+        ),
     )
 
 
@@ -439,7 +618,7 @@ def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     """
     Stage a set of files for the Granule in S3.
     """
-    stuff = granule.data_filenames + [granule.ummg_filename]
+    stuff = granule.data_filenames + [granule.ummg_filename] + granule.browse_filenames
     for fn in stuff:
         filename = os.path.basename(fn)
         bucket_path = s3_object_path(granule, filename)
@@ -460,6 +639,7 @@ def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
     granule_files = {
         "data": granule.data_filenames,
         "metadata": [granule.ummg_filename],
+        "browse": granule.browse_filenames,
     }
     for type, files in granule_files.items():
         for file in files:
@@ -517,6 +697,7 @@ def publish_cnm(configuration: config.Config, granule: Granule) -> Granule:
 def log_ledger(ledger: Ledger) -> Ledger:
     """Log a Ledger of the operations performed on a Granule."""
     logger = logging.getLogger(constants.ROOT_LOGGER)
+    logger.info("")
     logger.info(f"Granule: {ledger.granule.producer_granule_id}")
     logger.info(f"  * UUID           : {ledger.granule.uuid}")
     logger.info(f"  * Submission time: {ledger.granule.submission_time}")
@@ -547,7 +728,7 @@ def summarize_results(ledgers: list[Ledger]) -> None:
         start = dt.datetime.now()
         end = dt.datetime.now()
 
-    logger = logging.getLogger("metgenc")
+    logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.info("Processing Summary")
     logger.info("==================")
     logger.info(f"Granules  : {len(ledgers)}")

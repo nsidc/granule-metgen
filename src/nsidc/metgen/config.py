@@ -36,11 +36,12 @@ class Config:
     checksum_type: str
     number: int
     dry_run: bool
-    data_filename_pattern: str
-    filename_regex: Optional[str] = None
+    time_start_regex: Optional[str] = None
     time_coverage_duration: Optional[str] = None
     pixel_size: Optional[int] = None
     date_modified: Optional[str] = None
+    browse_regex: Optional[str] = None
+    granule_regex: Optional[str] = None
 
     def show(self):
         # TODO: add section headings in the right spot
@@ -96,8 +97,7 @@ def _get_configuration_value(
             elif value_type is int:
                 return config_parser.getint(section, name)
             else:
-                value = config_parser.get(section, name, vars=vars)
-                return value
+                return config_parser.get(section, name, vars=vars)
         except Exception:
             return None
     else:
@@ -120,7 +120,7 @@ def configuration(
         "checksum_type": constants.DEFAULT_CHECKSUM_TYPE,
         "number": constants.DEFAULT_NUMBER,
         "dry_run": constants.DEFAULT_DRY_RUN,
-        "data_filename_pattern": constants.DEFAULT_DATA_FILENAME_PATTERN,
+        "browse_regex": constants.DEFAULT_BROWSE_REGEX,
     }
     try:
         return Config(
@@ -192,15 +192,7 @@ def configuration(
             _get_configuration_value(
                 environment,
                 "Collection",
-                "data_filename_pattern",
-                str,
-                config_parser,
-                overrides,
-            ),
-            _get_configuration_value(
-                environment,
-                "Collection",
-                "filename_regex",
+                "time_start_regex",
                 str,
                 config_parser,
                 overrides,
@@ -225,6 +217,22 @@ def configuration(
                 environment,
                 "Collection",
                 "date_modified",
+                str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "browse_regex",
+                str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "granule_regex",
                 str,
                 config_parser,
                 overrides,

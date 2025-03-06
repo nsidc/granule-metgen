@@ -25,7 +25,10 @@ def extract_metadata(netcdf_path, configuration):
     """
 
     # TODO: handle errors if any needed attributes don't exist.
-    netcdf = xr.open_dataset(netcdf_path, decode_coords="all")
+    try:
+        netcdf = xr.open_dataset(netcdf_path, decode_coords="all")
+    except Exception:
+        raise Exception(f"Could not open netCDF file {netcdf_path}")
 
     return {
         "size_in_bytes": os.path.getsize(netcdf_path),
@@ -46,7 +49,7 @@ def time_range(netcdf_filename, netcdf, configuration):
         # In theory, we should never get here.
         log_and_raise_error(
             "Could not determine time coverage from NetCDF attributes. Ensure \
-filename_regex and time_coverage_duration are set in the configuration file."
+time_start_regex and time_coverage_duration are set in the configuration file."
         )
 
 
@@ -54,8 +57,8 @@ def time_coverage_start(netcdf_filename, netcdf, configuration):
     if "time_coverage_start" in netcdf.attrs:
         coverage_start = netcdf.attrs["time_coverage_start"]
 
-    elif configuration.filename_regex:
-        m = re.match(configuration.filename_regex, netcdf_filename)
+    elif configuration.time_start_regex:
+        m = re.match(configuration.time_start_regex, netcdf_filename)
         coverage_start = m.group("time_coverage_start")
 
     if coverage_start is not None:
@@ -63,11 +66,18 @@ def time_coverage_start(netcdf_filename, netcdf, configuration):
     else:
         log_and_raise_error(
             "NetCDF file does not have `time_coverage_start` global attribute. \
-Set `filename_regex` in the configuration file."
+Set `time_start_regex` in the configuration file."
         )
 
 
 def time_coverage_end(netcdf, configuration, time_coverage_start):
+    """
+    Use time_coverage_end attribute if it exists, otherwise use a duration
+    value from the ini file to calculate the time_coverage_end.
+
+    TODO: Look for time_coverage_duration attribute in the netCDF file before
+    using a value from the ini file.
+    """
     if "time_coverage_end" in netcdf.attrs:
         return ensure_iso(netcdf.attrs["time_coverage_end"])
 

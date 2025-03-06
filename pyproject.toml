@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nsidc-metgenc"
-version = "1.1.0"
+version = "1.2.1"
 description = "The nsidc-metgenc package enables data producers as well as Operations staff managing the data ingest workflow to create metadata files conforming to NASA's Common Metadata Repository UMM-G specification."
 authors = ["National Snow and Ice Data Center (NSIDC) <nsidc@nsidc.org>"]
 readme = "README.md"
@@ -24,6 +24,7 @@ funcy = "^2.0"
 pandas = "^2.2.3"
 isoduration = "^20.11.0"
 shapely = "^2.0.6"
+earthaccess = "^0.14.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.2"
@@ -38,7 +39,7 @@ sphinx = "^8.1.3"
 myst-parser = "^4.0.0"
 
 [tool.bumpversion]
-current_version = "1.1.0"
+current_version = "1.2.1"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"
