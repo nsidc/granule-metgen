@@ -22,14 +22,15 @@ from string import Template
 from typing import Optional
 
 import earthaccess
+from earthaccess import results
 import jsonschema
 from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
-from funcy import all, filter, partial, rcompose, take
+from funcy import all, filter, notnone, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
-from nsidc.metgen import aws, config, constants, netcdf_reader
+from nsidc.metgen import aws, config, constants, csv_reader, netcdf_reader
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -282,12 +283,20 @@ def process(configuration: config.Config) -> None:
 
     # Find all of the input granule files, limit the size of the list based
     # on the configuration, and execute the pipeline on each of the granules.
+
+    readers = {
+        ".nc": netcdf_reader.extract_metadata,
+        ".csv": csv_reader.extract_metadata,
+    }
+    _, granule_extension = os.path.splitext(configuration.granule_regex)
+    reader = readers[granule_extension]
+
     candidate_granules = [
         Granule(
             name,
             data_filenames=data_files,
             browse_filenames=browse_files,
-            data_reader=netcdf_reader.extract_metadata,
+            data_reader=reader,
         )
         for name, data_files, browse_files in grouped_granule_files(configuration)
     ]
@@ -468,10 +477,13 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
 
     if configuration.granule_regex:
-        granule_name_fragments = set(
-            re.search(configuration.granule_regex, file.name).group("granuleid")
-            for file in file_list
+        # file_list -> matches -> filtered matches -> granuleids -> set
+        pipeline = rcompose(
+            partial(re.search, configuration.granule_regex),
+            lambda match: match.group("granuleid") if match is not None else None,
         )
+        results = [pipeline(f.name) for f in file_list]
+        granule_name_fragments = set(filter(notnone, results))
     else:
         # Assume each data file represents a different granule.
         # If there are browse files they must match the browse regex as well as
