@@ -22,7 +22,6 @@ from string import Template
 from typing import Optional
 
 import earthaccess
-from earthaccess import results
 import jsonschema
 from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
 from funcy import all, filter, notnone, partial, rcompose, take
