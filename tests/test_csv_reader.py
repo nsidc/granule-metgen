@@ -59,4 +59,6 @@ def test_extract_metadata(test_config, csv):
     assert metadata["size_in_bytes"] == 154
     assert metadata["production_date_time"] == test_config.date_modified
     assert metadata["temporal"] == "2023-03-06T11:00:00.000Z"
-    assert metadata["geometry"] == {"point": (64.86197446452954, -147.71408586635164)}
+    assert metadata["geometry"] == {
+        "points": [{"Latitude": 64.86197446452954, "Longitude": -147.71408586635164}]
+    }

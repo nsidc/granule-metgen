@@ -15,7 +15,7 @@ def extract_metadata(csv_path, configuration):
             "size_in_bytes": os.path.getsize(csv_path),
             "production_date_time": configuration.date_modified,
             "temporal": data_datetime(csvreader, configuration),
-            "geometry": {"point": spatial_values(csvreader, configuration)},
+            "geometry": {"points": spatial_values(csvreader, configuration)},
         }
 
 
@@ -42,7 +42,9 @@ def spatial_values(csvreader, configuration):
     utm_crs = CRS(proj="utm", zone=zone, ellps="WGS84")
     transformer = Transformer.from_crs(utm_crs, "EPSG:4326")
 
-    return transformer.transform(easting, northing)
+    lat, lon = transformer.transform(easting, northing)
+
+    return [{"Latitude": lat, "Longitude": lon}]
 
 
 def get_key_value(csvreader, key_pattern):

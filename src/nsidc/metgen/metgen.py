@@ -479,7 +479,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     if configuration.granule_regex:
         # file_list -> matches -> filtered matches -> granuleids -> set
         pipeline = rcompose(
-            partial(re.search, configuration.granule_regex),
+            partial(re.match, configuration.granule_regex),
             lambda match: match.group("granuleid") if match is not None else None,
         )
         results = [pipeline(f.name) for f in file_list]
@@ -491,7 +491,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
         granule_name_fragments = set(
             os.path.splitext(file.name)[0]
             for file in file_list
-            if not re.search(configuration.browse_regex, file.name)
+            if not re.match(configuration.browse_regex, file.name)
         )
 
     return [
@@ -809,12 +809,20 @@ def checksum(file):
 
 
 # TODO: Use the GranuleSpatialRepresentation value in the collection metadata
-# to determine the expected spatial type. See Issue #15. For now, default to
-# a Gpolygon.
+# to determine the expected spatial type. See Issue #15. For now, use either
+# GPolygon or Point, depending on how many points are in the spatial values.
 def populate_spatial(spatial_values):
     # spatial_values is a dict suitable for use in template substitution, like:
     # { 'points': string representation of an array of {lon: lat:} dicts }
-    return ummg_spatial_gpolygon_template().safe_substitute(spatial_values)
+    if len(spatial_values["points"]) == 1:
+        return ummg_spatial_point_template().safe_substitute(
+            {"points": json.dumps(spatial_values["points"])}
+        )
+
+    # Default is a polygon
+    return ummg_spatial_gpolygon_template().safe_substitute(
+        {"points": json.dumps(spatial_values["points"])}
+    )
 
 
 def populate_temporal(datetime_values):
@@ -842,6 +850,10 @@ def ummg_temporal_range_template():
 
 def ummg_spatial_gpolygon_template():
     return initialize_template(constants.UMMG_SPATIAL_GPOLYGON_TEMPLATE)
+
+
+def ummg_spatial_point_template():
+    return initialize_template(constants.UMMG_SPATIAL_POINT_TEMPLATE)
 
 
 def cnms_body_template():
