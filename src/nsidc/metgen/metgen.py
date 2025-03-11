@@ -487,7 +487,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     if configuration.granule_regex:
         # file_list -> matches -> filtered matches -> granuleids -> set
         pipeline = rcompose(
-            partial(re.match, configuration.granule_regex),
+            partial(re.search, configuration.granule_regex),
             lambda match: match.group("granuleid") if match is not None else None,
         )
         results = [pipeline(f.name) for f in file_list]
@@ -499,7 +499,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
         granule_name_fragments = set(
             os.path.splitext(file.name)[0]
             for file in file_list
-            if not re.match(configuration.browse_regex, file.name)
+            if not re.search(configuration.browse_regex, file.name)
         )
 
     return [
