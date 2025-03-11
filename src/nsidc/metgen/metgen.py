@@ -282,20 +282,12 @@ def process(configuration: config.Config) -> None:
 
     # Find all of the input granule files, limit the size of the list based
     # on the configuration, and execute the pipeline on each of the granules.
-
-    readers = {
-        ".nc": netcdf_reader.extract_metadata,
-        ".csv": csv_reader.extract_metadata,
-    }
-    _, granule_extension = os.path.splitext(configuration.granule_regex)
-    reader = readers[granule_extension]
-
     candidate_granules = [
         Granule(
             name,
             data_filenames=data_files,
             browse_filenames=browse_files,
-            data_reader=reader,
+            data_reader=data_reader(data_files),
         )
         for name, data_files, browse_files in grouped_granule_files(configuration)
     ]
@@ -304,6 +296,22 @@ def process(configuration: config.Config) -> None:
 
     summarize_results(results)
 
+
+def data_reader(data_files: list[str]) -> Callable[[str], dict]:
+    """
+    Determine which file reader to use for the given data files. This currently
+    is limited to handling one data file type, and one reader. In a future
+    issue, we may handle granules with multiple data file types per granule.
+    In that future work this needs to be refactored to handle this case.
+    """
+    readers = {
+        ".nc": netcdf_reader.extract_metadata,
+        ".csv": csv_reader.extract_metadata,
+    }
+
+    _, extension = os.path.splitext(data_files[0])
+
+    return readers[extension]
 
 # -------------------------------------------------------------------
 
