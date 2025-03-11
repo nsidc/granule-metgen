@@ -21,6 +21,7 @@ def extract_metadata(csv_path, configuration):
 
 # Add new data_datetime strategy that gets DATE and TIME columns and finds range
 
+
 def data_datetime(csvreader, configuration):
     """Get "# Date ..." """
     pattern = re.compile("^.*Date")
@@ -28,15 +29,19 @@ def data_datetime(csvreader, configuration):
     val = get_key_value(csvreader, pattern)
     if val is not None:
         dt = parse(val)
-        return (
-            dt.replace(tzinfo=timezone.utc)
-            .isoformat(timespec="milliseconds")
-            .replace("+00:00", "Z")
-        )
+        return [
+            (
+                dt.replace(tzinfo=timezone.utc)
+                .isoformat(timespec="milliseconds")
+                .replace("+00:00", "Z")
+            )
+        ]
     else:
         return None
 
+
 # Add new spatial_values strategy that gets LAT & LON columns
+
 
 def spatial_values(csvreader, configuration):
     zone = get_key_value(csvreader, "^.*UTM_Zone")
