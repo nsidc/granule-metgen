@@ -313,6 +313,7 @@ def data_reader(data_files: list[str]) -> Callable[[str], dict]:
 
     return readers[extension]
 
+
 # -------------------------------------------------------------------
 
 
