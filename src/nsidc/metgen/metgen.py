@@ -809,7 +809,7 @@ def checksum(file):
 
 # TODO: Use the GranuleSpatialRepresentation value in the collection metadata
 # to determine the expected spatial type. See Issue #15. For now, use either
-# GPolygon or Point, depending on how many points are in the spatial values.
+# GPolygon or Points, depending on how many points are in the spatial values.
 def populate_spatial(spatial_values):
     # spatial_values is a dict suitable for use in template substitution, like:
     # { 'points': string representation of an array of {lon: lat:} dicts }
