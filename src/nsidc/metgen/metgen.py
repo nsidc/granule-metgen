@@ -25,6 +25,7 @@ import earthaccess
 import jsonschema
 from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
 from funcy import all, filter, notnone, partial, rcompose, take
+from jsonschema.exceptions import ValidationError
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
@@ -378,7 +379,7 @@ def end_ledger(ledger: Ledger) -> Ledger:
 # -------------------------------------------------------------------
 
 
-def null_operation(configuration: config.Config, granule: Granule) -> Granule:
+def null_operation(_: config.Config, granule: Granule) -> Granule:
     return granule
 
 
@@ -560,7 +561,7 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
     )
 
 
-def prepare_granule(configuration: config.Config, granule: Granule) -> Granule:
+def prepare_granule(_: config.Config, granule: Granule) -> Granule:
     """
     Prepare the Granule for creating metadata and submitting it.
     """
@@ -944,7 +945,7 @@ def apply_schema(schema, json_file, dummy_json):
         try:
             jsonschema.validate(instance=json_content | dummy_json, schema=schema)
             logger.info(f"No validation errors: {json_file}")
-        except jsonschema.exceptions.ValidationError as err:
+        except ValidationError as err:
             logger.error(
                 f"""Validation failed for "{err.validator}"\
                 in {json_file}: {err.validator_value}"""
