@@ -40,7 +40,7 @@ LOGFILE_FORMAT = "%(asctime)s|%(levelname)s|%(name)s|%(message)s"
 # -------------------------------------------------------------------
 
 
-def init_logging(configuration: config.Config):
+def init_logging(_: config.Config):
     """
     Initialize the logger for metgenc.
     """
@@ -161,7 +161,7 @@ def init_config(configuration_file):
         "write_cnm_file",
         Prompt.ask(
             "Write CNM messages to files? (True/False)",
-            default=constants.DEFAULT_WRITE_CNM_FILE,
+            default=str(constants.DEFAULT_WRITE_CNM_FILE),
         ),
     )
     cfg_parser.set(
@@ -169,7 +169,7 @@ def init_config(configuration_file):
         "overwrite_ummg",
         Prompt.ask(
             "Overwrite existing UMM-G files? (True/False)",
-            default=constants.DEFAULT_OVERWRITE_UMMG,
+            default=str(constants.DEFAULT_OVERWRITE_UMMG),
         ),
     )
 
@@ -224,7 +224,7 @@ class Granule:
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
     cnm_message: Maybe[str] = Maybe.empty
-    data_reader: Callable[[str], dict] = Maybe.empty
+    data_reader: Callable[[str], dict] = lambda _: dict()
 
 
 @dataclasses.dataclass
