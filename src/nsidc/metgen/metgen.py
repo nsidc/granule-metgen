@@ -24,12 +24,12 @@ from typing import Optional
 import earthaccess
 import jsonschema
 from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
-from funcy import all, filter, partial, rcompose, take
+from funcy import all, filter, notnone, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
-from nsidc.metgen import aws, config, constants, netcdf_reader
+from nsidc.metgen import aws, config, constants, csv_reader, netcdf_reader
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -287,7 +287,7 @@ def process(configuration: config.Config) -> None:
             name,
             data_filenames=data_files,
             browse_filenames=browse_files,
-            data_reader=netcdf_reader.extract_metadata,
+            data_reader=data_reader(data_files),
         )
         for name, data_files, browse_files in grouped_granule_files(configuration)
     ]
@@ -295,6 +295,23 @@ def process(configuration: config.Config) -> None:
     results = [pipeline(g) for g in granules]
 
     summarize_results(results)
+
+
+def data_reader(data_files: list[str]) -> Callable[[str], dict]:
+    """
+    Determine which file reader to use for the given data files. This currently
+    is limited to handling one data file type, and one reader. In a future
+    issue, we may handle granules with multiple data file types per granule.
+    In that future work this needs to be refactored to handle this case.
+    """
+    readers = {
+        ".nc": netcdf_reader.extract_metadata,
+        ".csv": csv_reader.extract_metadata,
+    }
+
+    _, extension = os.path.splitext(data_files[0])
+
+    return readers[extension]
 
 
 # -------------------------------------------------------------------
@@ -468,10 +485,13 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
 
     if configuration.granule_regex:
-        granule_name_fragments = set(
-            re.search(configuration.granule_regex, file.name).group("granuleid")
-            for file in file_list
+        # file_list -> matches -> filtered matches -> granuleids -> set
+        pipeline = rcompose(
+            partial(re.search, configuration.granule_regex),
+            lambda match: match.group("granuleid") if match is not None else None,
         )
+        results = [pipeline(f.name) for f in file_list]
+        granule_name_fragments = set(filter(notnone, results))
     else:
         # Assume each data file represents a different granule.
         # If there are browse files they must match the browse regex as well as
@@ -797,12 +817,20 @@ def checksum(file):
 
 
 # TODO: Use the GranuleSpatialRepresentation value in the collection metadata
-# to determine the expected spatial type. See Issue #15. For now, default to
-# a Gpolygon.
+# to determine the expected spatial type. See Issue #15. For now, use either
+# GPolygon or Points, depending on how many points are in the spatial values.
 def populate_spatial(spatial_values):
     # spatial_values is a dict suitable for use in template substitution, like:
     # { 'points': string representation of an array of {lon: lat:} dicts }
-    return ummg_spatial_gpolygon_template().safe_substitute(spatial_values)
+    if len(spatial_values["points"]) == 1:
+        return ummg_spatial_point_template().safe_substitute(
+            {"points": json.dumps(spatial_values["points"])}
+        )
+
+    # Default is a polygon
+    return ummg_spatial_gpolygon_template().safe_substitute(
+        {"points": json.dumps(spatial_values["points"])}
+    )
 
 
 def populate_temporal(datetime_values):
@@ -830,6 +858,10 @@ def ummg_temporal_range_template():
 
 def ummg_spatial_gpolygon_template():
     return initialize_template(constants.UMMG_SPATIAL_GPOLYGON_TEMPLATE)
+
+
+def ummg_spatial_point_template():
+    return initialize_template(constants.UMMG_SPATIAL_POINT_TEMPLATE)
 
 
 def cnms_body_template():

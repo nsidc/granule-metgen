@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Adds a CSV reader to process [SNOWEX](https://nsidc.org/data/snex23_ssa/versions/1) granules. (Issue-108)
+
 ## v1.3.0
 
 * Adds browse file names to CNM content and stages them to Cumulus if they
