@@ -25,7 +25,7 @@ def extract_metadata(netcdf_path, configuration):
 
     # TODO: handle errors if any needed attributes don't exist.
     try:
-        netcdf = xr.open_dataset(netcdf_path, decode_coords="all")
+        netcdf = xr.open_dataset(netcdf_path, decode_coords="all", decode_times=False)
     except Exception:
         raise Exception(f"Could not open netCDF file {netcdf_path}")
 
