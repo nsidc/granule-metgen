@@ -32,6 +32,8 @@ def extract_metadata(netcdf_path, configuration):
         #       in xarray, remove the decode_times parameter so that xarray will
         #       correctly apply the scale and offset. Although we don't need this at the
         #       moment, it seems the safer option for our future selves & other devs.
+        #       NOTE: We know this occurs with the NSIDC-0630 v2 collection, and it may
+        #       occur on others.
         netcdf = xr.open_dataset(netcdf_path, decode_coords="all", decode_times=False)
     except Exception:
         raise Exception(f"Could not open netCDF file {netcdf_path}")
