@@ -134,7 +134,7 @@ def test_parts_from_filename(file_list):
             [],
             ("aaa_gid1_bbb.nc", ["aaa_gid1_bbb.nc"], []),
         ),
-        (("gfile.nc", ()), ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
+        (("gfile", ()), ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
         (
             ("gfile", ()),
             ["gfile.nc"],
@@ -142,7 +142,7 @@ def test_parts_from_filename(file_list):
             ("gfile.nc", ["gfile.nc"], ["gfile_browse.png"]),
         ),
         (
-            ("gfile.nc", ()),
+            ("gfile", ()),
             ["gfile.nc"],
             ["browse.png"],
             ("gfile.nc", ["gfile.nc"], []),
