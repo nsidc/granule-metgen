@@ -25,6 +25,10 @@ def extract_metadata(netcdf_path, configuration):
 
     # TODO: handle errors if any needed attributes don't exist.
     try:
+        # TODO: We are telling xarray not to decode times here in order to get around
+        #       what appears to be a bug. Without this (defaults to True), xarrray is
+        #       unable to open the file and throws an exception, indicating it is
+        #       unable to apply the scale and offset to the time.
         netcdf = xr.open_dataset(netcdf_path, decode_coords="all", decode_times=False)
     except Exception:
         raise Exception(f"Could not open netCDF file {netcdf_path}")
