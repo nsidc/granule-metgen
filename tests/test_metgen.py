@@ -1,4 +1,5 @@
 import datetime as dt
+import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -59,6 +60,18 @@ def fake_ummc_response():
     ]
 
 
+@pytest.fixture
+def file_list():
+    file_list = [
+        "aaa_gid1_bbb",
+        "aaa_gid1_brws_bbb",
+        "ccc_gid2_ddd",
+        "ccc_gid2_brws_ddd",
+        "eee_gid3_fff",
+    ]
+    return [Path(f) for f in file_list]
+
+
 def test_banner():
     assert len(metgen.banner()) > 0
 
@@ -90,14 +103,27 @@ def test_returns_single_datetime():
     assert '"SingleDateTime": "123"' in result
 
 
-def test_granule_id_for_one_file():
-    granule_id = metgen.derived_granule_id(["path1.xyz"])
-    assert granule_id == "path1.xyz"
+def test_parts_from_regex(file_list):
+    regex = "([a-z]{3}_)(?P<granuleid>gid[1-3]?)(?:_brws)(_[a-z]{3})"
+    expected = [
+        ("gid1", ("aaa_", "gid1", "_bbb")),
+        ("gid2", ("ccc_", "gid2", "_ddd")),
+        ("gid3", ("eee_", "gid3", "_fff")),
+    ]
+    parts = metgen.parts_from_regex(regex, file_list)
+    for gtuple in parts:
+        assert gtuple in expected
 
 
-def test_granule_id_for_multiple_files():
-    granule_id = metgen.derived_granule_id(["path1.xyz", "path2.xyz", "path3.xyz"])
-    assert granule_id == "path"
+def test_parts_from_filename(file_list):
+    expected = [
+        ("aaa_gid1_bbb", ()),
+        ("ccc_gid2_ddd", ()),
+        ("eee_gid3_fff", ()),
+    ]
+    parts = metgen.parts_from_filename("_brws", file_list)
+    for gtuple in parts:
+        assert gtuple in expected
 
 
 @pytest.mark.parametrize(

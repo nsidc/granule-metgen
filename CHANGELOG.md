@@ -1,6 +1,7 @@
 ## UNRELEASED
 
 * Adds a CSV reader to process [SNOWEX](https://nsidc.org/data/snex23_ssa/versions/1) granules. (Issue-108)
+* Refines regex handling for multi-data-file granules. (Issue-103)
 
 ## v1.3.0
 

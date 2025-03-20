@@ -485,21 +485,12 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
 
     if configuration.granule_regex:
-        # file_list -> matches -> filtered matches -> granuleids -> set
-        pipeline = rcompose(
-            partial(re.search, configuration.granule_regex),
-            lambda match: match.group("granuleid") if match is not None else None,
+        granule_name_fragments = parts_from_regex(
+            configuration.granule_regex, file_list
         )
-        results = [pipeline(f.name) for f in file_list]
-        granule_name_fragments = set(filter(notnone, results))
     else:
-        # Assume each data file represents a different granule.
-        # If there are browse files they must match the browse regex as well as
-        # the data file name less its extension.
-        granule_name_fragments = set(
-            os.path.splitext(file.name)[0]
-            for file in file_list
-            if not re.search(configuration.browse_regex, file.name)
+        granule_name_fragments = parts_from_filename(
+            configuration.browse_regex, file_list
         )
 
     return [
@@ -508,20 +499,55 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     ]
 
 
+def parts_from_regex(granule_regex: str, file_list: list) -> list[tuple]:
+    """
+    Apply a regex to each file name in the list. Return a list of tuples whose
+    first element is the "granuleid" named match group and the second element
+    is a tuple containing all of the match groups. In the case of multi-data-
+    file granules, the elements in the nested tuple will eventually be concatenated
+    and used as the granule name in the UMM-G and CNM output.
+    """
+    # file_list -> matches -> filtered matches -> granuleids -> set
+    pipeline = rcompose(
+        partial(re.search, granule_regex),
+        lambda match: (match.group("granuleid"), match.groups())
+        if match is not None
+        else None,
+    )
+    results = [pipeline(f.name) for f in file_list]
+    return set(filter(notnone, results))
+
+
+def parts_from_filename(browse_regex, file_list):
+    """
+    Treat each non-browse file as the single data file making up a granule.
+    Return a list of tuples who first element is the basename of the data file
+    (browse files names must match this basename in order to be associated
+    with the granule). An empty tuple is included as the second element just
+    for consistency with the tuple returned by parts_from_regex.
+    """
+    return set(
+        (os.path.splitext(file.name)[0], ())
+        for file in file_list
+        if not re.search(browse_regex, file.name)
+    )
+
+
 def granule_tuple(
-    granule_name_fragment: str, browse_regex: str, file_list: list
+    granule_name_fragment: tuple, browse_regex: str, file_list: list
 ) -> tuple:
     """
     Return a tuple representing a granule:
-        - The "producer granule ID" (the granule file name in the case of a
-          single data file, otherwise the common basename for all data files)
+        - A string used as the "identifier" (in UMMG output) and "name" (in CNM output).
+          This is the granule file name in the case of a single data file granule,
+          otherwise the common name elements of all files related to a granule.
         - A list of one or more full paths to data file(s)
         - A list of zero or more full paths to associated browse file(s)
     """
     data_file_paths = [
         str(file)
         for file in file_list
-        if re.search(granule_name_fragment, file.name)
+        if re.search(granule_name_fragment[0], file.name)
         and not re.search(browse_regex, file.name)
     ]
 
@@ -531,19 +557,17 @@ def granule_tuple(
         if re.search(granule_name_fragment, file.name)
         and re.search(browse_regex, file.name)
     ]
-    return (derived_granule_id(data_file_paths), data_file_paths, browse_file_paths)
+    return (
+        derived_granule_name(granule_name_fragment, data_file_paths),
+        data_file_paths,
+        browse_file_paths,
+    )
 
 
-def derived_granule_id(data_file_paths):
-    """
-    Identify the string to use as the producer_granule_id
-    """
+def derived_granule_name(granule_name_fragment: tuple, data_file_paths: list) -> str:
     data_file_names = [os.path.basename(file_path) for file_path in data_file_paths]
-
     if len(data_file_names) > 1:
-        # Splitting off the "extension" here to get rid of a trailing '.'
-        # returned by commonprefix
-        return os.path.splitext(os.path.commonprefix(data_file_names))[0]
+        return "".join(granule_name_fragment[1])
     else:
         return data_file_names[0]
 
