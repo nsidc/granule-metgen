@@ -554,7 +554,7 @@ def granule_tuple(
     browse_file_paths = [
         str(file)
         for file in file_list
-        if re.search(granule_name_fragment, file.name)
+        if re.search(granule_name_fragment[0], file.name)
         and re.search(browse_regex, file.name)
     ]
     return (

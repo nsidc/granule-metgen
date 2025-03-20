@@ -1,5 +1,4 @@
 import datetime as dt
-import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -63,11 +62,11 @@ def fake_ummc_response():
 @pytest.fixture
 def file_list():
     file_list = [
-        "aaa_gid1_bbb",
-        "aaa_gid1_brws_bbb",
-        "ccc_gid2_ddd",
-        "ccc_gid2_brws_ddd",
-        "eee_gid3_fff",
+        "aaa_gid1_bbb.nc",
+        "aaa_gid1_brws_bbb.png",
+        "ccc_gid2_ddd.nc",
+        "ccc_gid2_brws_ddd.png",
+        "eee_gid3_fff.nc",
     ]
     return [Path(f) for f in file_list]
 
@@ -127,36 +126,41 @@ def test_parts_from_filename(file_list):
 
 
 @pytest.mark.parametrize(
-    "granule_str,data_files,browse_files,expected",
+    "gname_parts,data_files,browse_files,expected",
     [
-        ("gfile", ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
-        ("gfile.nc", ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
         (
-            "gfile",
+            ("gid1", ("aaa_", "gid1", "_bbb")),
+            ["aaa_gid1_bbb.nc"],
+            [],
+            ("aaa_gid1_bbb.nc", ["aaa_gid1_bbb.nc"], []),
+        ),
+        (("gfile.nc", ()), ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
+        (
+            ("gfile", ()),
             ["gfile.nc"],
             ["gfile_browse.png"],
             ("gfile.nc", ["gfile.nc"], ["gfile_browse.png"]),
         ),
         (
-            "gfile.nc",
+            ("gfile.nc", ()),
             ["gfile.nc"],
             ["browse.png"],
             ("gfile.nc", ["gfile.nc"], []),
         ),
         (
-            "gfile",
-            ["gfile.nc", "gfile.tif"],
-            [],
-            ("gfile", ["gfile.nc", "gfile.tif"], []),
+            ("aaa_gid1_bbb", ()),
+            ["aaa_gid1_bbb.nc"],
+            ["aaa_gid1_browse_bbb.png"],
+            ("aaa_gid1_bbb.nc", ["aaa_gid1_bbb.nc"], []),
         ),
         (
-            "gfile",
+            ("gfile", ("gfile")),
             ["gfile.nc", "gfile.tif"],
             ["gfile_browse.png"],
             ("gfile", ["gfile.nc", "gfile.tif"], ["gfile_browse.png"]),
         ),
         (
-            "gfile",
+            ("gfile", ("gfile")),
             ["gfile.nc", "gfile.tif"],
             ["gfile_browse.png", "gfile_browse.tif"],
             (
@@ -167,9 +171,9 @@ def test_parts_from_filename(file_list):
         ),
     ],
 )
-def test_granule_file_combinations(granule_str, data_files, browse_files, expected):
+def test_granule_file_combinations(gname_parts, data_files, browse_files, expected):
     granule = metgen.granule_tuple(
-        granule_str, "browse", [Path(p) for p in data_files + browse_files]
+        gname_parts, "browse", [Path(p) for p in data_files + browse_files]
     )
     assert granule == expected
 
