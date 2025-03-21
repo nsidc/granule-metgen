@@ -532,6 +532,8 @@ def granule_tuple(
     granule_name_fragment: str, granule_regex: str, browse_regex: str, file_list: list
 ) -> tuple:
     """
+    Important! granule_regex argument must include a captured match group
+
     Return a tuple representing a granule:
         - A string used as the "identifier" (in UMMG output) and "name" (in CNM output).
           This is the granule file name in the case of a single data file granule,
