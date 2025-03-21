@@ -24,7 +24,7 @@ from typing import Optional
 import earthaccess
 import jsonschema
 from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
-from funcy import all, filter, notnone, partial, rcompose, take
+from funcy import all, filter, first, notnone, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
@@ -483,28 +483,30 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     Identify data file(s) and browse file(s) related to each granule.
     """
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
-
-    if configuration.granule_regex:
-        granule_name_fragments = granule_substrings_from_regex(
-            configuration.granule_regex, file_list
-        )
-    else:
-        granule_name_fragments = granule_substrings_from_filename(
-            configuration.browse_regex, file_list
-        )
+    granule_keys = find_granule_keys(configuration, file_list)
 
     return [
         granule_tuple(
-            granule_name_fragment,
-            configuration.granule_regex or f"({granule_name_fragment})",
+            granule_key,
+            configuration.granule_regex or f"({granule_key})",
             configuration.browse_regex,
             file_list,
         )
-        for granule_name_fragment in granule_name_fragments
+        for granule_key in granule_keys
     ]
 
 
-def granule_substrings_from_regex(granule_regex: str, file_list: list) -> set:
+def find_granule_keys(configuration: config.Config, file_list: list[Path]) -> set[str]:
+    if configuration.granule_regex:
+        return granule_keys_from_regex(
+            configuration.granule_regex, file_list
+        )
+    else:
+        return granule_keys_from_filename(
+            configuration.browse_regex, file_list
+        )
+
+def granule_keys_from_regex(granule_regex: str, file_list: list) -> set:
     """
     Identify granules based on a "granuleid" regex match group
     """
@@ -516,7 +518,7 @@ def granule_substrings_from_regex(granule_regex: str, file_list: list) -> set:
     return set(filter(notnone, results))
 
 
-def granule_substrings_from_filename(browse_regex, file_list):
+def granule_keys_from_filename(browse_regex, file_list):
     """
     Identify granules based on unique data file basenames (minus file name
     extension) in lieu of a "granuleid" regex match group.
@@ -529,7 +531,7 @@ def granule_substrings_from_filename(browse_regex, file_list):
 
 
 def granule_tuple(
-    granule_name_fragment: str, granule_regex: str, browse_regex: str, file_list: list
+    granule_key: str, granule_regex: str, browse_regex: str, file_list: list
 ) -> tuple:
     """
     Important! granule_regex argument must include a captured match group
@@ -538,36 +540,46 @@ def granule_tuple(
         - A string used as the "identifier" (in UMMG output) and "name" (in CNM output).
           This is the granule file name in the case of a single data file granule,
           otherwise the common name elements of all files related to a granule.
-        - A list of one or more full paths to data file(s)
-        - A list of zero or more full paths to associated browse file(s)
+        - A set of one or more full paths to data file(s)
+        - A set of zero or more full paths to associated browse file(s)
     """
-    data_file_paths = [
+    browse_file_paths = {
         str(file)
         for file in file_list
-        if re.search(granule_name_fragment, file.name)
-        and not re.search(browse_regex, file.name)
-    ]
-
-    browse_file_paths = [
-        str(file)
-        for file in file_list
-        if re.search(granule_name_fragment, file.name)
+        if re.search(granule_key, file.name)
         and re.search(browse_regex, file.name)
-    ]
+    }
+
+    data_file_paths = {
+        str(file)
+        for file in file_list
+        if re.search(granule_key, file.name)
+    } - browse_file_paths
+
+    print(granule_key)
+    print(data_file_paths)
+    print(browse_file_paths)
+    dgn = derived_granule_name(granule_regex, data_file_paths)
+    print(dgn)
 
     return (
-        derived_granule_name(granule_regex, data_file_paths),
+        dgn,
         data_file_paths,
         browse_file_paths,
     )
 
 
-def derived_granule_name(granule_regex: str, data_file_paths: list) -> str:
+def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
+    a_file_path = first(data_file_paths)
+    if a_file_path is None:
+        return "" 
+    print("*** " + a_file_path)
+
     if len(data_file_paths) > 1:
-        m = re.search(granule_regex, data_file_paths[0])
-        return "".join(m.groups())
+        m = re.search(granule_regex, a_file_path)
+        return "".join(m.groups()) if m else ""
     else:
-        return os.path.basename(data_file_paths[0])
+        return os.path.basename(a_file_path)
 
 
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
