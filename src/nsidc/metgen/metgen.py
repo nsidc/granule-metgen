@@ -485,56 +485,51 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
 
     if configuration.granule_regex:
-        granule_name_fragments = parts_from_regex(
+        granule_name_fragments = granule_substrings_from_regex(
             configuration.granule_regex, file_list
         )
     else:
-        granule_name_fragments = parts_from_filename(
+        granule_name_fragments = granule_substrings_from_filename(
             configuration.browse_regex, file_list
         )
 
     return [
-        granule_tuple(granule_name_fragment, configuration.browse_regex, file_list)
+        granule_tuple(
+            granule_name_fragment,
+            configuration.granule_regex or f"({granule_name_fragment})",
+            configuration.browse_regex,
+            file_list,
+        )
         for granule_name_fragment in granule_name_fragments
     ]
 
 
-def parts_from_regex(granule_regex: str, file_list: list) -> list[tuple]:
+def granule_substrings_from_regex(granule_regex: str, file_list: list) -> set:
     """
-    Apply a regex to each file name in the list. Return a list of tuples whose
-    first element is the "granuleid" named match group and the second element
-    is a tuple containing all of the match groups. In the case of multi-data-
-    file granules, the elements in the nested tuple will eventually be concatenated
-    and used as the granule name in the UMM-G and CNM output.
+    Identify granules based on a "granuleid" regex match group
     """
-    # file_list -> matches -> filtered matches -> granuleids -> set
     pipeline = rcompose(
         partial(re.search, granule_regex),
-        lambda match: (match.group("granuleid"), match.groups())
-        if match is not None
-        else None,
+        lambda match: match.group("granuleid") if match is not None else None,
     )
     results = [pipeline(f.name) for f in file_list]
     return set(filter(notnone, results))
 
 
-def parts_from_filename(browse_regex, file_list):
+def granule_substrings_from_filename(browse_regex, file_list):
     """
-    Treat each non-browse file as the single data file making up a granule.
-    Return a list of tuples who first element is the basename of the data file
-    (browse files names must match this basename in order to be associated
-    with the granule). An empty tuple is included as the second element just
-    for consistency with the tuple returned by parts_from_regex.
+    Identify granules based on unique data file basenames (minus file name
+    extension) in lieu of a "granuleid" regex match group.
     """
     return set(
-        (os.path.splitext(file.name)[0], ())
+        os.path.splitext(file.name)[0]
         for file in file_list
         if not re.search(browse_regex, file.name)
     )
 
 
 def granule_tuple(
-    granule_name_fragment: tuple, browse_regex: str, file_list: list
+    granule_name_fragment: str, granule_regex: str, browse_regex: str, file_list: list
 ) -> tuple:
     """
     Return a tuple representing a granule:
@@ -547,29 +542,30 @@ def granule_tuple(
     data_file_paths = [
         str(file)
         for file in file_list
-        if re.search(granule_name_fragment[0], file.name)
+        if re.search(granule_name_fragment, file.name)
         and not re.search(browse_regex, file.name)
     ]
 
     browse_file_paths = [
         str(file)
         for file in file_list
-        if re.search(granule_name_fragment[0], file.name)
+        if re.search(granule_name_fragment, file.name)
         and re.search(browse_regex, file.name)
     ]
+
     return (
-        derived_granule_name(granule_name_fragment, data_file_paths),
+        derived_granule_name(granule_regex, data_file_paths),
         data_file_paths,
         browse_file_paths,
     )
 
 
-def derived_granule_name(granule_name_fragment: tuple, data_file_paths: list) -> str:
-    data_file_names = [os.path.basename(file_path) for file_path in data_file_paths]
-    if len(data_file_names) > 1:
-        return "".join(granule_name_fragment[1])
+def derived_granule_name(granule_regex: str, data_file_paths: list) -> str:
+    if len(data_file_paths) > 1:
+        m = re.search(granule_regex, data_file_paths[0])
+        return "".join(m.groups())
     else:
-        return data_file_names[0]
+        return os.path.basename(data_file_paths[0])
 
 
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:

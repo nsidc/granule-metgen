@@ -102,65 +102,55 @@ def test_returns_single_datetime():
     assert '"SingleDateTime": "123"' in result
 
 
-def test_parts_from_regex(file_list):
-    regex = "([a-z]{3}_)(?P<granuleid>gid[1-3]?)(?:_brws)(_[a-z]{3})"
-    expected = [
-        ("gid1", ("aaa_", "gid1", "_bbb")),
-        ("gid2", ("ccc_", "gid2", "_ddd")),
-        ("gid3", ("eee_", "gid3", "_fff")),
-    ]
-    parts = metgen.parts_from_regex(regex, file_list)
-    for gtuple in parts:
-        assert gtuple in expected
+def test_substrings_from_regex(file_list):
+    regex = "([a-z]{3}_)(?P<granuleid>gid[1-3]?)(?:_brws)?(_[a-z]{3})"
+    expected = {"gid1", "gid2", "gid3"}
+    found = metgen.granule_substrings_from_regex(regex, file_list)
+    assert expected == found
 
 
-def test_parts_from_filename(file_list):
-    expected = [
-        ("aaa_gid1_bbb", ()),
-        ("ccc_gid2_ddd", ()),
-        ("eee_gid3_fff", ()),
-    ]
-    parts = metgen.parts_from_filename("_brws", file_list)
-    for gtuple in parts:
-        assert gtuple in expected
+def test_substrings_from_filename(file_list):
+    expected = {"aaa_gid1_bbb", "ccc_gid2_ddd", "eee_gid3_fff"}
+    found = metgen.granule_substrings_from_filename("_brws", file_list)
+    assert expected == found
 
 
 @pytest.mark.parametrize(
-    "gname_parts,data_files,browse_files,expected",
+    "granuleid,data_files,browse_files,expected",
     [
         (
-            ("gid1", ("aaa_", "gid1", "_bbb")),
+            "gid1",
             ["aaa_gid1_bbb.nc"],
             [],
             ("aaa_gid1_bbb.nc", ["aaa_gid1_bbb.nc"], []),
         ),
-        (("gfile", ()), ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
+        ("gfile", ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
         (
-            ("gfile", ()),
+            "gfile",
             ["gfile.nc"],
             ["gfile_browse.png"],
             ("gfile.nc", ["gfile.nc"], ["gfile_browse.png"]),
         ),
         (
-            ("gfile", ()),
+            "gfile",
             ["gfile.nc"],
             ["browse.png"],
             ("gfile.nc", ["gfile.nc"], []),
         ),
         (
-            ("aaa_gid1_bbb", ()),
+            "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_browse_bbb.png"],
             ("aaa_gid1_bbb.nc", ["aaa_gid1_bbb.nc"], []),
         ),
         (
-            ("gfile", ("gfile")),
+            "gfile",
             ["gfile.nc", "gfile.tif"],
             ["gfile_browse.png"],
             ("gfile", ["gfile.nc", "gfile.tif"], ["gfile_browse.png"]),
         ),
         (
-            ("gfile", ("gfile")),
+            "gfile",
             ["gfile.nc", "gfile.tif"],
             ["gfile_browse.png", "gfile_browse.tif"],
             (
@@ -171,11 +161,20 @@ def test_parts_from_filename(file_list):
         ),
     ],
 )
-def test_granule_file_combinations(gname_parts, data_files, browse_files, expected):
+def test_granule_file_combinations(granuleid, data_files, browse_files, expected):
     granule = metgen.granule_tuple(
-        gname_parts, "browse", [Path(p) for p in data_files + browse_files]
+        granuleid, f'({granuleid})', "browse", [Path(p) for p in data_files + browse_files]
     )
     assert granule == expected
+
+def test_single_file_granule_name():
+    # TODO!
+    assert True
+
+
+def test_multi_file_granule_name():
+    # TODO!
+    assert True
 
 
 def test_returns_datetime_range():
