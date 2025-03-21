@@ -556,14 +556,8 @@ def granule_tuple(
         if re.search(granule_key, file.name)
     } - browse_file_paths
 
-    print(granule_key)
-    print(data_file_paths)
-    print(browse_file_paths)
-    dgn = derived_granule_name(granule_regex, data_file_paths)
-    print(dgn)
-
     return (
-        dgn,
+        derived_granule_name(granule_regex, data_file_paths),
         data_file_paths,
         browse_file_paths,
     )
