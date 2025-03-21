@@ -126,7 +126,7 @@ def test_granule_name_from_single_file(regex):
 
 
 def test_granule_name_from_regex(regex):
-    data_files = ["aaa_gid1_bbb.nc", "aaa_gid1_xx_bbb.tif"]
+    data_files = ["aaa_gid1_yy_bbb.nc", "aaa_gid1_bbb.tif"]
     assert metgen.derived_granule_name(regex, data_files) == "aaa_gid1_bbb"
 
 
@@ -204,22 +204,22 @@ def test_granule_tuple_from_filenames(granuleid, data_files, browse_files, expec
         ),
         (
             "gid1",
-            ["aaa_gid1_bbb.nc", "aaa_gid1_xx_bbb.tif"],
+            ["aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"],
             ["aaa_gid1_browse_bbb.png"],
             (
                 "aaa_gid1_bbb",
-                ["aaa_gid1_bbb.nc", "aaa_gid1_xx_bbb.tif"],
+                ["aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"],
                 ["aaa_gid1_browse_bbb.png"],
             ),
         ),
         (
             "gid1",
-            ["aaa_gid1_bbb.nc", "aaa_gid1_xx_bbb.tif"],
-            ["aaa_gid1_browse_bbb.png", "aaa_gid1_browse_yy_bbb.tif"],
+            ["aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"],
+            ["aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"],
             (
                 "aaa_gid1_bbb",
-                ["aaa_gid1_bbb.nc", "aaa_gid1_xx_bbb.tif"],
-                ["aaa_gid1_browse_bbb.png", "aaa_gid1_browse_yy_bbb.tif"],
+                ["aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"],
+                ["aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"],
             ),
         ),
     ],
