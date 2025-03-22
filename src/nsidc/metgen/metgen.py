@@ -498,13 +498,10 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
 
 def find_granule_keys(configuration: config.Config, file_list: list[Path]) -> set[str]:
     if configuration.granule_regex:
-        return granule_keys_from_regex(
-            configuration.granule_regex, file_list
-        )
+        return granule_keys_from_regex(configuration.granule_regex, file_list)
     else:
-        return granule_keys_from_filename(
-            configuration.browse_regex, file_list
-        )
+        return granule_keys_from_filename(configuration.browse_regex, file_list)
+
 
 def granule_keys_from_regex(granule_regex: str, file_list: list) -> set:
     """
@@ -546,14 +543,11 @@ def granule_tuple(
     browse_file_paths = {
         str(file)
         for file in file_list
-        if re.search(granule_key, file.name)
-        and re.search(browse_regex, file.name)
+        if re.search(granule_key, file.name) and re.search(browse_regex, file.name)
     }
 
     data_file_paths = {
-        str(file)
-        for file in file_list
-        if re.search(granule_key, file.name)
+        str(file) for file in file_list if re.search(granule_key, file.name)
     } - browse_file_paths
 
     return (
@@ -566,7 +560,7 @@ def granule_tuple(
 def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
     a_file_path = first(data_file_paths)
     if a_file_path is None:
-        return "" 
+        return ""
     print("*** " + a_file_path)
 
     if len(data_file_paths) > 1:
