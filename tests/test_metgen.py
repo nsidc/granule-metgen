@@ -108,15 +108,15 @@ def test_returns_single_datetime():
     assert '"SingleDateTime": "123"' in result
 
 
-def test_substrings_from_regex(file_list, regex):
+def test_keys_from_regex(file_list, regex):
     expected = {"gid1", "gid2", "gid3"}
-    found = metgen.granule_substrings_from_regex(regex, file_list)
+    found = metgen.granule_keys_from_regex(regex, file_list)
     assert expected == found
 
 
-def test_substrings_from_filename(file_list):
+def test_keys_from_filename(file_list):
     expected = {"aaa_gid1_bbb", "ccc_gid2_ddd", "eee_gid3_fff"}
-    found = metgen.granule_substrings_from_filename("_browse", file_list)
+    found = metgen.granule_keys_from_filename("_browse", file_list)
     assert expected == found
 
 
@@ -137,19 +137,19 @@ def test_granule_name_from_regex(regex):
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             [],
-            ("aaa_gid1_bbb.nc", ["aaa_gid1_bbb.nc"], []),
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set()),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_browse_bbb.png"],
-            ("aaa_gid1_bbb.nc", ["aaa_gid1_bbb.nc"], []),
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set()),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_bbb_browse.png"],
-            ("aaa_gid1_bbb.nc", ["aaa_gid1_bbb.nc"], ["aaa_gid1_bbb_browse.png"]),
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, {"aaa_gid1_bbb_browse.png"}),
         ),
         (
             "aaa_gid1_bbb",
@@ -157,8 +157,8 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb_browse.png"],
             (
                 "aaa_gid1_bbb",
-                ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
-                ["aaa_gid1_bbb_browse.png"],
+                {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
+                {"aaa_gid1_bbb_browse.png"},
             ),
         ),
         (
@@ -167,8 +167,8 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb_browse.png", "aaa_gid1_browse_bbb.tif"],
             (
                 "aaa_gid1_bbb",
-                ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
-                ["aaa_gid1_bbb_browse.png"],
+                {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
+                {"aaa_gid1_bbb_browse.png"},
             ),
         ),
     ],
@@ -190,7 +190,7 @@ def test_granule_tuple_from_filenames(granuleid, data_files, browse_files, expec
             "gid1",
             ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
             [],
-            ("aaa_gid1_bbb", ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"], []),
+            ("aaa_gid1_bbb", {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"}, set()),
         ),
         (
             "gid1",
@@ -198,8 +198,8 @@ def test_granule_tuple_from_filenames(granuleid, data_files, browse_files, expec
             ["aaa_gid1_browse_bbb.png"],
             (
                 "aaa_gid1_bbb",
-                ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
-                ["aaa_gid1_browse_bbb.png"],
+                {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
+                {"aaa_gid1_browse_bbb.png"},
             ),
         ),
         (
@@ -208,8 +208,8 @@ def test_granule_tuple_from_filenames(granuleid, data_files, browse_files, expec
             ["aaa_gid1_browse_bbb.png"],
             (
                 "aaa_gid1_bbb",
-                ["aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"],
-                ["aaa_gid1_browse_bbb.png"],
+                {"aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"},
+                {"aaa_gid1_browse_bbb.png"},
             ),
         ),
         (
@@ -218,8 +218,8 @@ def test_granule_tuple_from_filenames(granuleid, data_files, browse_files, expec
             ["aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"],
             (
                 "aaa_gid1_bbb",
-                ["aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"],
-                ["aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"],
+                {"aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"},
+                {"aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"},
             ),
         ),
     ],
