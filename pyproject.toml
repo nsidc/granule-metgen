@@ -45,12 +45,12 @@ parse = """(?x)
     (?P<minor>0|[1-9]\\d*)\\.
     (?P<patch>0|[1-9]\\d*)
     (?:
-        rc
-        (?P<rc>0|[1-9]\\d*)        # release-candidate version number
-    )?                             # release-candidate section is optional
+        (?P<rc>[a-zA-Z-]+)                  # release-candidate label
+        (?P<rcn>0|[1-9]\\d*)        # release-candidate version number
+    )?                              # release-candidate section is optional
 """
 serialize = [
-    "{major}.{minor}.{patch}rc{rc}",
+    "{major}.{minor}.{patch}{rc}{rcn}",
     "{major}.{minor}.{patch}",
 ]
 search = "{current_version}"
@@ -92,6 +92,10 @@ replace = "release = \"v{new_version}\""
 filename = "docs/source/conf.py"
 search = "version = \"v{current_version}\""
 replace = "version = \"v{new_version}\""
+
+[tool.bumpversion.parts.rc]
+values = ["rc", "release"]
+optional_value = "release"
 
 [build-system]
 requires = ["poetry-core"]
