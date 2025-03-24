@@ -40,8 +40,19 @@ myst-parser = "^4.0.0"
 
 [tool.bumpversion]
 current_version = "1.3.0"
-parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
-serialize = ["{major}.{minor}.{patch}"]
+parse = """(?x)
+    (?P<major>0|[1-9]\\d*)\\.
+    (?P<minor>0|[1-9]\\d*)\\.
+    (?P<patch>0|[1-9]\\d*)
+    (?:
+        rc
+        (?P<rc>0|[1-9]\\d*)        # release-candidate version number
+    )?                             # release-candidate section is optional
+"""
+serialize = [
+    "{major}.{minor}.{patch}rc{rc}",
+    "{major}.{minor}.{patch}",
+]
 search = "{current_version}"
 replace = "{new_version}"
 regex = false
