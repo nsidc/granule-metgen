@@ -80,7 +80,12 @@ replace = 'version = "{new_version}"'
 
 [[tool.bumpversion.files]]
 filename = "CHANGELOG.md"
-search = "UNRELEASED|v{current_version}"
+search = "UNRELEASED"
+replace = "v{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "CHANGELOG.md"
+search = "v{current_version}"
 replace = "v{new_version}"
 
 [[tool.bumpversion.files]]
