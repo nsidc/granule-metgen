@@ -476,27 +476,43 @@ integrated with the editor of your choice. See the
 * Show the current version and the possible next versions:
 
         $ bump-my-version show-bump
-        0.3.0 ── bump ─┬─ major ─ 1.0.0
-                       ├─ minor ─ 0.4.0
-                       ╰─ patch ─ 0.3.1
+        1.4.0 ── bump ─┬─ major ─── 2.0.0rc0
+                       ├─ minor ─── 1.5.0rc0
+                       ├─ patch ─── 1.4.1rc0
+                       ├─ release ─ invalid: The part has already the maximum value among ['rc', 'release'] and cannot be bumped.
+                       ╰─ rc ────── 1.4.0release1
 
-* Bump the version to the desired number, for example:
+* When you are ready to create a new release, the first step will be to create a pre-release version. As an example, if the
+  current version is `1.4.0` and you'd like to release `1.5.0`, first create a pre-release for testing:
 
         $ bump-my-version bump minor
 
-  You will see the latest commit & tag by looking at `git log`. You can then
-  push these to GitHub (`git push --follow-tags`) to trigger the CI/CD
-  workflow.
+  Now the project version will be `1.5.0rc0` -- Release Candidate 0. As testing for this release-candidate proceeds, you can
+  create more release-candidates by:
+
+        $ bump-my-version bump rc
+
+  And the version will now be `1.5.0rc1`. You can create as many release candidates as needed.
+
+* When you are ready to do a final release, you can:
+
+        $ bump-my-version bump release
+
+  Which will update the version to `1.5.0`. After doing any kind of release, you will see
+  the latest commit & tag by looking at `git log`. You can then push these to GitHub
+  (`git push --follow-tags`) to trigger the CI/CD workflow.
 
 * On the [GitHub repository](https://github.com/nsidc/granule-metgen), click
   'Releases' and follow the steps documented on the
   [GitHub Releases page](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release).
-  Draft a new Release using the version tag created above. After you have
-  published the release, the MetGenC Publish GHA workflow will be started.
+  Draft a new Release using the version tag created above. By default, the
+  'Set as the latest release' checkbox will be selected. To publish a pre-release
+  be sure to select the 'Set as a pre-release' checkbox. After you have
+  published the (pre-)release in GitHub, the MetGenC Publish GHA workflow will be started.
   Check that the workflow succeeds on the
   [MetGenC Actions page](https://github.com/nsidc/granule-metgen/actions),
   and verify that the
-  [new MetGenC release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
+  [new MetGenC (pre-)release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
 
 ## Credit
 
