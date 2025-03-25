@@ -30,7 +30,8 @@ from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
-from nsidc.metgen import aws, config, constants, csv_reader, netcdf_reader
+from nsidc.metgen import aws, config, constants, netcdf_reader
+from nsidc.metgen.readers import csv as csv_reader
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -483,7 +484,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     """
     Identify data file(s) and browse file(s) related to each granule.
     """
-    file_list = [p for p in Path(configuration.data_dir).glob("*")]
+    paths = [p for p in Path(configuration.data_dir).glob("*")]
 
     if configuration.granule_regex:
         # file_list -> matches -> filtered matches -> granuleids -> set
@@ -491,20 +492,20 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
             partial(re.search, configuration.granule_regex),
             lambda match: match.group("granuleid") if match is not None else None,
         )
-        results = [pipeline(f.name) for f in file_list]
+        results = [pipeline(p.name) for p in paths]
         granule_name_fragments = set(filter(notnone, results))
     else:
         # Assume each data file represents a different granule.
         # If there are browse files they must match the browse regex as well as
         # the data file name less its extension.
         granule_name_fragments = set(
-            os.path.splitext(file.name)[0]
-            for file in file_list
-            if not re.search(configuration.browse_regex, file.name)
+            os.path.splitext(p.name)[0]
+            for p in paths
+            if not re.search(configuration.browse_regex, p.name)
         )
 
     return [
-        granule_tuple(granule_name_fragment, configuration.browse_regex, file_list)
+        granule_tuple(granule_name_fragment, configuration.browse_regex, paths)
         for granule_name_fragment in granule_name_fragments
     ]
 
