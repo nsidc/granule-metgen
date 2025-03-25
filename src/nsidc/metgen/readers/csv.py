@@ -22,14 +22,18 @@ def data_datetime(df, _):
     # TODO: Read and parse the TIME and include in first & last
 
     if data_dates.size > 0:
-        first = data_dates.iat[0] \
-            .replace(tzinfo=timezone.utc) \
-            .isoformat(timespec="milliseconds") \
+        first = (
+            data_dates.iat[0]
+            .replace(tzinfo=timezone.utc)
+            .isoformat(timespec="milliseconds")
             .replace("+00:00", "Z")
-        last = data_dates.iat[-1] \
-            .replace(tzinfo=timezone.utc) \
-            .isoformat(timespec="milliseconds") \
+        )
+        last = (
+            data_dates.iat[-1]
+            .replace(tzinfo=timezone.utc)
+            .isoformat(timespec="milliseconds")
             .replace("+00:00", "Z")
+        )
 
         return [first, last]
     else:
@@ -42,8 +46,8 @@ def bbox(points):
     maxlon = max(lpluck("Longitude", points))
     maxlat = max(lpluck("Latitude", points))
 
-    def point(lon, lat): 
-        return { "Longitude": lon, "Latitude": lat }
+    def point(lon, lat):
+        return {"Longitude": lon, "Latitude": lat}
 
     return [
         point(maxlat, minlon),
