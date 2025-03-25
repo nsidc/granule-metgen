@@ -32,6 +32,8 @@ def expected_keys():
             "checksum_type",
             "number",
             "dry_run",
+            "premet_dir",
+            "spatial_dir",
             "time_start_regex",
             "time_coverage_duration",
             "pixel_size",
@@ -153,6 +155,8 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
 @pytest.mark.parametrize(
     "section,option,expected",
     [
+        ("Source", "premet_dir", None),
+        ("Source", "spatial_dir", None),
         (
             "Destination",
             "kinesis_stream_name",
@@ -198,3 +202,18 @@ def test_validate_with_invalid_checks(m1, m2, m3, cfg_parser):
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
     assert len(exc_info.value.errors) == 4
+
+
+@pytest.mark.parametrize(
+    "dir_type,dir_path",
+    [
+        ("premet_dir", "fake_premet_dir"),
+        ("spatial_dir", "fake_spatial_dir"),
+    ]
+)
+def test_validates_optional_dirs(cfg_parser, dir_type, dir_path):
+    cfg_parser.set("Source", dir_type, dir_path)
+    cfg = config.configuration(cfg_parser, {})
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+    assert any(err == f"The {dir_type} does not exist." for err in exc_info.value.errors)

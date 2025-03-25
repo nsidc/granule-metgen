@@ -281,6 +281,8 @@ the named group `(?P<time_coverage_start>)`.
 
 2. Duration value applied to `time_coverage_start` to determine `time_coverage_end`.  Must be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
 
+Add information about spatial_dir and premet_dir, or include as manual prompts when setting up `ini` file?
+
 Two additional `ini` values are used to identify browse files and the file name
 pattern (if any) that indicates which file(s) should be grouped together as a
 single granule (or browse file(s) associated with a granule).
