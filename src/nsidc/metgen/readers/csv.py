@@ -42,12 +42,15 @@ def bbox(points):
     maxlon = max(lpluck("Longitude", points))
     maxlat = max(lpluck("Latitude", points))
 
+    def point(lon, lat): 
+        return { "Longitude": lon, "Latitude": lat }
+
     return [
-        (maxlat, minlon),
-        (minlat, minlon),
-        (minlat, maxlon),
-        (maxlat, maxlon),
-        (maxlat, minlon),
+        point(maxlat, minlon),
+        point(minlat, minlon),
+        point(minlat, maxlon),
+        point(maxlat, maxlon),
+        point(maxlat, minlon),
     ]
 
 
