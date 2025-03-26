@@ -1,11 +1,13 @@
 import os.path
-from datetime import timezone
+from datetime import timedelta, timezone
 
 import pandas as pd
 from funcy import lpluck
 
+from nsidc.metgen.config import Config
 
-def extract_metadata(csv_path, configuration):
+
+def extract_metadata(csv_path: str, configuration: Config) -> dict:
     df = pd.read_csv(csv_path)
 
     return {
@@ -17,27 +19,20 @@ def extract_metadata(csv_path, configuration):
 
 
 def data_datetime(df, _):
+    def formatted(date, dt):
+        return (date.replace(tzinfo=timezone.utc) + timedelta(seconds=dt)) \
+            .isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
     data_dates = pd.to_datetime(df["DATE"], format="%d%m%y")
+    data_times = df["TIME"]
 
-    # TODO: Read and parse the TIME and include in first & last
-
-    if data_dates.size > 0:
-        first = (
-            data_dates.iat[0]
-            .replace(tzinfo=timezone.utc)
-            .isoformat(timespec="milliseconds")
-            .replace("+00:00", "Z")
-        )
-        last = (
-            data_dates.iat[-1]
-            .replace(tzinfo=timezone.utc)
-            .isoformat(timespec="milliseconds")
-            .replace("+00:00", "Z")
-        )
-
-        return [first, last]
+    if data_dates.size > 0 and data_times.size > 0:
+        return [
+            formatted(data_dates.iat[0], data_times.iat[0]), 
+            formatted(data_dates.iat[-1], data_times.iat[-1])
+        ]
     else:
-        return []
+        return ["", ""]
 
 
 def bbox(points):
@@ -50,16 +45,15 @@ def bbox(points):
         return {"Longitude": lon, "Latitude": lat}
 
     return [
-        point(maxlat, minlon),
-        point(minlat, minlon),
-        point(minlat, maxlon),
-        point(maxlat, maxlon),
-        point(maxlat, minlon),
+        point(minlon, maxlat),
+        point(minlon, minlat),
+        point(maxlon, minlat),
+        point(maxlon, maxlat),
+        point(minlon, maxlat),
     ]
 
 
 def spatial_values(df, _):
-    lats = df["LAT"]
-    lons = df["LON"]
-
-    return [{"Longitude": lon, "Latitude": lat} for (lon, lat) in zip(lons, lats)]
+    return [
+        {"Longitude": lon, "Latitude": lat} for (lon, lat) in zip(df["LON"], df["LAT"])
+    ]

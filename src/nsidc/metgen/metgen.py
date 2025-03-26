@@ -30,8 +30,8 @@ from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
-from nsidc.metgen import aws, config, constants, netcdf_reader
-from nsidc.metgen.readers import csv as csv_reader
+from nsidc.metgen import aws, config, constants
+from nsidc.metgen.readers import registry
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -226,7 +226,7 @@ class Granule:
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
     cnm_message: Maybe[str] = Maybe.empty
-    data_reader: Callable[[str], dict] = lambda _: dict()
+    data_reader: Callable[[str, config.Config], dict] = lambda coll, cfg: dict()
 
 
 @dataclasses.dataclass
@@ -289,7 +289,7 @@ def process(configuration: config.Config) -> None:
             name,
             data_filenames=data_files,
             browse_filenames=browse_files,
-            data_reader=data_reader(data_files),
+            data_reader=data_reader(configuration.auth_id, data_files),
         )
         for name, data_files, browse_files in grouped_granule_files(configuration)
     ]
@@ -299,21 +299,18 @@ def process(configuration: config.Config) -> None:
     summarize_results(results)
 
 
-def data_reader(data_files: list[str]) -> Callable[[str], dict]:
+def data_reader(
+    collection: str, data_files: list[str]
+) -> Callable[[str, config.Config], dict]:
     """
     Determine which file reader to use for the given data files. This currently
-    is limited to handling one data file type, and one reader. In a future
-    issue, we may handle granules with multiple data file types per granule.
+    is limited to handling one data file type (and one reader) per collection.
+    In a future issue, we may handle granules with multiple data file types per granule.
     In that future work this needs to be refactored to handle this case.
     """
-    readers = {
-        ".nc": netcdf_reader.extract_metadata,
-        ".csv": csv_reader.extract_metadata,
-    }
-
     _, extension = os.path.splitext(data_files[0])
 
-    return readers[extension]
+    return registry.lookup(collection, extension)
 
 
 # -------------------------------------------------------------------
