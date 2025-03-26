@@ -1,5 +1,4 @@
 import pytest
-
 from nsidc.metgen import netcdf_reader
 from nsidc.metgen.readers import csv, snowex_csv
 from nsidc.metgen.readers.registry import lookup
