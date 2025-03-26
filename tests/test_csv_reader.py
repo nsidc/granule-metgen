@@ -1,5 +1,4 @@
 import pytest
-
 from nsidc.metgen import config
 from nsidc.metgen.readers import csv as csv_reader
 
