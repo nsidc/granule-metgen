@@ -20,16 +20,19 @@ def extract_metadata(csv_path: str, configuration: Config) -> dict:
 
 def data_datetime(df, _):
     def formatted(date, dt):
-        return (date.replace(tzinfo=timezone.utc) + timedelta(seconds=dt)) \
-            .isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        return (
+            (date.replace(tzinfo=timezone.utc) + timedelta(seconds=dt))
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z")
+        )
 
     data_dates = pd.to_datetime(df["DATE"], format="%d%m%y")
     data_times = df["TIME"]
 
     if data_dates.size > 0 and data_times.size > 0:
         return [
-            formatted(data_dates.iat[0], data_times.iat[0]), 
-            formatted(data_dates.iat[-1], data_times.iat[-1])
+            formatted(data_dates.iat[0], data_times.iat[0]),
+            formatted(data_dates.iat[-1], data_times.iat[-1]),
         ]
     else:
         return ["", ""]

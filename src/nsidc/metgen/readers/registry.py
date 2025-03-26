@@ -13,10 +13,8 @@ def lookup(collection: str, extension: str) -> Callable[[str, Config], dict]:
     multiple data file types per granule. In that future work this needs
     to be refactored to handle this case.
     """
-    special_readers = {
-        "snex23": snowex_csv.extract_metadata
-    }
- 
+    special_readers = {"snex23": snowex_csv.extract_metadata}
+
     for key, function in special_readers.items():
         if collection.lower().startswith(key):
             return function
