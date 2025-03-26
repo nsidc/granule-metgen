@@ -286,8 +286,6 @@ the named group `(?P<time_coverage_start>)`.
 
 2. Duration value applied to `time_coverage_start` to determine `time_coverage_end`.  Must be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
 
-Add information about spatial_dir and premet_dir, or include as manual prompts when setting up `ini` file?
-
 Two additional `ini` values are used to identify browse files and the file name
 pattern (if any) that indicates which file(s) should be grouped together as a
 single granule (or browse file(s) associated with a granule).
@@ -531,7 +529,7 @@ integrated with the editor of your choice. See the
                        ├─ minor ─── 1.5.0rc0
                        ├─ patch ─── 1.4.1rc0
                        ├─ release ─ invalid: The part has already the maximum value among ['rc', 'release'] and cannot be bumped.
-                       ╰─ rc ────── 1.4.0rc0
+                       ╰─ rc ────── 1.4.0release1
 
 * If the currently released version of `metgenc` is not a release candidate
   and the goal is to start work on a new version, the first step is to create a
