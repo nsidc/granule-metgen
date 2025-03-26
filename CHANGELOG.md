@@ -4,6 +4,7 @@
 * Handle a bug in `xarray` when processing NSIDC-0630 v2 granules. (Issue-152)
 * Support creating release-candidates of MetGenC (v1.4.0rc1, 1.4.0rc2, ...) (Issue-128)
 * Add optional paths for `premet` and `spatial` files to `ini` file.
+* Add CLI `--version` option
 
 ## v1.3.0
 

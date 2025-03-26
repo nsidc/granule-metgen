@@ -262,12 +262,12 @@ def validate(configuration):
         ],
         [
             "premet_dir",
-            lambda dir: os.path.exists(dir) if dir is not None else lambda _: True,
+            lambda dir: os.path.exists(dir) if dir else lambda _: True,
             "The premet_dir does not exist.",
         ],
         [
             "spatial_dir",
-            lambda dir: os.path.exists(dir) if dir is not None else lambda _: True,
+            lambda dir: os.path.exists(dir) if dir else lambda _: True,
             "The spatial_dir does not exist.",
         ],
         [

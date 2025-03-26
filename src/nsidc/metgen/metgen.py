@@ -105,6 +105,16 @@ def init_config(configuration_file):
         "data_dir",
         Prompt.ask("Data directory", default="data"),
     )
+    cfg_parser.set(
+        constants.SOURCE_SECTION_NAME,
+        "premet_dir",
+        Prompt.ask("Premet directory"),
+    )
+    cfg_parser.set(
+        constants.SOURCE_SECTION_NAME,
+        "spatial_dir",
+        Prompt.ask("Spatial directory"),
+    )
     print()
 
     print()
@@ -161,7 +171,7 @@ def init_config(configuration_file):
         "write_cnm_file",
         Prompt.ask(
             "Write CNM messages to files? (True/False)",
-            default=constants.DEFAULT_WRITE_CNM_FILE,
+            default=str(constants.DEFAULT_WRITE_CNM_FILE),
         ),
     )
     cfg_parser.set(
@@ -169,7 +179,7 @@ def init_config(configuration_file):
         "overwrite_ummg",
         Prompt.ask(
             "Overwrite existing UMM-G files? (True/False)",
-            default=constants.DEFAULT_OVERWRITE_UMMG,
+            default=str(constants.DEFAULT_OVERWRITE_UMMG),
         ),
     )
 

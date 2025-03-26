@@ -130,6 +130,11 @@ data files.
 
 ## Before Running MetGenC: Tips and Assumptions
 
+* Verify the application version:
+
+        $ metgenc --version
+        metgenc, version 1.3.0
+
 * Show the help text:
 
         $ metgenc --help

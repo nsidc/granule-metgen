@@ -209,11 +209,26 @@ def test_validate_with_invalid_checks(m1, m2, m3, cfg_parser):
     [
         ("premet_dir", "fake_premet_dir"),
         ("spatial_dir", "fake_spatial_dir"),
-    ]
+    ],
 )
-def test_validates_optional_dirs(cfg_parser, dir_type, dir_path):
+def test_validates_optional_dirs_with_values(cfg_parser, dir_type, dir_path):
     cfg_parser.set("Source", dir_type, dir_path)
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
-    assert any(err == f"The {dir_type} does not exist." for err in exc_info.value.errors)
+    assert f"The {dir_type} does not exist." in exc_info.value.errors
+
+
+@pytest.mark.parametrize(
+    "dir_type,dir_path",
+    [
+        ("premet_dir", ""),
+        ("spatial_dir", ""),
+    ],
+)
+def test_validates_optional_dirs_without_values(cfg_parser, dir_type, dir_path):
+    cfg_parser.set("Source", dir_type, dir_path)
+    cfg = config.configuration(cfg_parser, {})
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+    assert f"The {dir_type} does not exist." not in exc_info.value.errors
