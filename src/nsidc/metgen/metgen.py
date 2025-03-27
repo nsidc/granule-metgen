@@ -652,10 +652,10 @@ def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     """
     Stage a set of files for the Granule in S3.
     """
-    stuff = concat(
+    all_filenames = concat(
         granule.data_filenames, {granule.ummg_filename}, granule.browse_filenames
     )
-    for fn in stuff:
+    for fn in all_filenames:
         filename = os.path.basename(fn)
         bucket_path = s3_object_path(granule, filename)
         with open(fn, "rb") as f:
