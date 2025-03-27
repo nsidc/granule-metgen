@@ -1,4 +1,4 @@
-## v1.4.0rc5
+## v1.4.0rc6
 
 * Add a CSV reader to process [SNOWEX](https://nsidc.org/data/snex23_ssa/versions/1) granules. (Issue-108)
 * Handle a bug in `xarray` when processing NSIDC-0630 v2 granules. (Issue-152)
