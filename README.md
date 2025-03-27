@@ -164,7 +164,7 @@ data files.
   (i.e. only one grid mapping variable is present in a file, and the content of
   that variable is the same in every data file).
 
-### MetGenC File Assumtions
+### MetGenC `ini` File Assumtions
 * If a `pixel_size` value is present in the `ini` file, its units are assumed to be
   the same as the units of the spatial coordinate variables.
 * Date/time strings can be parsed using `datetime.fromisoformat`
@@ -273,7 +273,7 @@ See the file `fixtures/test.ini` for examples.
 | date_modified       | Collection    | date_modified |       |
 | time_coverage_start | Collection    | time_start_regex | 1  |
 | time_coverage_end   | Collection    | time_coverage_duration | 2 |
-| GeoTransform        | Collection    | pixel_size |           |
+| GeoTransform        | Collection    | pixel_size    |        |
 
 
 1. Matched against file name to determine time coverage start value. Must match using
@@ -287,8 +287,39 @@ single granule (or browse file(s) associated with a granule).
 
 | `ini` section | `ini` element | Note |
 | ------------- | ------------- | ---- |
-| Collection    | browse_regex  | The file name pattern identifying a browse file. |
-| Collection    | granule_regex | The file name pattern identifying related files. Must match using the named group `(?P<granuleid>)`. |
+| Collection    | browse_regex  | The file name pattern identifying a browse file. Defaults to `_brws`|
+| Collection    | granule_regex | The file name pattern identifying related files. Must capture all text comprising the granule name in UMM-G and CNM output, and must provide a match using the named group `(?P<granuleid>)`. |
+
+##### Example `granule_regex` application
+
+Given the `granule_regex` below:
+
+```
+granule_regex = (NSIDC0081_SEAICE_PS_)(?P<granuleid>[NS]{1}\d{2}km_\d{8})(_v2.0_)(?:F\d{2}_)?(DUCk)
+```
+
+And two granules with associated browse files:
+
+```
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_DUCk.nc
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F16_DUCk_brws.png
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F17_DUCk_brws.png
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F18_DUCk_brws.png
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F16_DUCk_brws.png
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F17_DUCk_brws.png
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F18_DUCk_brws.png
+```
+
+- `(?:F\d{2}_)?` will match the `F16_`, `F17_` and `F18_` strings in the browse
+file names, but the match will not be captured due to to the `?:` elements and will
+not appear in the granule name recorded in the UMM-G and CNM output.
+- `N25km_20211101` and `S25km_20211102` will match the named capture group `granuleid`.
+Each of those strings uniquely identify all files associated with a given granule.
+- `NSIDC0081_SEAICE_PS_`, `_v2.0_` and `DUCk` will be combined with the `granuleid`
+text to form the granule name recorded in the UMM-G and CNM output (in the case of
+single data file granules, the file extension will be added to the granule name).
+
 
 ---
 
@@ -476,27 +507,43 @@ integrated with the editor of your choice. See the
 * Show the current version and the possible next versions:
 
         $ bump-my-version show-bump
-        0.3.0 ── bump ─┬─ major ─ 1.0.0
-                       ├─ minor ─ 0.4.0
-                       ╰─ patch ─ 0.3.1
+        1.4.0 ── bump ─┬─ major ─── 2.0.0rc0
+                       ├─ minor ─── 1.5.0rc0
+                       ├─ patch ─── 1.4.1rc0
+                       ├─ release ─ invalid: The part has already the maximum value among ['rc', 'release'] and cannot be bumped.
+                       ╰─ rc ────── 1.4.0release1
 
-* Bump the version to the desired number, for example:
+* When you are ready to create a new release, the first step will be to create a pre-release version. As an example, if the
+  current version is `1.4.0` and you'd like to release `1.5.0`, first create a pre-release for testing:
 
         $ bump-my-version bump minor
 
-  You will see the latest commit & tag by looking at `git log`. You can then
-  push these to GitHub (`git push --follow-tags`) to trigger the CI/CD
-  workflow.
+  Now the project version will be `1.5.0rc0` -- Release Candidate 0. As testing for this release-candidate proceeds, you can
+  create more release-candidates by:
+
+        $ bump-my-version bump rc
+
+  And the version will now be `1.5.0rc1`. You can create as many release candidates as needed.
+
+* When you are ready to do a final release, you can:
+
+        $ bump-my-version bump release
+
+  Which will update the version to `1.5.0`. After doing any kind of release, you will see
+  the latest commit & tag by looking at `git log`. You can then push these to GitHub
+  (`git push --follow-tags`) to trigger the CI/CD workflow.
 
 * On the [GitHub repository](https://github.com/nsidc/granule-metgen), click
   'Releases' and follow the steps documented on the
   [GitHub Releases page](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release).
-  Draft a new Release using the version tag created above. After you have
-  published the release, the MetGenC Publish GHA workflow will be started.
+  Draft a new Release using the version tag created above. By default, the
+  'Set as the latest release' checkbox will be selected. To publish a pre-release
+  be sure to select the 'Set as a pre-release' checkbox. After you have
+  published the (pre-)release in GitHub, the MetGenC Publish GHA workflow will be started.
   Check that the workflow succeeds on the
   [MetGenC Actions page](https://github.com/nsidc/granule-metgen/actions),
   and verify that the
-  [new MetGenC release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
+  [new MetGenC (pre-)release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
 
 ## Credit
 

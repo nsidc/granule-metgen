@@ -59,6 +59,24 @@ def fake_ummc_response():
     ]
 
 
+@pytest.fixture
+def file_list():
+    file_list = [
+        "aaa_gid1_bbb.nc",
+        "aaa_gid1_browse_bbb.png",
+        "ccc_gid2_ddd.nc",
+        "ccc_gid2_browse_ddd.png",
+        "eee_gid3_fff.nc",
+    ]
+    return [Path(f) for f in file_list]
+
+
+# Regex with optional browse part and optional two-letter chunk
+@pytest.fixture
+def regex():
+    return "([a-z]{3}_)(?P<granuleid>gid[1-3]?)(?:_browse)?(?:_[a-z]{2})?(_[a-z]{3})"
+
+
 def test_banner():
     assert len(metgen.banner()) > 0
 
@@ -90,60 +108,128 @@ def test_returns_single_datetime():
     assert '"SingleDateTime": "123"' in result
 
 
-def test_granule_id_for_one_file():
-    granule_id = metgen.derived_granule_id(["path1.xyz"])
-    assert granule_id == "path1.xyz"
+def test_keys_from_regex(file_list, regex):
+    expected = {"gid1", "gid2", "gid3"}
+    found = metgen.granule_keys_from_regex(regex, file_list)
+    assert expected == found
 
 
-def test_granule_id_for_multiple_files():
-    granule_id = metgen.derived_granule_id(["path1.xyz", "path2.xyz", "path3.xyz"])
-    assert granule_id == "path"
+def test_keys_from_filename(file_list):
+    expected = {"aaa_gid1_bbb", "ccc_gid2_ddd", "eee_gid3_fff"}
+    found = metgen.granule_keys_from_filename("_browse", file_list)
+    assert expected == found
+
+
+def test_granule_name_from_single_file(regex):
+    data_files = ["aaa_gid1_bbb.nc"]
+    assert metgen.derived_granule_name(regex, data_files) == "aaa_gid1_bbb.nc"
+
+
+def test_granule_name_from_regex(regex):
+    data_files = ["aaa_gid1_yy_bbb.nc", "aaa_gid1_bbb.tif"]
+    assert metgen.derived_granule_name(regex, data_files) == "aaa_gid1_bbb"
 
 
 @pytest.mark.parametrize(
-    "granule_str,data_files,browse_files,expected",
+    "granuleid,data_files,browse_files,expected",
     [
-        ("gfile", ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
-        ("gfile.nc", ["gfile.nc"], [], ("gfile.nc", ["gfile.nc"], [])),
         (
-            "gfile",
-            ["gfile.nc"],
-            ["gfile_browse.png"],
-            ("gfile.nc", ["gfile.nc"], ["gfile_browse.png"]),
-        ),
-        (
-            "gfile.nc",
-            ["gfile.nc"],
-            ["browse.png"],
-            ("gfile.nc", ["gfile.nc"], []),
-        ),
-        (
-            "gfile",
-            ["gfile.nc", "gfile.tif"],
+            "aaa_gid1_bbb",
+            ["aaa_gid1_bbb.nc"],
             [],
-            ("gfile", ["gfile.nc", "gfile.tif"], []),
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set()),
         ),
         (
-            "gfile",
-            ["gfile.nc", "gfile.tif"],
-            ["gfile_browse.png"],
-            ("gfile", ["gfile.nc", "gfile.tif"], ["gfile_browse.png"]),
+            "aaa_gid1_bbb",
+            ["aaa_gid1_bbb.nc"],
+            ["aaa_gid1_browse_bbb.png"],
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set()),
         ),
         (
-            "gfile",
-            ["gfile.nc", "gfile.tif"],
-            ["gfile_browse.png", "gfile_browse.tif"],
+            "aaa_gid1_bbb",
+            ["aaa_gid1_bbb.nc"],
+            ["aaa_gid1_bbb_browse.png"],
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, {"aaa_gid1_bbb_browse.png"}),
+        ),
+        (
+            "aaa_gid1_bbb",
+            ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
+            ["aaa_gid1_bbb_browse.png"],
             (
-                "gfile",
-                ["gfile.nc", "gfile.tif"],
-                ["gfile_browse.png", "gfile_browse.tif"],
+                "aaa_gid1_bbb",
+                {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
+                {"aaa_gid1_bbb_browse.png"},
+            ),
+        ),
+        (
+            "aaa_gid1_bbb",
+            ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
+            ["aaa_gid1_bbb_browse.png", "aaa_gid1_browse_bbb.tif"],
+            (
+                "aaa_gid1_bbb",
+                {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
+                {"aaa_gid1_bbb_browse.png"},
             ),
         ),
     ],
 )
-def test_granule_file_combinations(granule_str, data_files, browse_files, expected):
+def test_granule_tuple_from_filenames(granuleid, data_files, browse_files, expected):
     granule = metgen.granule_tuple(
-        granule_str, "browse", [Path(p) for p in data_files + browse_files]
+        granuleid,
+        f"({granuleid})",
+        "browse",
+        [Path(p) for p in data_files + browse_files],
+    )
+    assert granule == expected
+
+
+@pytest.mark.parametrize(
+    "granuleid,data_files,browse_files,expected",
+    [
+        (
+            "gid1",
+            ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
+            [],
+            ("aaa_gid1_bbb", {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"}, set()),
+        ),
+        (
+            "gid1",
+            ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
+            ["aaa_gid1_browse_bbb.png"],
+            (
+                "aaa_gid1_bbb",
+                {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
+                {"aaa_gid1_browse_bbb.png"},
+            ),
+        ),
+        (
+            "gid1",
+            ["aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"],
+            ["aaa_gid1_browse_bbb.png"],
+            (
+                "aaa_gid1_bbb",
+                {"aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"},
+                {"aaa_gid1_browse_bbb.png"},
+            ),
+        ),
+        (
+            "gid1",
+            ["aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"],
+            ["aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"],
+            (
+                "aaa_gid1_bbb",
+                {"aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"},
+                {"aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"},
+            ),
+        ),
+    ],
+)
+def test_granule_tuple_from_regex(granuleid, data_files, browse_files, expected, regex):
+    granule = metgen.granule_tuple(
+        granuleid,
+        regex,
+        "browse",
+        [Path(p) for p in data_files + browse_files],
     )
     assert granule == expected
 
