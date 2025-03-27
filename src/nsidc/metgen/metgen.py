@@ -300,7 +300,7 @@ def process(configuration: config.Config) -> None:
 
 
 def data_reader(
-    collection: str, data_files: list[str]
+    collection: str, data_files: set[str]
 ) -> Callable[[str, config.Config], dict]:
     """
     Determine which file reader to use for the given data files. This currently
@@ -308,7 +308,9 @@ def data_reader(
     In a future issue, we may handle granules with multiple data file types per granule.
     In that future work this needs to be refactored to handle this case.
     """
-    _, extension = os.path.splitext(data_files[0])
+    # Lookup based on an arbitrary data file in the set
+    a_data_file = next(iter(data_files))
+    _, extension = os.path.splitext(a_data_file)
 
     return registry.lookup(collection, extension)
 
