@@ -218,8 +218,8 @@ class Granule:
 
     producer_granule_id: str
     collection: Maybe[Collection] = Maybe.empty
-    data_filenames: list[str] = dataclasses.field(default_factory=list)
-    browse_filenames: list[str] = dataclasses.field(default_factory=list)
+    data_filenames: set[str] = dataclasses.field(default_factory=set)
+    browse_filenames: set[str] = dataclasses.field(default_factory=set)
     ummg_filename: Maybe[str] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
@@ -297,7 +297,7 @@ def process(configuration: config.Config) -> None:
     summarize_results(results)
 
 
-def data_reader(data_files: list[str]) -> Callable[[str], dict]:
+def data_reader(data_files: set[str]) -> Callable[[str], dict]:
     """
     Determine which file reader to use for the given data files. This currently
     is limited to handling one data file type, and one reader. In a future
@@ -309,7 +309,7 @@ def data_reader(data_files: list[str]) -> Callable[[str], dict]:
         ".csv": csv_reader.extract_metadata,
     }
 
-    _, extension = os.path.splitext(data_files[0])
+    _, extension = os.path.splitext(first(data_files))
 
     return readers[extension]
 
@@ -561,7 +561,6 @@ def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
     a_file_path = first(data_file_paths)
     if a_file_path is None:
         return ""
-    print("*** " + a_file_path)
 
     if len(data_file_paths) > 1:
         m = re.search(granule_regex, a_file_path)
