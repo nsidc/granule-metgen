@@ -24,7 +24,7 @@ from typing import Optional
 import earthaccess
 import jsonschema
 from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
-from funcy import all, filter, first, notnone, partial, rcompose, take
+from funcy import all, concat, filter, first, notnone, partial, rcompose, take
 from jsonschema.exceptions import ValidationError
 from pyfiglet import Figlet
 from returns.maybe import Maybe
@@ -220,8 +220,8 @@ class Granule:
 
     producer_granule_id: str
     collection: Maybe[Collection] = Maybe.empty
-    data_filenames: list[str] = dataclasses.field(default_factory=list)
-    browse_filenames: list[str] = dataclasses.field(default_factory=list)
+    data_filenames: set[str] = dataclasses.field(default_factory=set)
+    browse_filenames: set[str] = dataclasses.field(default_factory=set)
     ummg_filename: Maybe[str] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
@@ -560,7 +560,6 @@ def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
     a_file_path = first(data_file_paths)
     if a_file_path is None:
         return ""
-    print("*** " + a_file_path)
 
     if len(data_file_paths) > 1:
         m = re.search(granule_regex, a_file_path)
@@ -652,8 +651,10 @@ def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     """
     Stage a set of files for the Granule in S3.
     """
-    stuff = granule.data_filenames + [granule.ummg_filename] + granule.browse_filenames
-    for fn in stuff:
+    all_filenames = concat(
+        granule.data_filenames, {granule.ummg_filename}, granule.browse_filenames
+    )
+    for fn in all_filenames:
         filename = os.path.basename(fn)
         bucket_path = s3_object_path(granule, filename)
         with open(fn, "rb") as f:

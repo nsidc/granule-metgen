@@ -1,10 +1,10 @@
 import datetime as dt
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 import pytest
 from funcy import identity, partial
-from nsidc.metgen import metgen
+from nsidc.metgen import config, metgen
 
 # Unit tests for the 'metgen' module functions.
 #
@@ -232,6 +232,37 @@ def test_granule_tuple_from_regex(granuleid, data_files, browse_files, expected,
         [Path(p) for p in data_files + browse_files],
     )
     assert granule == expected
+
+
+@patch("nsidc.metgen.metgen.s3_object_path", return_value="/some/path")
+@patch("nsidc.metgen.aws.stage_file", return_value=True)
+@patch("builtins.open", new_callable=mock_open, read_data="data")
+def test_stage_files(m1, m2, m3):
+    granule = metgen.Granule(
+        "foo",
+        metgen.Collection("ABCD", 2),
+        uuid="abcd-1234",
+        data_filenames={"file1", "file2", "file3"},
+        browse_filenames={"browse1", "browse2", "browse3"},
+        ummg_filename="foo_ummg",
+    )
+    configuration = config.Config(
+        "uat",
+        staging_bucket_name="cloud_bucket",
+        data_dir="foo",
+        auth_id="nsidc-0000",
+        version=1,
+        provider="blah",
+        local_output_dir="output",
+        ummg_dir="ummg",
+        kinesis_stream_name="fake_stream",
+        write_cnm_file=True,
+        overwrite_ummg=True,
+        checksum_type="sha",
+        number=3,
+        dry_run=False,
+    )
+    assert metgen.stage_files(configuration, granule)
 
 
 def test_returns_datetime_range():
