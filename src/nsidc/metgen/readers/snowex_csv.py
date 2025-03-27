@@ -6,8 +6,10 @@ from datetime import timezone
 from dateutil.parser import parse
 from pyproj import CRS, Transformer
 
+from nsidc.metgen.config import Config
 
-def extract_metadata(csv_path, configuration):
+
+def extract_metadata(csv_path: str, configuration: Config) -> dict:
     with open(csv_path, newline="") as csvfile:
         csvreader = csv.reader(csvfile, delimiter=",")
 

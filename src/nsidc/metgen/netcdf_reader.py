@@ -15,9 +15,10 @@ from pyproj import CRS, Transformer
 from shapely import LineString
 
 from nsidc.metgen import constants
+from nsidc.metgen.config import Config
 
 
-def extract_metadata(netcdf_path, configuration):
+def extract_metadata(netcdf_path: str, configuration: Config) -> dict:
     """
     Read the content at netcdf_path and return a structure with temporal coverage
     information, spatial coverage information, file size, and production datetime.

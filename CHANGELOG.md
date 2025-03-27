@@ -4,6 +4,7 @@
 * Handle a bug in `xarray` when processing NSIDC-0630 v2 granules. (Issue-152)
 * Support creating release-candidates of MetGenC (v1.4.0rc1, 1.4.0rc2, ...) (Issue-128)
 * Refine regex handling for multi-data-file granules. (Issue-103)
+* Add support for reading IRWIS2 CSV files (Issue-154)
 
 ## v1.3.0
 
