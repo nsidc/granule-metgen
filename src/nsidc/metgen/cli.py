@@ -14,6 +14,7 @@ LOGGER = logging.getLogger(constants.ROOT_LOGGER)
 
 
 @click.group(epilog="For detailed help on each command, run: metgenc COMMAND --help")
+@click.version_option(package_name="nsidc-metgenc")
 def cli():
     """The metgenc utility allows users to create granule-level
     metadata, stage granule files and their associated metadata to

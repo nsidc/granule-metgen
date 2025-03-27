@@ -130,6 +130,11 @@ data files.
 
 ## Before Running MetGenC: Tips and Assumptions
 
+* Verify the application version:
+
+        $ metgenc --version
+        metgenc, version 1.3.0
+
 * Show the help text:
 
         $ metgenc --help
@@ -498,11 +503,24 @@ integrated with the editor of your choice. See the
 
 #### Releasing
 
-* Update the CHANGELOG to include details of the changes included in the new
-  release. The version should be the string literal 'UNRELEASED' (without
-  single-quotes). It will be replaced with the actual version number after
-  we bump the version below. Commit the CHANGELOG so the working directory is
-  clean.
+* Update `CHANGELOG.md` according to its representation of the current version:
+  * If the current "version" in `CHANGELOG.md` is `UNRELEASED`, add an
+    entry describing your new changes to the existing change summary list.
+
+  * If the current version in `CHANGELOG.md` is **not** a release candidate,
+    add a new line at the top of `CHANGELOG.md` with a "version" consisting of
+    the string literal `UNRELEASED` (no quotes surrounding the string).  It will
+    be replaced with the release candidate form of an actual version number
+    after the `major`, `minor`, or `patch` version is bumped (see below). Add a
+    list summarizing the changes (thus far) in this new version below the
+    `UNRELEASED` version entry.
+
+  * If the current version in `CHANGELOG.md`  **is** a release candidate, add
+    an entry describing your new changes to the existing change summary list for
+    this release candidate version. The release candidate version will be
+    automatically updated when the `rc` version is bumped (see below).
+
+* Commit `CHANGELOG.md` so the working directory is clean.
 
 * Show the current version and the possible next versions:
 
@@ -513,13 +531,15 @@ integrated with the editor of your choice. See the
                        ├─ release ─ invalid: The part has already the maximum value among ['rc', 'release'] and cannot be bumped.
                        ╰─ rc ────── 1.4.0release1
 
-* When you are ready to create a new release, the first step will be to create a pre-release version. As an example, if the
-  current version is `1.4.0` and you'd like to release `1.5.0`, first create a pre-release for testing:
+* If the currently released version of `metgenc` is not a release candidate
+  and the goal is to start work on a new version, the first step is to create a
+  pre-release version. As an example, if the current version is `1.4.0` and
+  you'd like to release `1.5.0`, first create a pre-release for testing:
 
         $ bump-my-version bump minor
 
-  Now the project version will be `1.5.0rc0` -- Release Candidate 0. As testing for this release-candidate proceeds, you can
-  create more release-candidates by:
+  Now the project version will be `1.5.0rc0` -- Release Candidate 0. As testing
+  for this release-candidate proceeds, you can create more release-candidates by:
 
         $ bump-my-version bump rc
 
@@ -530,17 +550,17 @@ integrated with the editor of your choice. See the
         $ bump-my-version bump release
 
   Which will update the version to `1.5.0`. After doing any kind of release, you will see
-  the latest commit & tag by looking at `git log`. You can then push these to GitHub
+  the latest commit and tag by looking at `git log`. You can then push these to GitHub
   (`git push --follow-tags`) to trigger the CI/CD workflow.
 
 * On the [GitHub repository](https://github.com/nsidc/granule-metgen), click
   'Releases' and follow the steps documented on the
   [GitHub Releases page](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release).
-  Draft a new Release using the version tag created above. By default, the
-  'Set as the latest release' checkbox will be selected. To publish a pre-release
-  be sure to select the 'Set as a pre-release' checkbox. After you have
-  published the (pre-)release in GitHub, the MetGenC Publish GHA workflow will be started.
-  Check that the workflow succeeds on the
+  Draft a new Release using the version tag created above. By default, the 'Set
+  as the latest release' checkbox will be selected. To publish a pre-release
+  from a release candidate version, be sure to select the 'Set as a pre-release'
+  checkbox. After you have published the (pre-)release in GitHub, the MetGenC
+  Publish GHA workflow will be started.  Check that the workflow succeeds on the
   [MetGenC Actions page](https://github.com/nsidc/granule-metgen/actions),
   and verify that the
   [new MetGenC (pre-)release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
