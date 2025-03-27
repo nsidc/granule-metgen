@@ -24,7 +24,7 @@ from typing import Optional
 import earthaccess
 import jsonschema
 from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
-from funcy import all, filter, first, notnone, partial, rcompose, take
+from funcy import all, concat, filter, first, notnone, partial, rcompose, take
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
@@ -652,7 +652,9 @@ def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     """
     Stage a set of files for the Granule in S3.
     """
-    stuff = granule.data_filenames + [granule.ummg_filename] + granule.browse_filenames
+    stuff = concat(
+        granule.data_filenames, {granule.ummg_filename}, granule.browse_filenames
+    )
     for fn in stuff:
         filename = os.path.basename(fn)
         bucket_path = s3_object_path(granule, filename)
