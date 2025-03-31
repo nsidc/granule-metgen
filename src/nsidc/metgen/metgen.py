@@ -42,7 +42,7 @@ LOGFILE_FORMAT = "%(asctime)s|%(levelname)s|%(name)s|%(message)s"
 # -------------------------------------------------------------------
 
 
-def init_logging(_: config.Config):
+def init_logging():
     """
     Initialize the logger for metgenc.
     """
