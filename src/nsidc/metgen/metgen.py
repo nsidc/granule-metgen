@@ -226,7 +226,7 @@ class Granule:
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
     cnm_message: Maybe[str] = Maybe.empty
-    data_reader: Callable[[str, config.Config], dict] = lambda coll, cfg: dict()
+    data_reader: Callable[[str, config.Config], dict] = lambda auth_id, cfg: dict()
 
 
 @dataclasses.dataclass
@@ -300,7 +300,7 @@ def process(configuration: config.Config) -> None:
 
 
 def data_reader(
-    collection: str, data_files: set[str]
+    auth_id: str, data_files: set[str]
 ) -> Callable[[str, config.Config], dict]:
     """
     Determine which file reader to use for the given data files. This currently
@@ -312,7 +312,7 @@ def data_reader(
     a_data_file = next(iter(data_files))
     _, extension = os.path.splitext(a_data_file)
 
-    return registry.lookup(collection, extension)
+    return registry.lookup(auth_id, extension)
 
 
 # -------------------------------------------------------------------
