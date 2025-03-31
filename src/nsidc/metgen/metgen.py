@@ -309,8 +309,7 @@ def data_reader(
     In that future work this needs to be refactored to handle this case.
     """
     # Lookup based on an arbitrary data file in the set
-    a_data_file = next(iter(data_files))
-    _, extension = os.path.splitext(a_data_file)
+    _, extension = os.path.splitext(first(data_files))
 
     return registry.lookup(auth_id, extension)
 
