@@ -107,6 +107,16 @@ def init_config(configuration_file):
         "data_dir",
         Prompt.ask("Data directory", default="data"),
     )
+    cfg_parser.set(
+        constants.SOURCE_SECTION_NAME,
+        "premet_dir",
+        Prompt.ask("Premet directory"),
+    )
+    cfg_parser.set(
+        constants.SOURCE_SECTION_NAME,
+        "spatial_dir",
+        Prompt.ask("Spatial directory"),
+    )
     print()
 
     print()
