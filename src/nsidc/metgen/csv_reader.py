@@ -44,9 +44,11 @@ def data_datetime(csvreader, configuration):
 
 
 def spatial_values(csvreader, configuration):
-    zone = get_key_value(csvreader, "^.*UTM_Zone")
+    # We only need the numeric zone indicator
+    zone = int(re.sub(r"\D", "", get_key_value(csvreader, "^.*UTM_Zone")))
     easting = get_key_value(csvreader, "^.*Easting")
     northing = get_key_value(csvreader, "^.*Northing")
+
     utm_crs = CRS(proj="utm", zone=zone, ellps="WGS84")
     transformer = Transformer.from_crs(utm_crs, "EPSG:4326")
 
