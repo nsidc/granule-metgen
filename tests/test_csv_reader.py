@@ -1,7 +1,6 @@
 import os.path
 
 import pytest
-
 from nsidc.metgen import config, csv_reader
 
 # Unit tests for the 'netcdf_reader' module functions.
@@ -11,6 +10,7 @@ from nsidc.metgen import config, csv_reader
 # should mock those module's functions and assert that csv_reader functions
 # call them with the correct parameters, correctly handle their return values,
 # and handle any exceptions they may throw.
+
 
 @pytest.fixture
 def csv(request, tmp_path):
