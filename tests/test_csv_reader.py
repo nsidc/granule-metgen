@@ -1,4 +1,7 @@
+import os.path
+
 import pytest
+
 from nsidc.metgen import config, csv_reader
 
 # Unit tests for the 'netcdf_reader' module functions.
@@ -9,32 +12,12 @@ from nsidc.metgen import config, csv_reader
 # call them with the correct parameters, correctly handle their return values,
 # and handle any exceptions they may throw.
 
-
 @pytest.fixture
-def csv_good(tmp_path):
+def csv(request, tmp_path):
     content = [
         "# Date (yyyy-mm-ddTHH:MM),2023-03-06T11:00,,,",
         "#Name field campaign,SnowEx 2023,,,",
-        "#UTM_Zone,6,,,",
-        "#Easting,466153,,,",
-        "#Northing,7193263,,,",
-        "#Timing,25 min,,,",
-    ]
-
-    d = tmp_path / __name__
-    d.mkdir()
-    p = d / "test.csv"
-    p.write_text("\n".join(content), encoding="utf-8")
-
-    return p
-
-
-@pytest.fixture
-def csv_bad(tmp_path):
-    content = [
-        "# Date (yyyy-mm-ddTHH:MM),2023-03-06T11:00,,,",
-        "#Name field campaign,SnowEx 2023,,,",
-        "#UTM_Zone,6W,,,",
+        f"#UTM_Zone,{request},,,",
         "#Easting,466153,,,",
         "#Northing,7193263,,,",
         "#Timing,25 min,,,",
@@ -51,41 +34,31 @@ def csv_bad(tmp_path):
 @pytest.fixture
 def test_config():
     return config.Config(
-        "test",
-        "./",
-        "abcd",
-        "1",
-        "provider",
-        "./output",
-        "./output/ummg",
-        "stream",
-        "bucket",
-        True,
-        True,
-        "SHA256",
-        3,
-        True,
-        "data*.dat",
-        "fnre",
-        None,
-        None,
-        "2023-12-25T00:00:00.000Z",
+        environment="test",
+        data_dir="./",
+        auth_id="abcd",
+        version="1",
+        provider="provider",
+        local_output_dir="./output",
+        ummg_dir="./output/ummg",
+        kinesis_stream_name="stream",
+        staging_bucket_name="bucket",
+        write_cnm_file=True,
+        overwrite_ummg=True,
+        checksum_type="SHA256",
+        number=3,
+        dry_run=True,
+        premet_dir="",
+        spatial_dir="",
+        granule_regex="data*.dat",
+        date_modified="2023-12-25T00:00:00.000Z",
     )
 
 
-def test_extract_metadata_with_good_csv(test_config, csv_good):
-    metadata = csv_reader.extract_metadata(csv_good, test_config)
-    assert metadata["size_in_bytes"] == 154
-    assert metadata["production_date_time"] == test_config.date_modified
-    assert metadata["temporal"] == ["2023-03-06T11:00:00.000Z"]
-    assert metadata["geometry"] == {
-        "points": [{"Latitude": 64.86197446452954, "Longitude": -147.71408586635164}]
-    }
-
-
-def test_extract_metadata_with_bad_csv(test_config, csv_bad):
-    metadata = csv_reader.extract_metadata(csv_bad, test_config)
-    assert metadata["size_in_bytes"] == 155
+@pytest.mark.parametrize("csv", ["6", "6W", "6N", "6ABC"], indirect=True)
+def test_extract_metadata(test_config, csv):
+    metadata = csv_reader.extract_metadata(csv, test_config)
+    assert metadata["size_in_bytes"] == os.path.getsize(csv)
     assert metadata["production_date_time"] == test_config.date_modified
     assert metadata["temporal"] == ["2023-03-06T11:00:00.000Z"]
     assert metadata["geometry"] == {
