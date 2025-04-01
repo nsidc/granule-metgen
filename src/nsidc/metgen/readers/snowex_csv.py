@@ -46,7 +46,8 @@ def data_datetime(csvreader, configuration):
 
 
 def spatial_values(csvreader, configuration):
-    zone = get_key_value(csvreader, "^.*UTM_Zone")
+    zone_string = get_key_value(csvreader, "^.*UTM_Zone")
+    zone = int(re.sub(r"\D", "", zone_string)) if zone_string else 0
     easting = get_key_value(csvreader, "^.*Easting")
     northing = get_key_value(csvreader, "^.*Northing")
     utm_crs = CRS(proj="utm", zone=zone, ellps="WGS84")

@@ -1,6 +1,9 @@
+import os.path
+
 import pytest
 from nsidc.metgen import config
 from nsidc.metgen.readers import csv as csv_reader
+from nsidc.metgen.readers import snowex_csv as snowex_csv_reader
 
 # Unit tests for the 'snowex_csv' module functions.
 #
@@ -12,7 +15,7 @@ from nsidc.metgen.readers import csv as csv_reader
 
 
 @pytest.fixture
-def csv_content():
+def generic_csv_content():
     return """LAT,LON,TIME,THICK,ELEVATION,FRAME,SURFACE,BOTTOM,QUALITY,DATE,DEM_SELECT
 61.418877,-148.562393,82800.0000,-9999.00,1324.0513,20120316T235145,77.00,10076.00,0,160312,1
 61.208763,-147.734161,3600.0000,-9999.00,1560.3271,20120317T002051,-223.93,9775.07,0,170312,1
@@ -23,11 +26,30 @@ def csv_content():
 
 
 @pytest.fixture
-def csv(tmp_path, csv_content):
+def generic_csv(tmp_path, generic_csv_content):
     d = tmp_path / __name__
     d.mkdir()
     p = d / "test.csv"
-    p.write_text(csv_content, encoding="utf-8")
+    p.write_text(generic_csv_content, encoding="utf-8")
+
+    return p
+
+
+@pytest.fixture
+def snowex_csv(request, tmp_path):
+    content = [
+        "# Date (yyyy-mm-ddTHH:MM),2023-03-06T11:00,,,",
+        "#Name field campaign,SnowEx 2023,,,",
+        f"#UTM_Zone,{request},,,",
+        "#Easting,466153,,,",
+        "#Northing,7193263,,,",
+        "#Timing,25 min,,,",
+    ]
+
+    d = tmp_path / __name__
+    d.mkdir()
+    p = d / "test.csv"
+    p.write_text("\n".join(content), encoding="utf-8")
 
     return p
 
@@ -35,31 +57,41 @@ def csv(tmp_path, csv_content):
 @pytest.fixture
 def test_config():
     return config.Config(
-        "test",
-        "./",
-        "abcd",
-        "1",
-        "provider",
-        "./output",
-        "./output/ummg",
-        "stream",
-        "bucket",
-        True,
-        True,
-        "SHA256",
-        3,
-        True,
-        "data*.dat",
-        "fnre",
-        None,
-        None,
-        "2023-12-25T00:00:00.000Z",
+        environment="test",
+        data_dir="./",
+        auth_id="abcd",
+        version="1",
+        provider="provider",
+        local_output_dir="./output",
+        ummg_dir="./output/ummg",
+        kinesis_stream_name="stream",
+        staging_bucket_name="bucket",
+        write_cnm_file=True,
+        overwrite_ummg=True,
+        checksum_type="SHA256",
+        number=3,
+        dry_run=True,
+        premet_dir="",
+        spatial_dir="",
+        granule_regex="data*.dat",
+        date_modified="2023-12-25T00:00:00.000Z",
     )
 
 
-def test_extract_metadata(test_config, csv_content, csv):
-    metadata = csv_reader.extract_metadata(csv, test_config)
-    assert metadata["size_in_bytes"] == len(csv_content)
+@pytest.mark.parametrize("snowex_csv", ["6", "6W", "6N", "6ABC"], indirect=True)
+def test_extract_snex_metadata(test_config, snowex_csv):
+    metadata = snowex_csv_reader.extract_metadata(snowex_csv, test_config)
+    assert metadata["size_in_bytes"] == os.path.getsize(snowex_csv)
+    assert metadata["production_date_time"] == test_config.date_modified
+    assert metadata["temporal"] == ["2023-03-06T11:00:00.000Z"]
+    assert metadata["geometry"] == {
+        "points": [{"Latitude": 64.86197446452954, "Longitude": -147.71408586635164}]
+    }
+
+
+def test_extract_generic_metadata(test_config, generic_csv_content, generic_csv):
+    metadata = csv_reader.extract_metadata(generic_csv, test_config)
+    assert metadata["size_in_bytes"] == len(generic_csv_content)
     assert metadata["production_date_time"] == test_config.date_modified
     assert metadata["temporal"] == [
         "2012-03-16T23:00:00.000Z",
