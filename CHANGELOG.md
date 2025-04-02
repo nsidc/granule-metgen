@@ -1,4 +1,4 @@
-## v1.5.0rc0
+## v1.5.0rc1
 
 * Add support for reading IRWIS2 CSV files (Issue-154)
 
