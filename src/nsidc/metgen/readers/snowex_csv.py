@@ -6,8 +6,10 @@ from datetime import timezone
 from dateutil.parser import parse
 from pyproj import CRS, Transformer
 
+from nsidc.metgen.config import Config
 
-def extract_metadata(csv_path, configuration):
+
+def extract_metadata(csv_path: str, configuration: Config) -> dict:
     with open(csv_path, newline="") as csvfile:
         csvreader = csv.reader(csvfile, delimiter=",")
 
@@ -44,7 +46,8 @@ def data_datetime(csvreader, configuration):
 
 
 def spatial_values(csvreader, configuration):
-    zone = get_key_value(csvreader, "^.*UTM_Zone")
+    zone_string = get_key_value(csvreader, "^.*UTM_Zone")
+    zone = int(re.sub(r"\D", "", zone_string)) if zone_string else 0
     easting = get_key_value(csvreader, "^.*Easting")
     northing = get_key_value(csvreader, "^.*Northing")
     utm_crs = CRS(proj="utm", zone=zone, ellps="WGS84")

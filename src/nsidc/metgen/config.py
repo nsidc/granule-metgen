@@ -36,6 +36,8 @@ class Config:
     checksum_type: str
     number: int
     dry_run: bool
+    premet_dir: Optional[str] = None
+    spatial_dir: Optional[str] = None
     time_start_regex: Optional[str] = None
     time_coverage_duration: Optional[str] = None
     pixel_size: Optional[int] = None
@@ -190,6 +192,12 @@ def configuration(
                 environment, "Settings", "dry_run", bool, config_parser, overrides
             ),
             _get_configuration_value(
+                environment, "Source", "premet_dir", str, config_parser, overrides
+            ),
+            _get_configuration_value(
+                environment, "Source", "spatial_dir", str, config_parser, overrides
+            ),
+            _get_configuration_value(
                 environment,
                 "Collection",
                 "time_start_regex",
@@ -251,6 +259,16 @@ def validate(configuration):
             "data_dir",
             lambda dir: os.path.exists(dir),
             "The data_dir does not exist.",
+        ],
+        [
+            "premet_dir",
+            lambda dir: os.path.exists(dir) if dir else lambda _: True,
+            "The premet_dir does not exist.",
+        ],
+        [
+            "spatial_dir",
+            lambda dir: os.path.exists(dir) if dir else lambda _: True,
+            "The spatial_dir does not exist.",
         ],
         [
             "local_output_dir",
