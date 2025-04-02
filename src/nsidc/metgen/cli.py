@@ -45,7 +45,7 @@ def info(config_filename):
     configuration = config.configuration(
         config.config_parser_factory(config_filename), {}
     )
-    metgen.init_logging(configuration)
+    metgen.init_logging()
     configuration.show()
 
 
@@ -71,7 +71,7 @@ def validate(config_filename, content_type):
     configuration = config.configuration(
         config.config_parser_factory(config_filename), {}
     )
-    metgen.init_logging(configuration)
+    metgen.init_logging()
     metgen.validate(configuration, content_type)
 
 
@@ -135,7 +135,7 @@ def process(config_filename, dry_run, env, number, write_cnm, overwrite):
         configuration = config.configuration(
             config.config_parser_factory(config_filename), overrides, env
         )
-        metgen.init_logging(configuration)
+        metgen.init_logging()
         configuration.show()
         config.validate(configuration)
         metgen.process(configuration)

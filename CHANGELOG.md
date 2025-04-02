@@ -1,10 +1,14 @@
+## UNRELEASED
+
+* Add support for reading IRWIS2 CSV files (Issue-154)
+
 ## v1.4.0rc7
 
 * Add a CSV reader to process [SNOWEX](https://nsidc.org/data/snex23_ssa/versions/1) granules. (Issue-108)
 * Handle a bug in `xarray` when processing NSIDC-0630 v2 granules. (Issue-152)
 * Support creating release-candidates of MetGenC (v1.4.0rc1, 1.4.0rc2, ...) (Issue-128)
 * Refine regex handling for multi-data-file granules. (Issue-103)
-* Add optional paths for `premet` and `spatial` files to `ini` file.
+* Add optional paths for `premet` and `spatial` files to `ini` file. (Issue-155)
 * Add CLI `--version` option
 
 ## v1.3.0

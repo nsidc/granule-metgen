@@ -25,11 +25,13 @@ import earthaccess
 import jsonschema
 from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
 from funcy import all, concat, filter, first, notnone, partial, rcompose, take
+from jsonschema.exceptions import ValidationError
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
-from nsidc.metgen import aws, config, constants, csv_reader, netcdf_reader
+from nsidc.metgen import aws, config, constants
+from nsidc.metgen.readers import registry
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -40,7 +42,7 @@ LOGFILE_FORMAT = "%(asctime)s|%(levelname)s|%(name)s|%(message)s"
 # -------------------------------------------------------------------
 
 
-def init_logging(configuration: config.Config):
+def init_logging():
     """
     Initialize the logger for metgenc.
     """
@@ -234,7 +236,7 @@ class Granule:
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
     cnm_message: Maybe[str] = Maybe.empty
-    data_reader: Callable[[str], dict] = Maybe.empty
+    data_reader: Callable[[str, config.Config], dict] = lambda auth_id, cfg: dict()
 
 
 @dataclasses.dataclass
@@ -297,7 +299,7 @@ def process(configuration: config.Config) -> None:
             name,
             data_filenames=data_files,
             browse_filenames=browse_files,
-            data_reader=data_reader(data_files),
+            data_reader=data_reader(configuration.auth_id, data_files),
         )
         for name, data_files, browse_files in grouped_granule_files(configuration)
     ]
@@ -307,21 +309,19 @@ def process(configuration: config.Config) -> None:
     summarize_results(results)
 
 
-def data_reader(data_files: set[str]) -> Callable[[str], dict]:
+def data_reader(
+    auth_id: str, data_files: set[str]
+) -> Callable[[str, config.Config], dict]:
     """
     Determine which file reader to use for the given data files. This currently
-    is limited to handling one data file type, and one reader. In a future
-    issue, we may handle granules with multiple data file types per granule.
+    is limited to handling one data file type (and one reader) per collection.
+    In a future issue, we may handle granules with multiple data file types per granule.
     In that future work this needs to be refactored to handle this case.
     """
-    readers = {
-        ".nc": netcdf_reader.extract_metadata,
-        ".csv": csv_reader.extract_metadata,
-    }
-
+    # Lookup based on an arbitrary data file in the set
     _, extension = os.path.splitext(first(data_files))
 
-    return readers[extension]
+    return registry.lookup(auth_id, extension)
 
 
 # -------------------------------------------------------------------
@@ -388,7 +388,7 @@ def end_ledger(ledger: Ledger) -> Ledger:
 # -------------------------------------------------------------------
 
 
-def null_operation(configuration: config.Config, granule: Granule) -> Granule:
+def null_operation(_: config.Config, granule: Granule) -> Granule:
     return granule
 
 
@@ -591,7 +591,7 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
     )
 
 
-def prepare_granule(configuration: config.Config, granule: Granule) -> Granule:
+def prepare_granule(_: config.Config, granule: Granule) -> Granule:
     """
     Prepare the Granule for creating metadata and submitting it.
     """
@@ -977,7 +977,7 @@ def apply_schema(schema, json_file, dummy_json):
         try:
             jsonschema.validate(instance=json_content | dummy_json, schema=schema)
             logger.info(f"No validation errors: {json_file}")
-        except jsonschema.exceptions.ValidationError as err:
+        except ValidationError as err:
             logger.error(
                 f"""Validation failed for "{err.validator}"\
                 in {json_file}: {err.validator_value}"""
