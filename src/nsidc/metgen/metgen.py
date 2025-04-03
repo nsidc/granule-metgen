@@ -220,6 +220,7 @@ class Collection:
 
     auth_id: str
     version: int
+    granule_spatial_representation: Optional[str] = None
     spatial_extent: Optional[dict] = None
     temporal_extent: Optional[dict] = None
 
@@ -417,20 +418,41 @@ are missing."
     return auth
 
 
-def ummc_content(umm: list, key: str):
+def validate_cmr_response(umm: list):
+    """
+    Confirm required elements exist in the UMM-C record returned from CMR.
+    """
     val = None
+    logger = logging.getLogger(constants.ROOT_LOGGER)
 
     if not umm:
+        logger.info("No UMM-C content returned from CMR.")
         return val
 
-    # if more than one response, log error, use first one?
-    if not isinstance(umm[0], dict):
+    if len(umm) > 1:
+        logger.info("Multiple UMM-C records returned from CMR, none will be used.")
         return val
 
+    if not isinstance(umm[0], dict) or "umm" not in umm[0]:
+        logger.info("Malformed UMM-C content returned from CMR.")
+        return None
+
+    return umm[0]["umm"]
+
+
+def ummc_content(umm: dict, key: str):
+    """
+    Look for a key in a UMM-C record (or a piece of the record), and log the status.
+    """
+    val = None
     logger = logging.getLogger(constants.ROOT_LOGGER)
+
+    if umm is None:
+        return val
+
     try:
-        val = umm[0]["umm"][key]
-        logger.info(f"Found {key} information in umm-c response from CMR.")
+        val = umm[key]
+        logger.info(f"{key} information in umm-c response from CMR: {val}")
     except KeyError:
         logger.info(f"No {key} information in umm-c response from CMR.")
 
@@ -468,23 +490,28 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
     # without associated granules.
     if edl_login(edl_environment(environment)):
         logger.info("Earthdata login succeeded.")
-        ummc = earthaccess.search_datasets(
+        cmr_response = earthaccess.search_datasets(
             short_name=auth_id,
             version=version,
             has_granules=None,
             provider=edl_provider(environment),
         )
+        ummc = validate_cmr_response(cmr_response)
     else:
         logger.info("Earthdata login failed, UMM-C metadata will not be used.")
-        ummc = []
+        ummc = None
 
     # FYI: data format (e.g. NetCDF) is available in the umm-c response in
     # ArchiveAndDistributionInformation should we decide to use it.
+    spatial_extent = ummc_content(ummc, "SpatialExtent")
     return Collection(
         auth_id,
         version,
-        ummc_content(ummc, "SpatialExtent"),
-        ummc_content(ummc, "TemporalExtents"),
+        granule_spatial_representation=ummc_content(
+            spatial_extent, "GranuleSpatialRepresentation"
+        ),
+        spatial_extent=spatial_extent,
+        temporal_extent=ummc_content(ummc, "TemporalExtents"),
     )
 
 
