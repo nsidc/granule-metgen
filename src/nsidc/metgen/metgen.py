@@ -501,7 +501,6 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
         logger.info("Earthdata login failed, UMM-C metadata will not be used.")
         ummc = None
 
-
     # FYI: data format (e.g. NetCDF) is available in the umm-c response in
     # ArchiveAndDistributionInformation should we decide to use it.
     spatial_extent = ummc_content(ummc, "SpatialExtent")
