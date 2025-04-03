@@ -1,6 +1,8 @@
 ## v1.5.0rc1
 
 * Add support for reading IRWIS2 CSV files (Issue-154)
+* Store `GranuleSpatialRepresentation` value from CMR collection metadata in the
+  `Collection` object.
 
 ## v1.4.0rc7
 

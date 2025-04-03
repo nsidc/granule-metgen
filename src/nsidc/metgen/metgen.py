@@ -452,7 +452,7 @@ def ummc_content(umm: dict, key: str):
 
     try:
         val = umm[key]
-        logger.info(f"Found {key} information in umm-c response from CMR.")
+        logger.info(f"{key} information in umm-c response from CMR: {val}")
     except KeyError:
         logger.info(f"No {key} information in umm-c response from CMR.")
 
@@ -496,11 +496,11 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
             has_granules=None,
             provider=edl_provider(environment),
         )
+        ummc = validate_cmr_response(cmr_response)
     else:
         logger.info("Earthdata login failed, UMM-C metadata will not be used.")
-        cmr_response = []
+        ummc = None
 
-    ummc = validate_cmr_response(cmr_response)
 
     # FYI: data format (e.g. NetCDF) is available in the umm-c response in
     # ArchiveAndDistributionInformation should we decide to use it.
