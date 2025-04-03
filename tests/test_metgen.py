@@ -1,10 +1,11 @@
 import datetime as dt
+import logging
 from pathlib import Path
 from unittest.mock import mock_open, patch
 
 import pytest
 from funcy import identity, partial
-from nsidc.metgen import config, metgen
+from nsidc.metgen import config, constants, metgen
 
 # Unit tests for the 'metgen' module functions.
 #
@@ -47,16 +48,12 @@ def single_file_granule():
 
 @pytest.fixture
 def fake_ummc_response():
-    return [
-        {
-            "umm": {
-                "ShortName": "BigData",
-                "Version": 1,
-                "TemporalExtents": ["then", "now"],
-                "SpatialExtent": {"here": "there"},
-            }
-        }
-    ]
+    return {
+        "ShortName": "BigData",
+        "Version": 1,
+        "TemporalExtents": ["then", "now"],
+        "SpatialExtent": {"here": "there"},
+    }
 
 
 @pytest.fixture
@@ -397,7 +394,7 @@ def test_edl_login_environment(ingest_env, edl_env):
 
 
 def test_handles_no_cmr_response(fake_ummc_response):
-    assert metgen.ummc_content([], "fakekey") is None
+    assert metgen.ummc_content({}, "fakekey") is None
     assert metgen.ummc_content(fake_ummc_response, "DOI") is None
 
 
@@ -410,3 +407,37 @@ def test_no_ummc_if_login_fails(mock_edl_login):
     new_collection = metgen.collection_from_cmr("uat", "BigData", 1)
     assert new_collection.spatial_extent is None
     assert new_collection.temporal_extent is None
+    assert new_collection.granule_spatial_representation is None
+
+
+@pytest.mark.parametrize(
+    "umm_content,validated_response,log_message",
+    [
+        ([], None, "No UMM-C content returned from CMR."),
+        (
+            ["ummc1", "ummc2"],
+            None,
+            "Multiple UMM-C records returned from CMR, none will be used.",
+        ),
+        (
+            ["ummc1"],
+            None,
+            "Malformed UMM-C content returned from CMR.",
+        ),
+        (
+            [{"ummc1": "some ummc"}],
+            None,
+            "Malformed UMM-C content returned from CMR.",
+        ),
+        ([{"umm": "some ummc"}], "some ummc", []),
+    ],
+)
+def test_umm_key_required(umm_content, validated_response, log_message, caplog):
+    caplog.set_level(logging.INFO, logger=constants.ROOT_LOGGER)
+    if log_message:
+        log_tuples = [(constants.ROOT_LOGGER, logging.INFO, log_message)]
+    else:
+        log_tuples = []
+    assert metgen.validate_cmr_response(umm_content) is validated_response
+    assert caplog.record_tuples == log_tuples
+    caplog.clear()
