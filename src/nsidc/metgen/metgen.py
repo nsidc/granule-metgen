@@ -233,6 +233,7 @@ class Granule:
     collection: Maybe[Collection] = Maybe.empty
     data_filenames: set[str] = dataclasses.field(default_factory=set)
     browse_filenames: set[str] = dataclasses.field(default_factory=set)
+    premet_filename: Maybe[str] = Maybe.empty
     ummg_filename: Maybe[str] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
@@ -300,9 +301,12 @@ def process(configuration: config.Config) -> None:
             name,
             data_filenames=data_files,
             browse_filenames=browse_files,
+            premet_filename=premet_file,
             data_reader=data_reader(configuration.auth_id, data_files),
         )
-        for name, data_files, browse_files in grouped_granule_files(configuration)
+        for name, data_files, browse_files, premet_file in grouped_granule_files(
+            configuration
+        )
     ]
     granules = take(configuration.number, candidate_granules)
     results = [pipeline(g) for g in granules]
@@ -517,10 +521,10 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
 
 def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     """
-    Identify data file(s) and browse file(s) related to each granule.
+    Identify file(s) related to each granule.
     """
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
-    granule_keys = find_granule_keys(configuration, file_list)
+    premet_file_list = premet_files(configuration)
 
     return [
         granule_tuple(
@@ -528,12 +532,20 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
             configuration.granule_regex or f"({granule_key})",
             configuration.browse_regex,
             file_list,
+            premet_file_list,
         )
-        for granule_key in granule_keys
+        for granule_key in granule_keys(configuration, file_list)
     ]
 
 
-def find_granule_keys(configuration: config.Config, file_list: list[Path]) -> set[str]:
+def premet_files(configuration: config.Config) -> list[Path]:
+    if configuration.premet_dir:
+        return [p for p in Path(configuration.premet_dir).glob("*")]
+
+    return []
+
+
+def granule_keys(configuration: config.Config, file_list: list[Path]) -> set[str]:
     if configuration.granule_regex:
         return granule_keys_from_regex(configuration.granule_regex, file_list)
     else:
@@ -565,7 +577,11 @@ def granule_keys_from_filename(browse_regex, file_list):
 
 
 def granule_tuple(
-    granule_key: str, granule_regex: str, browse_regex: str, file_list: list
+    granule_key: str,
+    granule_regex: str,
+    browse_regex: str,
+    file_list: list,
+    premet_list: list,
 ) -> tuple:
     """
     Important! granule_regex argument must include a captured match group
@@ -576,6 +592,7 @@ def granule_tuple(
           otherwise the common name elements of all files related to a granule.
         - A set of one or more full paths to data file(s)
         - A set of zero or more full paths to associated browse file(s)
+        - Path to an associated premet file (may be None)
     """
     browse_file_paths = {
         str(file)
@@ -587,10 +604,13 @@ def granule_tuple(
         str(file) for file in file_list if re.search(granule_key, file.name)
     } - browse_file_paths
 
+    premet_file = first([str(file) for file in premet_list if re.search(granule_key, file.name)])
+
     return (
         derived_granule_name(granule_regex, data_file_paths),
         data_file_paths,
         browse_file_paths,
+        premet_file
     )
 
 
@@ -630,6 +650,7 @@ def prepare_granule(_: config.Config, granule: Granule) -> Granule:
 
 
 def find_existing_ummg(configuration: config.Config, granule: Granule) -> Granule:
+    # this logic is in create_ummg as well -- remove duplication
     ummg_filename = configuration.ummg_path().joinpath(
         granule.producer_granule_id + ".json"
     )
@@ -652,7 +673,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         granule.producer_granule_id + ".json"
     )
 
-    # Populated metadata_details dict looks like:
+    # Populated summary dict looks like:
     # {
     #   data_file: {
     #       'size_in_bytes' => integer,
@@ -663,12 +684,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     #                                 lat/lon pairs }
     #   }
     # }
-    metadata_details = {}
-    for data_file in granule.data_filenames:
-        metadata_details[data_file] = granule.data_reader(data_file, configuration)
-
-    # Collapse information about (possibly) multiple files into a granule summary.
-    summary = metadata_summary(metadata_details)
+    summary = extract_metadata(configuration, granule)
     summary["spatial_extent"] = populate_spatial(summary["geometry"])
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
@@ -684,6 +700,32 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
 
     return dataclasses.replace(granule, ummg_filename=ummg_file_path)
 
+def extract_metadata(configuration: config.Config, granule: Granule) -> Granule:
+    metadata_details = {}
+
+    # Need size for all files, but spatial, temporal, and production
+    # date and time only needed for first of the data files
+    sizes = []
+    for data_file in granule.data_filenames:
+        sizes.append(os.path.getsize(data_file))
+
+    data_file = first(granule.data_filenames)
+    file_handle = granule.data_reader.open_file(data_file)
+
+    metadata_details["production_date_time"] = granule.data_reader.date_modified(file_handle, configuration)
+
+    if granule.premet_filename:
+        metadata_details["temporal"] = temporal_from_premet(granule.premet_filename)
+    else:
+        metadata_details["temporal"] = granule.data_reader.time_range(file_handle, os.path.basename(data_file), configuration)
+
+    metadata_details["geometry"] = granule.data_reader.spatial_extent(file_handle, configuration)
+    metadata_details["size_in_bytes"] = sum(sizes)
+
+    return metadata_details
+
+def temporal_from_premet(premet_filename):
+    return True
 
 def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     """
@@ -848,19 +890,6 @@ def s3_object_path(granule, filename):
         }
     )
     return prefix + filename
-
-
-# size is a sum of all associated data file sizes.
-# all other attributes use the values from the first data file entry.
-def metadata_summary(details):
-    default = list(details.values())[0]
-
-    return {
-        "size_in_bytes": sum([x["size_in_bytes"] for x in details.values()]),
-        "production_date_time": default["production_date_time"],
-        "temporal": default["temporal"],
-        "geometry": default["geometry"],
-    }
 
 
 def checksum(file):
