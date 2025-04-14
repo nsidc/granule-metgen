@@ -1,3 +1,4 @@
+import os.path
 from datetime import timedelta, timezone
 
 import pandas as pd
@@ -10,6 +11,7 @@ def extract_metadata(csv_path: str, configuration: Config) -> dict:
     df = pd.read_csv(csv_path)
 
     return {
+        "size_in_bytes": os.path.getsize(csv_path),
         "production_date_time": configuration.date_modified,
         "temporal": data_datetime(df, configuration),
         "geometry": {"points": bbox(spatial_values(df, configuration))},

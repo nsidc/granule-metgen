@@ -42,6 +42,7 @@ def extract_metadata(netcdf_path: str, configuration: Config) -> dict:
         raise Exception(f"Could not open netCDF file {netcdf_path}")
 
     return {
+        "size_in_bytes": os.path.getsize(netcdf_path),
         "production_date_time": date_modified(netcdf, configuration),
         "temporal": time_range(os.path.basename(netcdf_path), netcdf, configuration),
         "geometry": {"points": spatial_values(netcdf, configuration)},

@@ -1,4 +1,5 @@
 import csv
+import os.path
 import re
 from datetime import timezone
 
@@ -13,6 +14,7 @@ def extract_metadata(csv_path: str, configuration: Config) -> dict:
         csvreader = csv.reader(csvfile, delimiter=",")
 
         return {
+            "size_in_bytes": os.path.getsize(csv_path),
             "production_date_time": configuration.date_modified,
             "temporal": data_datetime(csvreader, configuration),
             "geometry": {"points": spatial_values(csvreader, configuration)},

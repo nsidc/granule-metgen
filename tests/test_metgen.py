@@ -128,105 +128,125 @@ def test_granule_name_from_regex(regex):
 
 
 @pytest.mark.parametrize(
-    "granuleid,data_files,browse_files,expected",
+    "granuleid,data_files,browse_files,premet_files,expected",
     [
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             [],
-            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set()),
+            [],
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), None),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_browse_bbb.png"],
-            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set()),
+            [],
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), None),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_bbb_browse.png"],
-            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, {"aaa_gid1_bbb_browse.png"}),
+            [],
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, {"aaa_gid1_bbb_browse.png"}, None),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
             ["aaa_gid1_bbb_browse.png"],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
+                None,
             ),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
             ["aaa_gid1_bbb_browse.png", "aaa_gid1_browse_bbb.tif"],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
+                None,
             ),
         ),
     ],
 )
-def test_granule_tuple_from_filenames(granuleid, data_files, browse_files, expected):
+def test_granule_tuple_from_filenames(
+    granuleid, data_files, browse_files, premet_files, expected
+):
     granule = metgen.granule_tuple(
         granuleid,
         f"({granuleid})",
         "browse",
         [Path(p) for p in data_files + browse_files],
+        premet_files,
     )
     assert granule == expected
 
 
 @pytest.mark.parametrize(
-    "granuleid,data_files,browse_files,expected",
+    "granuleid,data_files,browse_files,premet_files,expected",
     [
         (
             "gid1",
             ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
             [],
-            ("aaa_gid1_bbb", {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"}, set()),
+            [],
+            ("aaa_gid1_bbb", {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"}, set(), None),
         ),
         (
             "gid1",
             ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
             ["aaa_gid1_browse_bbb.png"],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_browse_bbb.png"},
+                None,
             ),
         ),
         (
             "gid1",
             ["aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"],
             ["aaa_gid1_browse_bbb.png"],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_browse_bbb.png"},
+                None,
             ),
         ),
         (
             "gid1",
             ["aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"],
             ["aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"},
                 {"aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"},
+                None,
             ),
         ),
     ],
 )
-def test_granule_tuple_from_regex(granuleid, data_files, browse_files, expected, regex):
+def test_granule_tuple_from_regex(
+    granuleid, data_files, browse_files, premet_files, expected, regex
+):
     granule = metgen.granule_tuple(
         granuleid,
         regex,
         "browse",
         [Path(p) for p in data_files + browse_files],
+        premet_files,
     )
     assert granule == expected
 
