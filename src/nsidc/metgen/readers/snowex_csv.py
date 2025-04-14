@@ -1,22 +1,21 @@
 import csv
 import os.path
 import re
-from datetime import timezone
 
-from dateutil.parser import parse
 from pyproj import CRS, Transformer
 
 from nsidc.metgen.config import Config
+from nsidc.metgen.readers import utilities
 
 
-def extract_metadata(csv_path: str, configuration: Config) -> dict:
+def extract_metadata(csv_path: str, premet_path: str, configuration: Config) -> dict:
     with open(csv_path, newline="") as csvfile:
         csvreader = csv.reader(csvfile, delimiter=",")
 
         return {
             "size_in_bytes": os.path.getsize(csv_path),
             "production_date_time": configuration.date_modified,
-            "temporal": data_datetime(csvreader, configuration),
+            "temporal": data_datetime(csvreader, premet_path),
             "geometry": {"points": spatial_values(csvreader, configuration)},
         }
 
@@ -24,20 +23,16 @@ def extract_metadata(csv_path: str, configuration: Config) -> dict:
 # Add new data_datetime strategy that gets DATE and TIME columns and finds range
 
 
-def data_datetime(csvreader, configuration):
-    """Get "# Date ..." """
+def data_datetime(csvreader, premet_path) -> list:
+    """Get temporal extent from premet file if it exists, otherwise parse from CSV"""
+    if premet_path is not None:
+        return utilities.temporal_from_premet(premet_path)
+
     pattern = re.compile("^.*Date")
 
     val = get_key_value(csvreader, pattern)
     if val is not None:
-        dt = parse(val)
-        return [
-            (
-                dt.replace(tzinfo=timezone.utc)
-                .isoformat(timespec="milliseconds")
-                .replace("+00:00", "Z")
-            )
-        ]
+        return [utilities.ensure_iso(val)]
     else:
         return None
 

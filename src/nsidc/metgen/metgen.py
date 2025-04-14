@@ -694,7 +694,9 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     # }
     metadata_details = {}
     for data_file in granule.data_filenames:
-        metadata_details[data_file] = granule.data_reader(data_file, configuration)
+        metadata_details[data_file] = granule.data_reader(
+            data_file, granule.premet_filename, configuration
+        )
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)
@@ -715,6 +717,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
 
 
 def temporal_from_premet(premet_filename):
+    """Read time range from a premet file"""
     return True
 
 

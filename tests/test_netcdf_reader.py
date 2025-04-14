@@ -49,52 +49,8 @@ def test_no_other_duplicate_values(big_xdata, big_ydata):
     assert len(result_set) == len(result) - 1
 
 
-@pytest.mark.parametrize(
-    "input,expected",
-    [
-        pytest.param("2001-01-01", "2001-01-01T00:00:00.000Z", id="Date and no time"),
-        pytest.param(
-            "2001-01-01 18:59:59", "2001-01-01T18:59:59.000Z", id="Date with time"
-        ),
-        pytest.param(
-            "2001-01-01 18:59.5",
-            "2001-01-01T18:59:30.000Z",
-            id="Datetime and fractional minutes",
-        ),
-        pytest.param(
-            "2001-01-01 18:59.500",
-            "2001-01-01T18:59:30.000Z",
-            id="Datetime and zero padded fractional minutes",
-        ),
-        pytest.param(
-            "2001-01-01 18:59.34",
-            "2001-01-01T18:59:20.000Z",
-            id="Datetime and other fractional minutes value",
-        ),
-        pytest.param(
-            "2001-01-01 18:59.999",
-            "2001-01-01T18:59:59.000Z",
-            id="Datetime and other fractional minutes value",
-        ),
-        pytest.param(
-            "2001-01-01 18:59:20.666",
-            "2001-01-01T18:59:20.666Z",
-            id="Datetime and fractional seconds",
-        ),
-        pytest.param(
-            "2001-01-01 18:59",
-            "2001-01-01T18:59:00.000Z",
-            id="Datetime and hours/minutes",
-        ),
-    ],
-)
-def test_correctly_reads_date_time_strings(input, expected):
-    result = netcdf_reader.ensure_iso(input)
-    assert result == expected
-
-
 def test_shows_bad_filename():
     with patch("xarray.open_dataset", side_effect=Exception("oops")):
         with pytest.raises(Exception) as exc_info:
-            netcdf_reader.extract_metadata("fake.nc", {})
+            netcdf_reader.extract_metadata("fake.nc", None, {})
         assert re.search("Could not open netCDF file fake.nc", exc_info.value.args[0])
