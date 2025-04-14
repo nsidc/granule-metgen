@@ -1,4 +1,3 @@
-import os.path
 from datetime import timedelta, timezone
 
 import pandas as pd
@@ -18,9 +17,6 @@ def extract_metadata(csv_path: str, configuration: Config) -> dict:
 
 
 def data_datetime(df, _):
-    if granule.premet_filename:
-        return temporal_from_premet(granule.premet_filename)
-
     def formatted(date, dt):
         return (
             (date.replace(tzinfo=timezone.utc) + timedelta(seconds=dt))

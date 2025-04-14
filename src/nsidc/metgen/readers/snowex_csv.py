@@ -1,5 +1,4 @@
 import csv
-import os.path
 import re
 from datetime import timezone
 

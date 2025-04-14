@@ -540,7 +540,10 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
 
 def premet_files(configuration: config.Config) -> list[Path]:
     if configuration.premet_dir:
-        return [p for p in Path(configuration.premet_dir).glob(f"*.{constants.PREMET_SUFFIX}")]
+        return [
+            p
+            for p in Path(configuration.premet_dir).glob(f"*.{constants.PREMET_SUFFIX}")
+        ]
 
     return []
 
@@ -651,10 +654,13 @@ def prepare_granule(_: config.Config, granule: Granule) -> Granule:
     )
 
 
+def derived_ummg_filename(ummg_path: Path, granule_id: str) -> Path:
+    return ummg_path.joinpath(granule_id, ".json")
+
+
 def find_existing_ummg(configuration: config.Config, granule: Granule) -> Granule:
-    # this logic is in create_ummg as well -- remove duplication
-    ummg_filename = configuration.ummg_path().joinpath(
-        granule.producer_granule_id + ".json"
+    ummg_filename = derived_ummg_filename(
+        configuration.ummg_path(), granule.producer_granule_id
     )
 
     if ummg_filename.exists():
@@ -671,8 +677,8 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     if granule.ummg_filename != Maybe.empty and not configuration.overwrite_ummg:
         return granule
 
-    ummg_file_path = configuration.ummg_path().joinpath(
-        granule.producer_granule_id + ".json"
+    ummg_file_path = derived_ummg_filename(
+        configuration.ummg_path(), granule.producer_granule_id
     )
 
     # Populated metadata_details dict looks like:
@@ -875,6 +881,7 @@ def s3_object_path(granule, filename):
         }
     )
     return prefix + filename
+
 
 # size is a sum of all associated data file sizes.
 # all other attributes use the values from the first data file entry.

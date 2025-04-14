@@ -36,7 +36,7 @@ SETTINGS_SECTION_NAME = "Settings"
 # File name defaults
 PREMET_SUFFIX = ".premet"
 CSV_SUFFIX = ".csv"
-NETCDF_SUFFIX = '.nc'
+NETCDF_SUFFIX = ".nc"
 
 # Spatial coverage
 DEFAULT_SPATIAL_AXIS_SIZE = 6
