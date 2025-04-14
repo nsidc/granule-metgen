@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from nsidc.metgen import netcdf_reader
+from nsidc.metgen import constants, netcdf_reader
 from nsidc.metgen.config import Config
 from nsidc.metgen.readers import csv, snowex_csv
 
@@ -17,8 +17,8 @@ def lookup(auth_id: str, extension: str) -> Callable[[str, Config], dict]:
             return function
 
     readers = {
-        ".nc": netcdf_reader.extract_metadata,
-        ".csv": csv.extract_metadata,
+        constants.NETCDF_SUFFIX: netcdf_reader.extract_metadata,
+        constants.CSV_SUFFIX: csv.extract_metadata,
     }
 
     return readers[extension]
