@@ -716,11 +716,6 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     return dataclasses.replace(granule, ummg_filename=ummg_file_path)
 
 
-def temporal_from_premet(premet_filename):
-    """Read time range from a premet file"""
-    return True
-
-
 def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     """
     Stage a set of files for the Granule in S3.
