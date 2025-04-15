@@ -542,7 +542,7 @@ def premet_files(configuration: config.Config) -> list[Path]:
     if configuration.premet_dir:
         return [
             p
-            for p in Path(configuration.premet_dir).glob(f"*.{constants.PREMET_SUFFIX}")
+            for p in Path(configuration.premet_dir).glob(f"*{constants.PREMET_SUFFIX}")
         ]
 
     return []
@@ -655,7 +655,7 @@ def prepare_granule(_: config.Config, granule: Granule) -> Granule:
 
 
 def derived_ummg_filename(ummg_path: Path, granule_id: str) -> Path:
-    return ummg_path.joinpath(granule_id, ".json")
+    return ummg_path.joinpath(granule_id + ".json")
 
 
 def find_existing_ummg(configuration: config.Config, granule: Granule) -> Granule:
