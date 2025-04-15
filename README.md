@@ -191,8 +191,8 @@ data files.
 | Attribute in use (location)   | ACDD | CF Conventions | NSIDC Guidelines | Note    |
 | ----------------------------- | ---- | -------------- | ---------------- | ------- |
 | date_modified (global)        | S    |                | R                | 1, OC   |
-| time_coverage_start (global)  | R    |                | R                | 2, OC   |
-| time_coverage_end (global)    | R    |                | R                | 2, OC   |
+| time_coverage_start (global)  | R    |                | R                | 2, OC, P   |
+| time_coverage_end (global)    | R    |                | R                | 2, OC, P   |
 | grid_mapping_name (variable)  |      | RequiredC      | R+               | 3       |
 | crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 4       |
 | GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 5, OC   |
@@ -200,7 +200,8 @@ data files.
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
 
 Notes:
-OC = Attributes (or elements of them) that can be represented in the `ini` file.
+OC = Attributes (or elements of them) that may be represented in the `ini` file.
+P = Attributes that may be specified in a `premet` file; a `premet_dir` directory must be defined in the `ini` file.
 See [Optional Configuration Elements](#optional-configuration-elements)
 
 1. Used to populate the production date and time values in UMM-G output.
@@ -292,8 +293,24 @@ single granule (or browse file(s) associated with a granule).
 
 | `ini` section | `ini` element | Note |
 | ------------- | ------------- | ---- |
-| Collection    | browse_regex  | The file name pattern identifying a browse file. Defaults to `_brws`|
-| Collection    | granule_regex | The file name pattern identifying related files. Must capture all text comprising the granule name in UMM-G and CNM output, and must provide a match using the named group `(?P<granuleid>)`. |
+| Collection    | browse_regex  | 1    |
+| Collection    | granule_regex | 2    |
+
+1. The file name pattern identifying a browse file. Defaults to `_brws`. Included in the
+ `metgenc init` prompts.
+2. The file name pattern identifying related files. Must  capture all text
+ comprising the granule name in UMM-G and CNM output, and must provide a match
+ using the named group `(?P<granuleid>)`. This value must be added manually; it
+ is **not** included in the `metgenc init` prompts.
+
+Paths to the directories containing `premet` and `spatial` files are also 
+included in the `ini` file. The user will be prompted for these values when running
+`metgenc init`.
+
+| `ini` section | `ini` element |
+| ------------- | ------------- |
+| Collection    | premet_dir    |
+| Collection    | spatial_dir   |
 
 ##### Example `granule_regex` application
 
