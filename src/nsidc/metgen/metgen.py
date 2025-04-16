@@ -540,12 +540,21 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
 
 def premet_files(configuration: config.Config) -> list[Path]:
     if configuration.premet_dir:
-        return [
+        try:
+            Path(configuration.premet_dir).stat()
+        except Exception as e:
+            raise Exception(f"Could not read premet files: {e}.")
+
+        premets = [
             p
             for p in Path(configuration.premet_dir).glob(f"*{constants.PREMET_SUFFIX}")
         ]
+        if not premets:
+            raise Exception(f"Premet directory {configuration.premet} is empty.")
 
-    return []
+        return premets
+
+    return None
 
 
 def granule_keys(configuration: config.Config, file_list: list[Path]) -> set[str]:
@@ -595,7 +604,7 @@ def granule_tuple(
           otherwise the common name elements of all files related to a granule.
         - A set of one or more full paths to data file(s)
         - A set of zero or more full paths to associated browse file(s)
-        - Path to an associated premet file (may be None)
+        - Path to an associated premet file (may be None or empty string)
     """
     browse_file_paths = {
         str(file)
@@ -607,9 +616,16 @@ def granule_tuple(
         str(file) for file in file_list if re.search(granule_key, file.name)
     } - browse_file_paths
 
-    premet_file = first(
-        [str(file) for file in premet_list if re.search(granule_key, file.name)]
-    )
+    if premet_list is None:
+        premet_file = None
+    else:
+        premet_matches = [
+            str(file) for file in premet_list if re.search(granule_key, file.name)
+        ]
+        if not premet_matches:
+            premet_file = ""
+        else:
+            premet_file = first(premet_matches)
 
     return (
         derived_granule_name(granule_regex, data_file_paths),

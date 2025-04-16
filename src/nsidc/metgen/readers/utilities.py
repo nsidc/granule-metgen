@@ -4,6 +4,11 @@ from dateutil.parser import parse
 
 
 def temporal_from_premet(premet_path: str) -> list:
+    if premet_path == "":
+        raise Exception(
+            "premet_dir is specified but no premet file exists for granule."
+        )
+
     pdict = premet_values(premet_path)
     begin = " ".join([pdict["RangeBeginningDate"], pdict["RangeBeginningTime"]])
     end = " ".join([pdict["RangeEndingDate"], pdict["RangeEndingTime"]])
