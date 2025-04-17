@@ -540,17 +540,14 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
 
 def premet_files(configuration: config.Config) -> list[Path]:
     if configuration.premet_dir:
-        try:
-            Path(configuration.premet_dir).stat()
-        except Exception as e:
-            raise Exception(f"Could not read premet files: {e}.")
-
         premets = [
             p
             for p in Path(configuration.premet_dir).glob(f"*{constants.PREMET_SUFFIX}")
         ]
         if not premets:
-            raise Exception(f"Premet directory {configuration.premet} is empty.")
+            raise Exception(
+                f"Premet directory {configuration.premet} is empty or unreadable."
+            )
 
         return premets
 
