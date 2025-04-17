@@ -525,6 +525,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     """
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
     premet_file_list = premet_files(configuration)
+    spatial_file_list = spatial_files(configuration)
 
     return [
         granule_tuple(
@@ -533,6 +534,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
             configuration.browse_regex,
             file_list,
             premet_file_list,
+            spatial_file_list,
         )
         for granule_key in granule_keys(configuration, file_list)
     ]
@@ -546,10 +548,26 @@ def premet_files(configuration: config.Config) -> list[Path]:
         ]
         if not premets:
             raise Exception(
-                f"Premet directory {configuration.premet} is empty or unreadable."
+                f"Premet directory {configuration.premet_dir} is empty or unreadable."
             )
 
         return premets
+
+    return None
+
+
+def spatial_files(configuration: config.Config) -> list[Path]:
+    if configuration.spatial_dir:
+        spatials = [
+            p
+            for p in Path(configuration.spatial_dir).glob(f"*{constants.SPATIAL_SUFFIX}")
+        ]
+        if not spatials:
+            raise Exception(
+                f"Spatial directory {configuration.spatial_dir} is empty or unreadable."
+            )
+
+        return spatials
 
     return None
 
