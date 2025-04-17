@@ -546,7 +546,7 @@ def premet_files(configuration: config.Config) -> list[Path]:
         ]
         if not premets:
             raise Exception(
-                f"Premet directory {configuration.premet} is empty or unreadable."
+                f"Premet directory {configuration.premet_dir} is empty or unreadable."
             )
 
         return premets
