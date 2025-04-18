@@ -1,8 +1,8 @@
 from collections.abc import Callable
 
-from nsidc.metgen import constants, netcdf_reader
+from nsidc.metgen import constants
 from nsidc.metgen.config import Config
-from nsidc.metgen.readers import csv, snowex_csv
+from nsidc.metgen.readers import csv, netcdf_reader, snowex_csv
 
 
 def lookup(auth_id: str, extension: str) -> Callable[[str, Config], dict]:

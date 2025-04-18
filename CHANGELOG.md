@@ -3,7 +3,9 @@
 * Add support for reading IRWIS2 CSV files (Issue-154)
 * Store `GranuleSpatialRepresentation` value from CMR collection metadata in the
   `Collection` object.
-* Add option to read temporal extents from premet files. (Issue-160)
+* Read temporal extents from `premet` files if they exist. (Issue-160)
+* Read spatial information from `spatial` files if they exist. (Issue-161)
+* Note successful collection metadata harvest details in the log, not to `stdout`.
 
 ## v1.4.0rc7
 
