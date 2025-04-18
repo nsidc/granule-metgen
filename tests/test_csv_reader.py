@@ -5,11 +5,11 @@ from nsidc.metgen import config
 from nsidc.metgen.readers import csv as csv_reader
 from nsidc.metgen.readers import snowex_csv as snowex_csv_reader
 
-# Unit tests for the 'snowex_csv' module functions.
+# Unit tests for the 'csv' and 'snowex_csv' module functions.
 #
-# The test boundary is the snowex_csv module's interface with the filesystem
-# so in addition to testing the snowex_csv module's behavior, the tests
-# should mock those module's functions and assert that snowex_csv functions
+# The test boundary is the csv module's interface with the filesystem
+# so in addition to testing the csv module's behavior, the tests
+# should mock those module's functions and assert that csv functions
 # call them with the correct parameters, correctly handle their return values,
 # and handle any exceptions they may throw.
 
@@ -80,7 +80,7 @@ def test_config():
 
 @pytest.mark.parametrize("snowex_csv", ["6", "6W", "6N", "6ABC"], indirect=True)
 def test_extract_snex_metadata(test_config, snowex_csv):
-    metadata = snowex_csv_reader.extract_metadata(snowex_csv, test_config)
+    metadata = snowex_csv_reader.extract_metadata(snowex_csv, None, test_config)
     assert metadata["size_in_bytes"] == os.path.getsize(snowex_csv)
     assert metadata["production_date_time"] == test_config.date_modified
     assert metadata["temporal"] == ["2023-03-06T11:00:00.000Z"]
@@ -90,7 +90,7 @@ def test_extract_snex_metadata(test_config, snowex_csv):
 
 
 def test_extract_generic_metadata(test_config, generic_csv_content, generic_csv):
-    metadata = csv_reader.extract_metadata(generic_csv, test_config)
+    metadata = csv_reader.extract_metadata(generic_csv, None, test_config)
     assert metadata["size_in_bytes"] == len(generic_csv_content)
     assert metadata["production_date_time"] == test_config.date_modified
     assert metadata["temporal"] == [

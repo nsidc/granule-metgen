@@ -5,20 +5,24 @@ import pandas as pd
 from funcy import lpluck
 
 from nsidc.metgen.config import Config
+from nsidc.metgen.readers import utilities
 
 
-def extract_metadata(csv_path: str, configuration: Config) -> dict:
+def extract_metadata(csv_path: str, premet_path: str, configuration: Config) -> dict:
     df = pd.read_csv(csv_path)
 
     return {
         "size_in_bytes": os.path.getsize(csv_path),
         "production_date_time": configuration.date_modified,
-        "temporal": data_datetime(df, configuration),
+        "temporal": data_datetime(df, premet_path),
         "geometry": {"points": bbox(spatial_values(df, configuration))},
     }
 
 
-def data_datetime(df, _):
+def data_datetime(df, premet_path) -> list:
+    if premet_path is not None:
+        return utilities.temporal_from_premet(premet_path)
+
     def formatted(date, dt):
         return (
             (date.replace(tzinfo=timezone.utc) + timedelta(seconds=dt))
@@ -35,7 +39,7 @@ def data_datetime(df, _):
             formatted(data_dates.iat[-1], data_times.iat[-1]),
         ]
     else:
-        return ["", ""]
+        return None
 
 
 def bbox(points):

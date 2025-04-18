@@ -6,7 +6,6 @@ from source science data files.
 import logging
 import os.path
 import re
-from datetime import timezone
 
 import xarray as xr
 from dateutil.parser import parse
@@ -16,9 +15,10 @@ from shapely import LineString
 
 from nsidc.metgen import constants
 from nsidc.metgen.config import Config
+from nsidc.metgen.readers import utilities
 
 
-def extract_metadata(netcdf_path: str, configuration: Config) -> dict:
+def extract_metadata(netcdf_path: str, premet_path: str, configuration: Config) -> dict:
     """
     Read the content at netcdf_path and return a structure with temporal coverage
     information, spatial coverage information, file size, and production datetime.
@@ -27,13 +27,15 @@ def extract_metadata(netcdf_path: str, configuration: Config) -> dict:
     # TODO: handle errors if any needed attributes don't exist.
     try:
         # TODO: We are telling xarray not to decode times here in order to get around
-        #       what appears to be a bug. Without this (defaults to True), xarrray is
-        #       unable to open the file and throws an exception, indicating it is
-        #       unable to apply the scale and offset to the time. If this bug is fixed
-        #       in xarray, remove the decode_times parameter so that xarray will
-        #       correctly apply the scale and offset. Although we don't need this at the
-        #       moment, it seems the safer option for our future selves & other devs.
-        #       NOTE: We know this occurs with the NSIDC-0630 v2 collection, and it may
+        #       what appears to be a bug affecting some datasets. Without this
+        #       (defaults to True), xarrray is unable to open impacted files and
+        #       throws an exception, indicating it is unable to apply the scale
+        #       and offset to the time. If this bug is fixed in xarray, remove
+        #       the decode_times parameter so that xarray will correctly apply
+        #       the scale and offset in those cases. Although we don't need
+        #       decoded time values at the moment, it seems the safer option for
+        #       our future selves & other devs.
+        # NOTE: We know this occurs with the NSIDC-0630 v2 collection, and it may
         #       occur on others.
         netcdf = xr.open_dataset(netcdf_path, decode_coords="all", decode_times=False)
     except Exception:
@@ -42,13 +44,18 @@ def extract_metadata(netcdf_path: str, configuration: Config) -> dict:
     return {
         "size_in_bytes": os.path.getsize(netcdf_path),
         "production_date_time": date_modified(netcdf, configuration),
-        "temporal": time_range(os.path.basename(netcdf_path), netcdf, configuration),
+        "temporal": time_range(
+            os.path.basename(netcdf_path), netcdf, premet_path, configuration
+        ),
         "geometry": {"points": spatial_values(netcdf, configuration)},
     }
 
 
-def time_range(netcdf_filename, netcdf, configuration):
+def time_range(netcdf_filename, netcdf, premet_path, configuration):
     """Return an array of datetime strings"""
+    if premet_path is not None:
+        return utilities.temporal_from_premet(premet_path)
+
     coverage_start = time_coverage_start(netcdf_filename, netcdf, configuration)
     coverage_end = time_coverage_end(netcdf, configuration, coverage_start)
 
@@ -71,7 +78,7 @@ def time_coverage_start(netcdf_filename, netcdf, configuration):
         coverage_start = m.group("time_coverage_start")
 
     if coverage_start is not None:
-        return ensure_iso(coverage_start)
+        return utilities.ensure_iso(coverage_start)
     else:
         log_and_raise_error(
             "NetCDF file does not have `time_coverage_start` global attribute. \
@@ -88,13 +95,13 @@ def time_coverage_end(netcdf, configuration, time_coverage_start):
     using a value from the ini file.
     """
     if "time_coverage_end" in netcdf.attrs:
-        return ensure_iso(netcdf.attrs["time_coverage_end"])
+        return utilities.ensure_iso(netcdf.attrs["time_coverage_end"])
 
     if configuration.time_coverage_duration and time_coverage_start:
         try:
             duration = parse_duration(configuration.time_coverage_duration)
             coverage_end = parse(time_coverage_start) + duration
-            return ensure_iso(coverage_end.isoformat())
+            return utilities.ensure_iso(coverage_end.isoformat())
         except Exception:
             log_and_raise_error(
                 "NetCDF file does not have `time_coverage_end` global attribute. \
@@ -255,7 +262,7 @@ def date_modified(netcdf, configuration):
         datetime_str = configuration.date_modified
 
     if datetime_str:
-        return ensure_iso(datetime_str)
+        return utilities.ensure_iso(datetime_str)
     else:
         log_and_raise_error(
             "NetCDF file does not have `date_modified` global attribute. \
@@ -268,15 +275,3 @@ def log_and_raise_error(err):
     logger.error(err)
 
     raise Exception(err)
-
-
-def ensure_iso(datetime_str):
-    """
-    Parse ISO-standard datetime strings without a timezone identifier.
-    """
-    iso_obj = parse(datetime_str)
-    return (
-        iso_obj.replace(tzinfo=timezone.utc)
-        .isoformat(timespec="milliseconds")
-        .replace("+00:00", "Z")
-    )
