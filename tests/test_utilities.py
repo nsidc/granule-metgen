@@ -3,7 +3,7 @@ from nsidc.metgen.readers import utilities
 
 # Unit tests for the 'utilities' module functions.
 #
-# The test boundary is the netcdf_reader module's interface with the filesystem
+# The test boundary is the utilities module's interface with the filesystem
 # so in addition to testing the netcdf_reader module's behavior, the tests
 # should mock those module's functions and assert that netcdf_reader functions
 # call them with the correct parameters, correctly handle their return values,
