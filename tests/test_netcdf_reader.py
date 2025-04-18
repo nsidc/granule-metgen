@@ -2,7 +2,7 @@ import re
 from unittest.mock import patch
 
 import pytest
-from nsidc.metgen import constants, netcdf_reader
+from nsidc.metgen import constants
 from nsidc.metgen.readers import netcdf_reader
 
 # Unit tests for the 'netcdf_reader' module functions.

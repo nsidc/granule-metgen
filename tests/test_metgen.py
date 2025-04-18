@@ -148,32 +148,36 @@ def test_granule_name_from_regex(regex):
 
 
 @pytest.mark.parametrize(
-    "granuleid,data_files,browse_files,premet_files,expected",
+    "granuleid,data_files,browse_files,premet_files,spatial_files,expected",
     [
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             [],
             [],
-            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), ""),
+            [],
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), "", ""),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_browse_bbb.png"],
             [],
-            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), ""),
+            [],
+            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), "", ""),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_browse_bbb.png"],
             ["aaa_gid1_bbb.nc.premet"],
+            [],
             (
                 "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 set(),
                 "aaa_gid1_bbb.nc.premet",
+                "",
             ),
         ),
         (
@@ -181,18 +185,27 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_bbb_browse.png"],
             [],
-            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, {"aaa_gid1_bbb_browse.png"}, ""),
+            [],
+            (
+                "aaa_gid1_bbb.nc",
+                {"aaa_gid1_bbb.nc"},
+                {"aaa_gid1_bbb_browse.png"},
+                "",
+                "",
+            ),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_bbb_browse.png"],
             ["aaa_gid1_bbb.nc.premet"],
+            [],
             (
                 "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 {"aaa_gid1_bbb_browse.png"},
                 "aaa_gid1_bbb.nc.premet",
+                "",
             ),
         ),
         (
@@ -200,17 +213,26 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_bbb_browse.png"],
             ["ccc_gid1_ddd.nc.premet"],
-            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, {"aaa_gid1_bbb_browse.png"}, ""),
+            [],
+            (
+                "aaa_gid1_bbb.nc",
+                {"aaa_gid1_bbb.nc"},
+                {"aaa_gid1_bbb_browse.png"},
+                "",
+                "",
+            ),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
             ["aaa_gid1_bbb_browse.png"],
             [],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
+                "",
                 "",
             ),
         ),
@@ -219,11 +241,13 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
             ["aaa_gid1_bbb_browse.png"],
             ["aaa_gid1_bbb.premet"],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
                 "aaa_gid1_bbb.premet",
+                "",
             ),
         ),
         (
@@ -231,17 +255,19 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
             ["aaa_gid1_bbb_browse.png", "aaa_gid1_browse_bbb.tif"],
             [],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
+                "",
                 "",
             ),
         ),
     ],
 )
 def test_granule_tuple_from_filenames(
-    granuleid, data_files, browse_files, premet_files, expected
+    granuleid, data_files, browse_files, premet_files, spatial_files, expected
 ):
     granule = metgen.granule_tuple(
         granuleid,
@@ -249,30 +275,34 @@ def test_granule_tuple_from_filenames(
         "browse",
         [Path(p) for p in data_files + browse_files],
         [Path(p) for p in premet_files],
+        [Path(p) for p in spatial_files],
     )
     assert granule == expected
 
 
 @pytest.mark.parametrize(
-    "granuleid,data_files,browse_files,premet_files,expected",
+    "granuleid,data_files,browse_files,premet_files,spatial_files,expected",
     [
         (
             "gid1",
             ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
             [],
             [],
-            ("aaa_gid1_bbb", {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"}, set(), ""),
+            [],
+            ("aaa_gid1_bbb", {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"}, set(), "", ""),
         ),
         (
             "gid1",
             ["aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"],
             ["aaa_gid1_browse_bbb.png"],
             ["aaa_gid1_bbb.premet"],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_browse_bbb.png"},
                 "aaa_gid1_bbb.premet",
+                "",
             ),
         ),
         (
@@ -280,11 +310,13 @@ def test_granule_tuple_from_filenames(
             ["aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"],
             ["aaa_gid1_browse_bbb.png"],
             ["aaa_gid1_xx_bbb.premet"],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_browse_bbb.png"},
                 "aaa_gid1_xx_bbb.premet",
+                "",
             ),
         ),
         (
@@ -292,17 +324,19 @@ def test_granule_tuple_from_filenames(
             ["aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"],
             ["aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"],
             [],
+            [],
             (
                 "aaa_gid1_bbb",
                 {"aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"},
                 {"aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"},
+                "",
                 "",
             ),
         ),
     ],
 )
 def test_granule_tuple_from_regex(
-    granuleid, data_files, browse_files, premet_files, expected, regex
+    granuleid, data_files, browse_files, premet_files, spatial_files, expected, regex
 ):
     granule = metgen.granule_tuple(
         granuleid,
@@ -310,12 +344,9 @@ def test_granule_tuple_from_regex(
         "browse",
         [Path(p) for p in data_files + browse_files],
         [Path(p) for p in premet_files],
+        [Path(p) for p in spatial_files],
     )
     assert granule == expected
-
-
-def test_with_no_premet_dir(test_config):
-    assert metgen.premet_files(test_config) is None
 
 
 @patch("nsidc.metgen.metgen.s3_object_path", return_value="/some/path")

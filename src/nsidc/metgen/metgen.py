@@ -24,7 +24,16 @@ from typing import Optional
 import earthaccess
 import jsonschema
 from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
-from funcy import all, concat, filter, first, notnone, partial, rcompose, take
+from funcy import (
+    all,
+    concat,
+    filter,
+    first,
+    notnone,
+    partial,
+    rcompose,
+    take,
+)
 from jsonschema.exceptions import ValidationError
 from pyfiglet import Figlet
 from returns.maybe import Maybe
@@ -444,19 +453,19 @@ def validate_cmr_response(umm: list):
     return umm[0]["umm"]
 
 
-def ummc_content(umm: dict, key: str):
+def ummc_content(ummc: dict, key: str) -> str:
     """
     Look for a key in a UMM-C record (or a piece of the record), and log the status.
     """
     val = None
     logger = logging.getLogger(constants.ROOT_LOGGER)
 
-    if umm is None:
+    if ummc is None:
         return val
 
     try:
-        val = umm[key]
-        logger.info(f"{key} information in umm-c response from CMR: {val}")
+        val = ummc[key]
+        logger.debug(f"{key} information in umm-c response from CMR: {val}")
     except KeyError:
         logger.info(f"No {key} information in umm-c response from CMR.")
 
@@ -524,8 +533,12 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     Identify file(s) related to each granule.
     """
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
-    premet_file_list = premet_files(configuration)
-    spatial_file_list = spatial_files(configuration)
+    premet_file_list = ancillary_files(
+        configuration.premet_dir, constants.PREMET_SUFFIX
+    )
+    spatial_file_list = ancillary_files(
+        configuration.spatial_dir, constants.SPATIAL_SUFFIX
+    )
 
     return [
         granule_tuple(
@@ -540,34 +553,13 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     ]
 
 
-def premet_files(configuration: config.Config) -> list[Path]:
-    if configuration.premet_dir:
-        premets = [
-            p
-            for p in Path(configuration.premet_dir).glob(f"*{constants.PREMET_SUFFIX}")
-        ]
-        if not premets:
-            raise Exception(
-                f"Premet directory {configuration.premet_dir} is empty or unreadable."
-            )
+def ancillary_files(dir, suffix):
+    if dir:
+        files = [p for p in Path(dir).glob(f"*{suffix}")]
+        if not files:
+            raise Exception(f"Directory {dir} is empty or unreadable.")
 
-        return premets
-
-    return None
-
-
-def spatial_files(configuration: config.Config) -> list[Path]:
-    if configuration.spatial_dir:
-        spatials = [
-            p
-            for p in Path(configuration.spatial_dir).glob(f"*{constants.SPATIAL_SUFFIX}")
-        ]
-        if not spatials:
-            raise Exception(
-                f"Spatial directory {configuration.spatial_dir} is empty or unreadable."
-            )
-
-        return spatials
+        return files
 
     return None
 
@@ -609,9 +601,10 @@ def granule_tuple(
     browse_regex: str,
     file_list: list,
     premet_list: list,
+    spatial_list: list,
 ) -> tuple:
     """
-    Important! granule_regex argument must include a captured match group
+    Important! granule_regex argument must include a captured match group.
 
     Return a tuple representing a granule:
         - A string used as the "identifier" (in UMMG output) and "name" (in CNM output).
@@ -631,23 +624,28 @@ def granule_tuple(
         str(file) for file in file_list if re.search(granule_key, file.name)
     } - browse_file_paths
 
-    if premet_list is None:
-        premet_file = None
-    else:
-        premet_matches = [
-            str(file) for file in premet_list if re.search(granule_key, file.name)
-        ]
-        if not premet_matches:
-            premet_file = ""
-        else:
-            premet_file = first(premet_matches)
-
     return (
         derived_granule_name(granule_regex, data_file_paths),
         data_file_paths,
         browse_file_paths,
-        premet_file,
+        matched_ancillary_file(granule_key, premet_list),
+        matched_ancillary_file(granule_key, spatial_list),
     )
+
+
+def matched_ancillary_file(granule_key, file_list):
+    if file_list is None:
+        file_match = None
+    else:
+        file_matches = [
+            str(file) for file in file_list if re.search(granule_key, file.name)
+        ]
+        if not file_matches:
+            file_match = ""
+        else:
+            file_match = first(file_matches)
+
+    return file_match
 
 
 def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
