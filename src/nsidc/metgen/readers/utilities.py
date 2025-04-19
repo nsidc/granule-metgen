@@ -1,6 +1,8 @@
+import re
 from datetime import timezone
 
 from dateutil.parser import parse
+from funcy import keep
 
 
 def temporal_from_premet(premet_path: str) -> list:
@@ -9,17 +11,51 @@ def temporal_from_premet(premet_path: str) -> list:
             "premet_dir is specified but no premet file exists for granule."
         )
 
+    begin_date_keys = ["RangeBeginningDate", "Begin_date"]
+    begin_time_keys = ["RangeBeginningTime", "Begin_time"]
+    end_date_keys = [
+        "RangeEndingDate",
+        "End_date",
+    ]
+    end_time_keys = ["RangeEndingTime", "End_time"]
+
     pdict = premet_values(premet_path)
-    begin = " ".join([pdict["RangeBeginningDate"], pdict["RangeBeginningTime"]])
-    end = " ".join([pdict["RangeEndingDate"], pdict["RangeEndingTime"]])
-    return [ensure_iso(begin), ensure_iso(end)]
+    begin = list(
+        keep(
+            [
+                find_key_aliases(begin_date_keys, pdict),
+                find_key_aliases(begin_time_keys, pdict),
+            ]
+        )
+    )
+    end = list(
+        keep(
+            [
+                find_key_aliases(end_date_keys, pdict),
+                find_key_aliases(end_time_keys, pdict),
+            ]
+        )
+    )
+
+    return [ensure_iso(td) for td in list(keep([" ".join(begin), " ".join(end)]))]
+
+
+def find_key_aliases(aliases: list, datetime_parts: dict) -> str:
+    val = None
+
+    for key in aliases:
+        if key in datetime_parts:
+            val = datetime_parts[key]
+            break
+
+    return val
 
 
 def premet_values(premet_path: str) -> dict:
     pdict = {}
     with open(premet_path) as premet_file:
         for line in premet_file:
-            key, val = line.strip().split("=")
+            key, val = re.sub(r"\s+", "", line).split("=")
             pdict[key] = val
 
     return pdict
