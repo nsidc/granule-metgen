@@ -18,7 +18,7 @@ from nsidc.metgen.config import Config
 from nsidc.metgen.readers import utilities
 
 
-def extract_metadata(netcdf_path: str, premet_path: str, configuration: Config) -> dict:
+def extract_metadata(netcdf_path: str, premet_path: str, spatial_path: str, configuration: Config) -> dict:
     """
     Read the content at netcdf_path and return a structure with temporal coverage
     information, spatial coverage information, file size, and production datetime.
@@ -47,7 +47,7 @@ def extract_metadata(netcdf_path: str, premet_path: str, configuration: Config) 
         "temporal": time_range(
             os.path.basename(netcdf_path), netcdf, premet_path, configuration
         ),
-        "geometry": {"points": spatial_values(netcdf, configuration)},
+        "geometry": {"points": spatial_values(netcdf, spatial_path, configuration)},
     }
 
 
@@ -109,7 +109,7 @@ Set `time_coverage_duration` in the configuration file."
             )
 
 
-def spatial_values(netcdf, configuration):
+def spatial_values(netcdf, spatial_path, configuration):
     """
     Return an array of dicts, each dict representing one lat/lon pair like so:
 

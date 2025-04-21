@@ -243,11 +243,12 @@ class Granule:
     data_filenames: set[str] = dataclasses.field(default_factory=set)
     browse_filenames: set[str] = dataclasses.field(default_factory=set)
     premet_filename: Maybe[str] = Maybe.empty
+    spatial_filename: Maybe[str] = Maybe.empty
     ummg_filename: Maybe[str] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
     cnm_message: Maybe[str] = Maybe.empty
-    data_reader: Callable[[str, config.Config], dict] = lambda auth_id, cfg: dict()
+    data_reader: Callable[[str, str, str, config.Config], dict] = lambda auth_id, cfg: dict()
 
 
 @dataclasses.dataclass
@@ -325,7 +326,7 @@ def process(configuration: config.Config) -> None:
 
 def data_reader(
     auth_id: str, data_files: set[str]
-) -> Callable[[str, config.Config], dict]:
+) -> Callable[[str, str, str, config.Config], dict]:
     """
     Determine which file reader to use for the given data files. This currently
     is limited to handling one data file type (and one reader) per collection.
@@ -724,7 +725,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     metadata_details = {}
     for data_file in granule.data_filenames:
         metadata_details[data_file] = granule.data_reader(
-            data_file, granule.premet_filename, configuration
+            data_file, granule.premet_filename, granule.spatial_filename, configuration
         )
 
     # Collapse information about (possibly) multiple files into a granule summary.
