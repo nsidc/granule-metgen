@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from nsidc.metgen.readers import utilities
 
@@ -52,3 +54,42 @@ from nsidc.metgen.readers import utilities
 def test_correctly_reads_date_time_strings(input, expected):
     result = utilities.ensure_iso(input)
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        (
+            {
+                "RangeBeginningDate": "2020-01-01",
+                "RangeBeginningTime": "00:00:00",
+                "RangeEndingDate": "2020-12-31",
+                "RangeEndingTime": "23:59:59",
+            },
+            ["2020-01-01T00:00:00.000Z", "2020-12-31T23:59:59.000Z"],
+        ),
+        (
+            {
+                "RangeBeginningDate": "2020-01-01",
+                "RangeBeginningTime": "00:00:00",
+            },
+            ["2020-01-01T00:00:00.000Z"],
+        ),
+        (
+            {"Begin_date": "2000-01-01", "End_date": "2000-12-31"},
+            ["2000-01-01T00:00:00.000Z", "2000-12-31T00:00:00.000Z"],
+        ),
+        (
+            {"Begin_date": "2000-01-01", "Begin_time": "01:00:30"},
+            ["2000-01-01T01:00:30.000Z"],
+        ),
+        (
+            {"Begin_date": "2000-01-01"},
+            ["2000-01-01T00:00:00.000Z"],
+        ),
+    ],
+)
+def test_datetime_from_premet(input, expected):
+    with patch("nsidc.metgen.readers.utilities.premet_values", return_value=input):
+        vals = utilities.temporal_from_premet("fake_premet_path")
+        assert vals == expected
