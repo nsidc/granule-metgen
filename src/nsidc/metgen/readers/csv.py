@@ -8,7 +8,9 @@ from nsidc.metgen.config import Config
 from nsidc.metgen.readers import utilities
 
 
-def extract_metadata(csv_path: str, premet_path: str, spatial_path: str, configuration: Config) -> dict:
+def extract_metadata(
+    csv_path: str, premet_path: str, spatial_path: str, configuration: Config
+) -> dict:
     df = pd.read_csv(csv_path)
 
     return {
@@ -61,6 +63,10 @@ def bbox(points):
 
 
 def spatial_values(df, spatial_path, _):
+    """Get spatial coverage from spatial file if it exists, otherwise parse from CSV"""
+    if spatial_path is not None:
+        return utilities.points_from_spatial(spatial_path)
+
     return [
         {"Longitude": lon, "Latitude": lat} for (lon, lat) in zip(df["LON"], df["LAT"])
     ]

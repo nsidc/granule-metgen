@@ -52,7 +52,7 @@ from nsidc.metgen.readers import utilities
     ],
 )
 def test_correctly_reads_date_time_strings(input, expected):
-    result = utilities.ensure_iso(input)
+    result = utilities.ensure_iso_datetime(input)
     assert result == expected
 
 

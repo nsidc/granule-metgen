@@ -18,7 +18,9 @@ from nsidc.metgen.config import Config
 from nsidc.metgen.readers import utilities
 
 
-def extract_metadata(netcdf_path: str, premet_path: str, spatial_path: str, configuration: Config) -> dict:
+def extract_metadata(
+    netcdf_path: str, premet_path: str, spatial_path: str, configuration: Config
+) -> dict:
     """
     Read the content at netcdf_path and return a structure with temporal coverage
     information, spatial coverage information, file size, and production datetime.
@@ -78,7 +80,7 @@ def time_coverage_start(netcdf_filename, netcdf, configuration):
         coverage_start = m.group("time_coverage_start")
 
     if coverage_start is not None:
-        return utilities.ensure_iso(coverage_start)
+        return utilities.ensure_iso_datetime(coverage_start)
     else:
         log_and_raise_error(
             "NetCDF file does not have `time_coverage_start` global attribute. \
@@ -95,13 +97,13 @@ def time_coverage_end(netcdf, configuration, time_coverage_start):
     using a value from the ini file.
     """
     if "time_coverage_end" in netcdf.attrs:
-        return utilities.ensure_iso(netcdf.attrs["time_coverage_end"])
+        return utilities.ensure_iso_datetime(netcdf.attrs["time_coverage_end"])
 
     if configuration.time_coverage_duration and time_coverage_start:
         try:
             duration = parse_duration(configuration.time_coverage_duration)
             coverage_end = parse(time_coverage_start) + duration
-            return utilities.ensure_iso(coverage_end.isoformat())
+            return utilities.ensure_iso_datetime(coverage_end.isoformat())
         except Exception:
             log_and_raise_error(
                 "NetCDF file does not have `time_coverage_end` global attribute. \
@@ -120,6 +122,10 @@ def spatial_values(netcdf, spatial_path, configuration):
     Eventually this should be pulled out of the netCDF-specific code into a
     general-use module.
     """
+
+    # Get spatial coverage from spatial file if it exists
+    if spatial_path is not None:
+        return utilities.points_from_spatial(spatial_path)
 
     grid_mapping_name = find_grid_mapping(netcdf)
     xformer = crs_transformer(netcdf[grid_mapping_name])
@@ -262,7 +268,7 @@ def date_modified(netcdf, configuration):
         datetime_str = configuration.date_modified
 
     if datetime_str:
-        return utilities.ensure_iso(datetime_str)
+        return utilities.ensure_iso_datetime(datetime_str)
     else:
         log_and_raise_error(
             "NetCDF file does not have `date_modified` global attribute. \
