@@ -381,9 +381,6 @@ def test_matches_ancillary_files(granuleid, spatial_files, expected):
         == expected
     )
 
-    # file_list = [Path("file_with_key3.suffix"), Path("file_with_key2.suffix")]
-    # assert metgen.matched_ancillary_file(granule_key, file_list) == ""
-
 
 @patch("nsidc.metgen.metgen.s3_object_path", return_value="/some/path")
 @patch("nsidc.metgen.aws.stage_file", return_value=True)
