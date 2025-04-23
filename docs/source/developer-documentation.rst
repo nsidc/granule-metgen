@@ -15,5 +15,4 @@ submodules, and the functions, classes, and methods in each.
    config docstring
    constants docstring
    metgen docstring
-   netcdf_reader docstring
-   readers/*
+   readers
