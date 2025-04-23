@@ -155,15 +155,21 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc"],
             [],
             [],
-            [],
-            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), "", ""),
+            ["aaa_gid1_bbb.nc.spatial"],
+            (
+                "aaa_gid1_bbb.nc",
+                {"aaa_gid1_bbb.nc"},
+                set(),
+                "",
+                "aaa_gid1_bbb.nc.spatial",
+            ),
         ),
         (
             "aaa_gid1_bbb",
             ["aaa_gid1_bbb.nc"],
             ["aaa_gid1_browse_bbb.png"],
             [],
-            [],
+            ["aaa_gid1_ccc.nc.spatial"],
             ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), "", ""),
         ),
         (
@@ -347,6 +353,36 @@ def test_granule_tuple_from_regex(
         [Path(p) for p in spatial_files],
     )
     assert granule == expected
+
+
+@pytest.mark.parametrize(
+    "granuleid,spatial_files,expected",
+    [
+        (
+            "key1",
+            ["file_with_key1.suffix", "file_with_key2.suffix"],
+            "file_with_key1.suffix",
+        ),
+        (
+            "file_with_key1.nc",
+            ["file_with_key1.nc.suffix", "file_with_key2.nc.suffix"],
+            "file_with_key1.nc.suffix",
+        ),
+        (
+            "file_with_key1",
+            ["file_with_key2.suffix", "file_with_key3.suffix"],
+            "",
+        ),
+    ],
+)
+def test_matches_ancillary_files(granuleid, spatial_files, expected):
+    assert (
+        metgen.matched_ancillary_file(granuleid, [Path(p) for p in spatial_files])
+        == expected
+    )
+
+    # file_list = [Path("file_with_key3.suffix"), Path("file_with_key2.suffix")]
+    # assert metgen.matched_ancillary_file(granule_key, file_list) == ""
 
 
 @patch("nsidc.metgen.metgen.s3_object_path", return_value="/some/path")

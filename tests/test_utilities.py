@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 import pytest
 from nsidc.metgen.readers import utilities
@@ -93,3 +93,10 @@ def test_datetime_from_premet(input, expected):
     with patch("nsidc.metgen.readers.utilities.premet_values", return_value=input):
         vals = utilities.temporal_from_premet("fake_premet_path")
         assert vals == expected
+
+
+@patch("builtins.open", new_callable=mock_open, read_data="-105.253 40.0126")
+def test_reads_points_from_spatial_file(mo):
+    assert utilities.points_from_spatial("a_spatial_path") == [
+        {"Longitude": -105.253, "Latitude": 40.0126}
+    ]
