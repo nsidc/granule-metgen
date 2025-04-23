@@ -2,7 +2,8 @@ import re
 from unittest.mock import patch
 
 import pytest
-from nsidc.metgen import constants, netcdf_reader
+from nsidc.metgen import constants
+from nsidc.metgen.readers import netcdf_reader
 
 # Unit tests for the 'netcdf_reader' module functions.
 #
@@ -52,5 +53,5 @@ def test_no_other_duplicate_values(big_xdata, big_ydata):
 def test_shows_bad_filename():
     with patch("xarray.open_dataset", side_effect=Exception("oops")):
         with pytest.raises(Exception) as exc_info:
-            netcdf_reader.extract_metadata("fake.nc", None, {})
+            netcdf_reader.extract_metadata("fake.nc", None, None, {})
         assert re.search("Could not open netCDF file fake.nc", exc_info.value.args[0])

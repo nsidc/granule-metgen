@@ -8,7 +8,9 @@ from nsidc.metgen.config import Config
 from nsidc.metgen.readers import utilities
 
 
-def extract_metadata(csv_path: str, premet_path: str, configuration: Config) -> dict:
+def extract_metadata(
+    csv_path: str, premet_path: str, spatial_path: str, configuration: Config
+) -> dict:
     with open(csv_path, newline="") as csvfile:
         csvreader = csv.reader(csvfile, delimiter=",")
 
@@ -16,7 +18,9 @@ def extract_metadata(csv_path: str, premet_path: str, configuration: Config) -> 
             "size_in_bytes": os.path.getsize(csv_path),
             "production_date_time": configuration.date_modified,
             "temporal": data_datetime(csvreader, premet_path),
-            "geometry": {"points": spatial_values(csvreader, configuration)},
+            "geometry": {
+                "points": spatial_values(csvreader, spatial_path, configuration)
+            },
         }
 
 
@@ -32,7 +36,7 @@ def data_datetime(csvreader, premet_path) -> list:
 
     val = get_key_value(csvreader, pattern)
     if val is not None:
-        return [utilities.ensure_iso(val)]
+        return [utilities.ensure_iso_datetime(val)]
     else:
         return None
 
@@ -40,7 +44,11 @@ def data_datetime(csvreader, premet_path) -> list:
 # Add new spatial_values strategy that gets LAT & LON columns
 
 
-def spatial_values(csvreader, configuration):
+def spatial_values(csvreader, spatial_path, _):
+    """Get spatial coverage from spatial file if it exists, otherwise parse from CSV"""
+    if spatial_path is not None:
+        return utilities.points_from_spatial(spatial_path)
+
     zone_string = get_key_value(csvreader, "^.*UTM_Zone")
     zone = int(re.sub(r"\D", "", zone_string)) if zone_string else 0
     easting = get_key_value(csvreader, "^.*Easting")

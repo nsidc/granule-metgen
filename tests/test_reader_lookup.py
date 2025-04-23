@@ -1,6 +1,6 @@
 import pytest
-from nsidc.metgen import constants, netcdf_reader
-from nsidc.metgen.readers import csv, snowex_csv
+from nsidc.metgen import constants
+from nsidc.metgen.readers import csv, netcdf_reader, snowex_csv
 from nsidc.metgen.readers.registry import lookup
 
 

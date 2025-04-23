@@ -37,7 +37,9 @@ def temporal_from_premet(premet_path: str) -> list:
         )
     )
 
-    return [ensure_iso(td) for td in list(keep([" ".join(begin), " ".join(end)]))]
+    return [
+        ensure_iso_datetime(td) for td in list(keep([" ".join(begin), " ".join(end)]))
+    ]
 
 
 def find_key_aliases(aliases: list, datetime_parts: dict) -> str:
@@ -61,17 +63,29 @@ def premet_values(premet_path: str) -> dict:
     return pdict
 
 
-def ensure_iso(datetime_str):
+def ensure_iso_datetime(datetime_str):
     """
     Parse ISO-standard datetime strings without a timezone identifier.
     """
     iso_obj = parse(datetime_str)
-    return format(iso_obj)
+    return format_timezone(iso_obj)
 
 
-def format(iso_obj):
+def format_timezone(iso_obj):
     return (
         iso_obj.replace(tzinfo=timezone.utc)
         .isoformat(timespec="milliseconds")
         .replace("+00:00", "Z")
     )
+
+
+def points_from_spatial(spatial_path: str) -> list:
+    points = []
+    with open(spatial_path) as spatial_file:
+        return [
+            {"Longitude": float(lon), "Latitude": float(lat)}
+            for line in spatial_file
+            for lon, lat in [line.split()]
+        ]
+
+    return points

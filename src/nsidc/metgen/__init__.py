@@ -8,7 +8,6 @@ __all__ = [
     "config",
     "constants",
     "metgen",
-    "netcdf_reader",
 ]
 
-from . import aws, cli, config, constants, metgen, netcdf_reader
+from . import aws, cli, config, constants, metgen
