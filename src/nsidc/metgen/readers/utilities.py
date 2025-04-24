@@ -80,6 +80,11 @@ def format_timezone(iso_obj):
 
 
 def points_from_spatial(spatial_path: str) -> list:
+    if spatial_path == "":
+        raise Exception(
+            "spatial_dir is specified but no spatial file exists for granule."
+        )
+
     points = []
     with open(spatial_path) as spatial_file:
         return [

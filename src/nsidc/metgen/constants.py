@@ -4,6 +4,7 @@ Constant values used throughout the `nsidc.metgen` package's submodules.
 
 # Default configuration values
 DEFAULT_CUMULUS_ENVIRONMENT = "uat"
+DEFAULT_KINESIS_PARTITION_KEY = "metgenc-duck"
 DEFAULT_STAGING_KINESIS_STREAM = "nsidc-cumulus-${environment}-external_notification"
 DEFAULT_STAGING_BUCKET_NAME = "nsidc-cumulus-${environment}-ingest-staging"
 DEFAULT_WRITE_CNM_FILE = False

@@ -29,6 +29,7 @@ from funcy import (
     concat,
     filter,
     first,
+    last,
     notnone,
     partial,
     rcompose,
@@ -314,9 +315,10 @@ def process(configuration: config.Config) -> None:
             data_filenames=data_files,
             browse_filenames=browse_files,
             premet_filename=premet_file,
+            spatial_filename=spatial_file,
             data_reader=data_reader(configuration.auth_id, data_files),
         )
-        for name, data_files, browse_files, premet_file in grouped_granule_files(
+        for name, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
             configuration
         )
     ]
@@ -350,21 +352,29 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
     Ledger, will execute the function on the Ledger's granule, record the
     results, and return the resulting new Ledger.
     """
-    # Execute the operation and record the result
     successful = True
     message = ""
     start = dt.datetime.now()
     new_granule = None
-    try:
-        new_granule = fn(ledger.granule)
-    except Exception as e:
+    new_actions = ledger.actions.copy()
+    fn_name = fn.func.__name__ if hasattr(fn, "func") else fn.__name__
+
+    # Check success of previous operation
+    if previous_failure(last(new_actions)):
         successful = False
-        message = str(e)
+        message = "Skipped due to earlier failures."
+
+    else:
+        # Execute the operation and record the result
+        try:
+            new_granule = fn(ledger.granule)
+        except Exception as e:
+            successful = False
+            message = str(e)
+
     end = dt.datetime.now()
 
     # Store the result in the Ledger
-    new_actions = ledger.actions.copy()
-    fn_name = fn.func.__name__ if hasattr(fn, "func") else fn.__name__
     new_actions.append(
         Action(
             fn_name,
@@ -380,6 +390,10 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
         granule=new_granule if new_granule else ledger.granule,
         actions=new_actions,
     )
+
+
+def previous_failure(last_action: Action) -> bool:
+    return last_action is not None and not last_action.successful
 
 
 def start_ledger(granule: Granule) -> Ledger:
