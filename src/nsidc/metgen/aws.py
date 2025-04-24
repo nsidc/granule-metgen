@@ -6,7 +6,7 @@ and post CNM messages to their destinations.
 
 import boto3
 
-KINESIS_PARTITION_KEY = "metgenc-duck"
+from nsidc.metgen import constants
 
 
 def kinesis_stream_exists(stream_name):
@@ -28,7 +28,9 @@ def post_to_kinesis(stream_name, cnm_message):
     """
     client = boto3.client("kinesis")
     result = client.put_record(
-        StreamName=stream_name, Data=cnm_message, PartitionKey=KINESIS_PARTITION_KEY
+        StreamName=stream_name,
+        Data=cnm_message,
+        PartitionKey=constants.DEFAULT_KINESIS_PARTITION_KEY,
     )
 
     return result["ShardId"]

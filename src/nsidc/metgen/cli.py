@@ -13,6 +13,17 @@ from nsidc.metgen import config, constants, metgen
 LOGGER = logging.getLogger(constants.ROOT_LOGGER)
 
 
+# TODO: (maybe) click will show the version of the *installed* metgenc
+# package, presumably via importlib.metadata.version('nsidc.metgenc')).
+# This is very likely different from the local working copy's version
+# if one is working in a cloned code directory.
+#
+# Showing the version as part of the banner output would be handy, but would
+# also possibly add more confusion for developers unless we switch to using
+# nsidc.metgen.__version__ to show the version in all cases -- and then we'd
+# have to write some custom code for the command line "--version" option.
+# The ".__version__" approach also seems to be frowned upon by some in the
+# python community. A conundrum.
 @click.group(epilog="For detailed help on each command, run: metgenc COMMAND --help")
 @click.version_option(package_name="nsidc-metgenc")
 def cli():
