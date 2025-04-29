@@ -657,19 +657,17 @@ def granule_tuple(
     )
 
 
-def matched_ancillary_file(granule_key, file_list):
+def matched_ancillary_file(granule_key: str, file_list: list[Path]) -> str:
     if file_list is None:
-        file_match = None
-    else:
-        file_matches = [
-            str(file) for file in file_list if re.search(granule_key, file.name)
-        ]
-        if not file_matches:
-            file_match = ""
-        else:
-            file_match = first(file_matches)
+        return None
 
-    return file_match
+    file_matches = [
+        str(file) for file in file_list if re.search(granule_key, file.name)
+    ]
+    if not file_matches:
+        return ""
+
+    return first(file_matches)
 
 
 def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:

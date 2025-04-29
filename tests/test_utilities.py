@@ -1,3 +1,4 @@
+import re
 from unittest.mock import mock_open, patch
 
 import pytest
@@ -96,7 +97,24 @@ def test_datetime_from_premet(input, expected):
 
 
 @patch("builtins.open", new_callable=mock_open, read_data="-105.253 40.0126")
-def test_reads_points_from_spatial_file(mo):
-    assert utilities.points_from_spatial("a_spatial_path") == [
+def test_reads_raw_points(mo):
+    assert utilities.raw_points("a_spatial_path") == [
         {"Longitude": -105.253, "Latitude": 40.0126}
     ]
+
+
+def test_empty_lonlat_file():
+    assert utilities.raw_points("./fixtures/spatial/empty.spatial") == []
+
+
+def test_error_if_no_filename():
+    with pytest.raises(Exception) as exc_info:
+        utilities.points_from_spatial("")
+    assert re.search("spatial_dir is specified but no", exc_info.value.args[0])
+
+
+def test_reverses_spo_points():
+    lonlats = utilities.raw_points("./fixtures/spatial/test.spo")
+    spo_lonlats = utilities.points_from_spatial("./fixtures/spatial/test.spo")
+    lonlat_count = len(lonlats)
+    assert lonlats[1] == spo_lonlats[lonlat_count - 2]
