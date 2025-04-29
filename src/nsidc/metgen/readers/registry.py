@@ -1,3 +1,7 @@
+"""
+Manage reader selection based on data file type.
+"""
+
 from collections.abc import Callable
 
 from nsidc.metgen import constants

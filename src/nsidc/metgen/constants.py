@@ -37,6 +37,7 @@ SETTINGS_SECTION_NAME = "Settings"
 # File name defaults
 PREMET_SUFFIX = ".premet"
 SPATIAL_SUFFIX = ".spatial"
+SPO_SUFFIX = ".spo"
 CSV_SUFFIX = ".csv"
 NETCDF_SUFFIX = ".nc"
 

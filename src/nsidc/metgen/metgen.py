@@ -359,7 +359,7 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
     new_actions = ledger.actions.copy()
     fn_name = fn.func.__name__ if hasattr(fn, "func") else fn.__name__
 
-    # Check success of previous operation
+    # If previous operation failed, bail out.
     if previous_failure(last(new_actions)):
         successful = False
         message = "Skipped due to earlier failures."
@@ -551,10 +551,10 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     """
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
     premet_file_list = ancillary_files(
-        configuration.premet_dir, constants.PREMET_SUFFIX
+        configuration.premet_dir, [constants.PREMET_SUFFIX]
     )
     spatial_file_list = ancillary_files(
-        configuration.spatial_dir, constants.SPATIAL_SUFFIX
+        configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
     )
 
     return [
@@ -570,15 +570,21 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
     ]
 
 
-def ancillary_files(dir, suffix):
-    if dir:
-        files = [p for p in Path(dir).glob(f"*{suffix}")]
-        if not files:
-            raise Exception(f"Directory {dir} is empty or unreadable.")
+def ancillary_files(dir: Path, suffixes: list) -> list:
+    files = None
 
+    if not dir:
         return files
 
-    return None
+    for suffix in suffixes:
+        files = [p for p in Path(dir).glob(f"*{suffix}")]
+        if files:
+            break
+
+    if not files:
+        raise Exception(f"No files with suffix {suffixes} in directory {dir}.")
+
+    return files
 
 
 def granule_keys(configuration: config.Config, file_list: list[Path]) -> set[str]:
@@ -630,6 +636,7 @@ def granule_tuple(
         - A set of one or more full paths to data file(s)
         - A set of zero or more full paths to associated browse file(s)
         - Path to an associated premet file (may be None or empty string)
+        - Path to an associated spatial (or spo) file (may be None or empty string)
     """
     browse_file_paths = {
         str(file)

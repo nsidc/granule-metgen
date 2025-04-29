@@ -114,7 +114,6 @@ Set `time_coverage_duration` in the configuration file."
 def spatial_values(netcdf, spatial_path, configuration):
     """
     Return an array of dicts, each dict representing one lat/lon pair like so:
-
         {
             "Longitude: float,
             "Latitude: float

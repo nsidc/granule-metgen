@@ -4,6 +4,8 @@ from datetime import timezone
 from dateutil.parser import parse
 from funcy import keep
 
+from nsidc.metgen import constants
+
 
 def temporal_from_premet(premet_path: str) -> list:
     if premet_path == "":
@@ -80,17 +82,30 @@ def format_timezone(iso_obj):
 
 
 def points_from_spatial(spatial_path: str) -> list:
+    """
+    Read (lon, lat) points from a .spatial or .spo file.
+    """
     if spatial_path == "":
         raise Exception(
-            "spatial_dir is specified but no spatial file exists for granule."
+            "spatial_dir is specified but no .spatial or .spo file exists for granule."
         )
 
+    if re.search(constants.SPO_SUFFIX, spatial_path):
+        # return spo contents, reversed to comply with Cumulus requirement for
+        # counter-clockwise point order. 
+        return [p for p in reversed(raw_points(spatial_path))]
+
+    # TODO: Add extra "sock" handling for points in a .spatial file
+    # These files can be huge so might need another approach to handling the content
+    # For now, simply return the points from the file with no changes.
+    return raw_points(spatial_path)
+
+
+def raw_points(spatial_path: str) -> list:
     points = []
-    with open(spatial_path) as spatial_file:
+    with open(spatial_path) as file:
         return [
             {"Longitude": float(lon), "Latitude": float(lat)}
-            for line in spatial_file
+            for line in file
             for lon, lat in [line.split()]
         ]
-
-    return points
