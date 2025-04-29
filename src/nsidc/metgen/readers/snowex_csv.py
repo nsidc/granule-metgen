@@ -1,3 +1,7 @@
+"""
+Read a csv data file specific to SNOWEX.
+"""
+
 import csv
 import os.path
 import re

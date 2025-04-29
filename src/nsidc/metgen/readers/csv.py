@@ -1,3 +1,7 @@
+"""
+Read a csv data file containing LAT, LON, and DATE columns.
+"""
+
 import os.path
 from datetime import timedelta, timezone
 
