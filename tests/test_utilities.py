@@ -97,7 +97,7 @@ def test_datetime_from_premet(input, expected):
 
 
 @patch("builtins.open", new_callable=mock_open, read_data="-105.253 40.0126")
-def test_reads_raw_points(mo):
+def test_reads_raw_points(mock):
     assert utilities.raw_points("a_spatial_path") == [
         {"Longitude": -105.253, "Latitude": 40.0126}
     ]

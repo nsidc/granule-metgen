@@ -382,6 +382,10 @@ def test_matches_ancillary_files(granuleid, spatial_files, expected):
     )
 
 
+def test_no_attempt_to_match_empty_ancillary_files():
+    assert metgen.matched_ancillary_file("key1", None) is None
+
+
 @patch("nsidc.metgen.metgen.s3_object_path", return_value="/some/path")
 @patch("nsidc.metgen.aws.stage_file", return_value=True)
 @patch("builtins.open", new_callable=mock_open, read_data="data")
