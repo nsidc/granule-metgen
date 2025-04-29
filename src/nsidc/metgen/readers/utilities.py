@@ -92,7 +92,7 @@ def points_from_spatial(spatial_path: str) -> list:
 
     if re.search(constants.SPO_SUFFIX, spatial_path):
         # return spo contents, reversed to comply with Cumulus requirement for
-        # counter-clockwise point order. 
+        # counter-clockwise point order.
         return [p for p in reversed(raw_points(spatial_path))]
 
     # TODO: Add extra "sock" handling for points in a .spatial file
@@ -102,7 +102,6 @@ def points_from_spatial(spatial_path: str) -> list:
 
 
 def raw_points(spatial_path: str) -> list:
-    points = []
     with open(spatial_path) as file:
         return [
             {"Longitude": float(lon), "Latitude": float(lat)}
