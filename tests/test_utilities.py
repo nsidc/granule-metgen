@@ -91,9 +91,7 @@ def test_correctly_reads_date_time_strings(input, expected):
     ],
 )
 def test_datetime_from_premet(input, expected):
-    with patch("nsidc.metgen.readers.utilities.premet_values", return_value=input):
-        vals = utilities.temporal_from_premet("fake_premet_path")
-        assert vals == expected
+    assert utilities.temporal_from_premet(input) == expected
 
 
 @patch("builtins.open", new_callable=mock_open, read_data="-105.253 40.0126")

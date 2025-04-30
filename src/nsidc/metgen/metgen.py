@@ -41,7 +41,7 @@ from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws, config, constants
-from nsidc.metgen.readers import registry
+from nsidc.metgen.readers import registry, utilities
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -732,6 +732,13 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         configuration.ummg_path(), granule.producer_granule_id
     )
 
+    # get premet if it exists
+    if granule.premet_filename == "":
+        raise Exception(
+            f"premet_dir {granule.premet_filename} is specified but no premet file exists for granule."
+        )
+    pdict = utilities.premet_values(granule.premet_filename)
+
     # Populated metadata_details dict looks like:
     # {
     #   data_file: {
@@ -746,7 +753,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     metadata_details = {}
     for data_file in granule.data_filenames:
         metadata_details[data_file] = granule.data_reader(
-            data_file, granule.premet_filename, granule.spatial_filename, configuration
+            data_file, pdict, granule.spatial_filename, configuration
         )
 
     # Collapse information about (possibly) multiple files into a granule summary.
@@ -754,6 +761,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     summary["spatial_extent"] = populate_spatial(summary["geometry"])
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
+    # will need to populate additional attributes from premet here
 
     # Populate the body template
     body = ummg_body_template().safe_substitute(

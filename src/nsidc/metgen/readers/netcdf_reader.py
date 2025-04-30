@@ -53,10 +53,10 @@ def extract_metadata(
     }
 
 
-def time_range(netcdf_filename, netcdf, premet_path, configuration):
+def time_range(netcdf_filename, netcdf, premet_content: dict, configuration):
     """Return an array of datetime strings"""
-    if premet_path is not None:
-        return utilities.temporal_from_premet(premet_path)
+    if premet_content is not None:
+        return utilities.temporal_from_premet(premet_content)
 
     coverage_start = time_coverage_start(netcdf_filename, netcdf, configuration)
     coverage_end = time_coverage_end(netcdf, configuration, coverage_start)
