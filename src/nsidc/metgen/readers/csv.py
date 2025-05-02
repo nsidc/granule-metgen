@@ -26,7 +26,7 @@ def extract_metadata(
 
 
 def data_datetime(df, premet_content: dict) -> list:
-    if premet_content is not None:
+    if premet_content:
         return utilities.temporal_from_premet(premet_content)
 
     def formatted(date, dt):

@@ -737,7 +737,14 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         raise Exception(
             f"premet_dir {granule.premet_filename} is specified but no premet file exists for granule."
         )
-    pdict = utilities.premet_values(granule.premet_filename)
+    premet_content = utilities.premet_values(granule.premet_filename)
+
+    # temporarily show any additional attributes in premet file
+    if "AdditionalAttributes" in premet_content:
+        logger = logging.getLogger(constants.ROOT_LOGGER)
+        logger.info("")
+        logger.info(f"Additional attributes in premet file {granule.premet_filename}:")
+        logger.info(premet_content["AdditionalAttributes"])
 
     # Populated metadata_details dict looks like:
     # {
@@ -753,7 +760,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     metadata_details = {}
     for data_file in granule.data_filenames:
         metadata_details[data_file] = granule.data_reader(
-            data_file, pdict, granule.spatial_filename, configuration
+            data_file, premet_content, granule.spatial_filename, configuration
         )
 
     # Collapse information about (possibly) multiple files into a granule summary.
@@ -761,7 +768,6 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     summary["spatial_extent"] = populate_spatial(summary["geometry"])
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
-    # will need to populate additional attributes from premet here
 
     # Populate the body template
     body = ummg_body_template().safe_substitute(

@@ -33,7 +33,7 @@ def extract_metadata(
 
 def data_datetime(csvreader, premet_content: dict) -> list:
     """Get temporal extent from premet file if it exists, otherwise parse from CSV"""
-    if premet_content is not None:
+    if premet_content:
         return utilities.temporal_from_premet(premet_content)
 
     pattern = re.compile("^.*Date")

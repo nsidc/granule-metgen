@@ -52,12 +52,30 @@ def find_key_aliases(aliases: list, datetime_parts: dict) -> str:
 
 def premet_values(premet_path: str) -> dict:
     pdict = {}
+
+    if premet_path is None:
+        return None
+
+    additional_atts = []
     with open(premet_path) as premet_file:
         for line in premet_file:
-            key, val = re.sub(r"\s+", "", line).split("=")
-            pdict[key] = val
+            key, val = parse_premet_entry(line)
+            if re.match("Container", key):
+                _, namevalue = parse_premet_entry(next(premet_file))
+                _, attvalue = parse_premet_entry(next(premet_file))
+                additional_atts.append({"Name": namevalue, "Values": [attvalue]})
+            else:
+                pdict[key] = val
+
+    # Include any additional attributes
+    if additional_atts:
+        pdict["AdditionalAttributes"] = additional_atts
 
     return pdict
+
+
+def parse_premet_entry(pline: str):
+    return re.sub(r"\s+", "", pline).split("=")
 
 
 def ensure_iso_datetime(datetime_str):
