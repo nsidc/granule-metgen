@@ -12,6 +12,7 @@
 * Read spatial information from `spo` files and reverse point order to create a
   counter-clockwise polygon definition. (Issue-158)
 * Note successful collection metadata harvest details in the log, not to `stdout`.
+* Skip remaining pipeline operations if a step fails.
 * Move `netcdf_reader` to `readers` module.
 
 ## v1.4.0
