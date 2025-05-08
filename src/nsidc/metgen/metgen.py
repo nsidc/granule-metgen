@@ -739,13 +739,6 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         )
     premet_content = utilities.premet_values(granule.premet_filename)
 
-    # temporarily show any additional attributes in premet file
-    if "AdditionalAttributes" in premet_content:
-        logger = logging.getLogger(constants.ROOT_LOGGER)
-        logger.info("")
-        logger.info(f"Additional attributes in premet file {granule.premet_filename}:")
-        logger.info(premet_content["AdditionalAttributes"])
-
     # Populated metadata_details dict looks like:
     # {
     #   data_file: {
@@ -767,6 +760,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     summary = metadata_summary(metadata_details)
     summary["spatial_extent"] = populate_spatial(summary["geometry"])
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
+    summary["additional_attributes"] = populate_additional_attributes(premet_content)
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
 
     # Populate the body template
@@ -998,6 +992,16 @@ def populate_temporal(datetime_values):
         return ummg_temporal_single_template().safe_substitute(
             {"date_time": datetime_values[0]}
         )
+
+
+def populate_additional_attributes(premet_content):
+    # temporarily show any additional attributes in premet file
+    if "AdditionalAttributes" in premet_content:
+        logger = logging.getLogger(constants.ROOT_LOGGER)
+        logger.info("")
+        logger.info("Additional attributes in premet file:")
+        logger.info(premet_content["AdditionalAttributes"])
+    return ""
 
 
 def ummg_body_template():

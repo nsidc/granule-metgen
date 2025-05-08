@@ -47,7 +47,7 @@ DEFAULT_SPATIAL_AXIS_SIZE = 6
 # Templates
 CNM_BODY_TEMPLATE = ("nsidc.metgen.templates", "cnm_body_template.json")
 CNM_FILES_TEMPLATE = ("nsidc.metgen.templates", "cnm_files_template.json")
-UMMG_BODY_TEMPLATE = ("nsidc.metgen.templates", "ummg_body_template.json")
+UMMG_BODY_TEMPLATE = ("nsidc.metgen.templates", "ummg_body_template.txt")
 UMMG_TEMPORAL_SINGLE_TEMPLATE = (
     "nsidc.metgen.templates",
     "ummg_temporal_single_template.json",

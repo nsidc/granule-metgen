@@ -16,14 +16,15 @@ from nsidc.metgen.readers import utilities
 @pytest.mark.parametrize(
     "input,expected",
     [
-        ('akey = somevalue', ['akey', 'somevalue']),
-        ('adate =   2020-01-01', ['adate', '2020-01-01']),
-        ('alat=74.5', ['alat', '74.5']),
-        ('alon  =100', ['alon', '100'])
-    ]
+        ("akey = somevalue", ["akey", "somevalue"]),
+        ("adate =   2020-01-01", ["adate", "2020-01-01"]),
+        ("alat=74.5", ["alat", "74.5"]),
+        ("alon  =100", ["alon", "100"]),
+    ],
 )
 def test_parse_premet_ignores_whitespace(input, expected):
     assert utilities.parse_premet_entry(input) == expected
+
 
 @pytest.mark.parametrize(
     "input,expected",
