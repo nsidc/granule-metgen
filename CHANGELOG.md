@@ -1,6 +1,7 @@
 ## UNRELEASED
 
-* Parse `AdditionalAttributes` from `.premet` file. (Issue-162) 
+* Parse `AdditionalAttributes` from `.premet` file and include them in UMM-G
+  output. (Issue-162, Issue-186) 
 
 ## v1.5.0rc8
 
