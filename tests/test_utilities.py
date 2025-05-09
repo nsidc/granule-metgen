@@ -13,6 +13,26 @@ from nsidc.metgen.readers import utilities
 # and handle any exceptions they may throw.
 
 
+@pytest.fixture
+def open_polygon():
+    return [{"lat": 40, "lon": 100}, {"lat": 45, "lon": 105}, {"lat": 50, "lon": 110}]
+
+
+@pytest.fixture
+def closed_polygon():
+    return [
+        {"lat": 40, "lon": 100},
+        {"lat": 45, "lon": 105},
+        {"lat": 50, "lon": 110},
+        {"lat": 40, "lon": 100},
+    ]
+
+
+@pytest.fixture
+def not_a_polygon():
+    return [{"lat": 40, "lon": 100}, {"lat": 45, "lon": 105}]
+
+
 @pytest.mark.parametrize(
     "input,expected",
     [
@@ -142,8 +162,28 @@ def test_error_if_no_filename():
     assert re.search("spatial_dir is specified but no", exc_info.value.args[0])
 
 
-def test_reverses_spo_points():
-    lonlats = utilities.raw_points("./fixtures/spatial/test.spo")
-    spo_lonlats = utilities.points_from_spatial("./fixtures/spatial/test.spo")
-    lonlat_count = len(lonlats)
-    assert lonlats[1] == spo_lonlats[lonlat_count - 2]
+def test_reverses_closed_spo_points():
+    lonlats = utilities.raw_points("./fixtures/spatial/closed.spo")
+    spo_lonlats = utilities.parse_spo("./fixtures/spatial/closed.spo")
+    assert lonlats[1] == spo_lonlats[-2]
+
+
+def test_reverses_open_spo_points():
+    lonlats = utilities.raw_points("./fixtures/spatial/open.spo")
+    spo_lonlats = utilities.parse_spo("./fixtures/spatial/open.spo")
+    assert lonlats[1] == spo_lonlats[-2]
+    assert len(lonlats) == len(spo_lonlats) - 1
+
+
+def test_closes_open_polygon(open_polygon):
+    closed_lonlats = utilities.closed_polygon(open_polygon)
+    assert (len(closed_lonlats)) == len(open_polygon) + 1
+
+
+def test_accepts_closed_polygon(closed_polygon):
+    closed_lonlats = utilities.closed_polygon(closed_polygon)
+    assert (len(closed_lonlats)) == len(closed_polygon)
+
+
+def test_ignores_tiny_spo(not_a_polygon):
+    assert utilities.closed_polygon(not_a_polygon) == not_a_polygon
