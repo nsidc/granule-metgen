@@ -2,7 +2,7 @@ import re
 from datetime import timezone
 
 from dateutil.parser import parse
-from funcy import keep
+from funcy import first, keep, last
 
 from nsidc.metgen import constants
 
@@ -104,14 +104,21 @@ def points_from_spatial(spatial_path: str) -> list:
         )
 
     if re.search(constants.SPO_SUFFIX, spatial_path):
-        # return spo contents, reversed to comply with Cumulus requirement for
-        # counter-clockwise point order.
-        return [p for p in reversed(raw_points(spatial_path))]
+        return parse_spo(spatial_path)
 
     # TODO: Add extra "sock" handling for points in a .spatial file
     # These files can be huge so might need another approach to handling the content
     # For now, simply return the points from the file with no changes.
     return raw_points(spatial_path)
+
+
+def parse_spo(spatial_path: str) -> list:
+    """
+    Read points from a .spo file, reverse the order of the points to comply with
+    the Cumulus requirement for a clockwise order to polygon points, and ensure
+    the polygon is closed.
+    """
+    return [p for p in reversed(closed_polygon(raw_points(spatial_path)))]
 
 
 def raw_points(spatial_path: str) -> list:
@@ -121,3 +128,16 @@ def raw_points(spatial_path: str) -> list:
             for line in file
             for lon, lat in [line.split()]
         ]
+
+
+def closed_polygon(raw_points: list[dict]) -> list[dict]:
+    """
+    Return a copy of the input list, extended if necessary to ensure the first
+    and last points of the list have the same value. The original list is not
+    modified.
+    """
+    points = raw_points.copy()
+    if len(points) > 2 and (first(points) != last(points)):
+        points.append(first(points))
+
+    return points
