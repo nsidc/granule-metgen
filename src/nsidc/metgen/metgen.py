@@ -41,7 +41,7 @@ from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws, config, constants
-from nsidc.metgen.readers import registry
+from nsidc.metgen.readers import registry, utilities
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -732,6 +732,20 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         configuration.ummg_path(), granule.producer_granule_id
     )
 
+    # get premet if it exists
+    if granule.premet_filename == "":
+        raise Exception(
+            f"premet_dir {granule.premet_filename} is specified but no premet file exists for granule."
+        )
+    premet_content = utilities.premet_values(granule.premet_filename)
+
+    # temporarily show any additional attributes in premet file
+    if "AdditionalAttributes" in premet_content:
+        logger = logging.getLogger(constants.ROOT_LOGGER)
+        logger.info("")
+        logger.info(f"Additional attributes in premet file {granule.premet_filename}:")
+        logger.info(premet_content["AdditionalAttributes"])
+
     # Populated metadata_details dict looks like:
     # {
     #   data_file: {
@@ -746,7 +760,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     metadata_details = {}
     for data_file in granule.data_filenames:
         metadata_details[data_file] = granule.data_reader(
-            data_file, granule.premet_filename, granule.spatial_filename, configuration
+            data_file, premet_content, granule.spatial_filename, configuration
         )
 
     # Collapse information about (possibly) multiple files into a granule summary.
