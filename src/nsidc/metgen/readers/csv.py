@@ -13,21 +13,21 @@ from nsidc.metgen.readers import utilities
 
 
 def extract_metadata(
-    csv_path: str, premet_path: str, spatial_path: str, configuration: Config
+    csv_path: str, premet_content: dict, spatial_path: str, configuration: Config
 ) -> dict:
     df = pd.read_csv(csv_path)
 
     return {
         "size_in_bytes": os.path.getsize(csv_path),
         "production_date_time": configuration.date_modified,
-        "temporal": data_datetime(df, premet_path),
+        "temporal": data_datetime(df, premet_content),
         "geometry": {"points": bbox(spatial_values(df, spatial_path, configuration))},
     }
 
 
-def data_datetime(df, premet_path) -> list:
-    if premet_path is not None:
-        return utilities.temporal_from_premet(premet_path)
+def data_datetime(df, premet_content: dict) -> list:
+    if premet_content:
+        return utilities.temporal_from_premet(premet_content)
 
     def formatted(date, dt):
         return (

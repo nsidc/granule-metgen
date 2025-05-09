@@ -12,6 +12,7 @@
     "HorizontalSpatialDomain": $spatial_extent
   },
   "TemporalExtent": $temporal_extent,
+  $additional_attributes
   "DataGranule": {
     "DayNightFlag": "Unspecified",
     "Identifiers": [
