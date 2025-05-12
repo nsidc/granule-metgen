@@ -36,6 +36,18 @@ def not_a_polygon():
 @pytest.mark.parametrize(
     "input,expected",
     [
+        ('akey = somevalue', ['akey', 'somevalue']),
+        ('adate =   2020-01-01', ['adate', '2020-01-01']),
+        ('alat=74.5', ['alat', '74.5']),
+        ('alon  =100', ['alon', '100'])
+    ]
+)
+def test_parse_premet_ignores_whitespace(input, expected):
+    assert utilities.parse_premet_entry(input) == expected
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
         pytest.param("2001-01-01", "2001-01-01T00:00:00.000Z", id="Date and no time"),
         pytest.param(
             "2001-01-01 18:59:59", "2001-01-01T18:59:59.000Z", id="Date with time"
@@ -111,9 +123,25 @@ def test_correctly_reads_date_time_strings(input, expected):
     ],
 )
 def test_datetime_from_premet(input, expected):
-    with patch("nsidc.metgen.readers.utilities.premet_values", return_value=input):
-        vals = utilities.temporal_from_premet("fake_premet_path")
-        assert vals == expected
+    assert utilities.temporal_from_premet(input) == expected
+
+
+def test_one_additional_attribute():
+    premet_content = utilities.premet_values("./fixtures/premet/one_attribute.premet")
+    assert premet_content["AdditionalAttributes"] == [
+        {"Name": "first_attribute", "Values": ["first_value"]}
+    ]
+
+
+def test_two_additional_attributes():
+    premet_content = utilities.premet_values("./fixtures/premet/two_attributes.premet")
+    assert {"Name": "first_attribute", "Values": ["first_value"]} in premet_content[
+        "AdditionalAttributes"
+    ]
+    assert {"Name": "second_attribute", "Values": ["second_value"]} in premet_content[
+        "AdditionalAttributes"
+    ]
+    assert len(premet_content["AdditionalAttributes"]) == 2
 
 
 @patch("builtins.open", new_callable=mock_open, read_data="-105.253 40.0126")

@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Parse `AdditionalAttributes` from `.premet` file. (Issue-162) 
+
 ## v1.5.0rc8
 
 * Add support for reading IRWIS2 CSV files (Issue-154)
@@ -8,6 +12,7 @@
 * Read spatial information from `spo` files and reverse point order to create a
   counter-clockwise polygon definition. Close polygon if necessary. (Issue-158)
 * Note successful collection metadata harvest details in the log, not to `stdout`.
+* Skip remaining pipeline operations if a step fails.
 * Move `netcdf_reader` to `readers` module.
 
 ## v1.4.0

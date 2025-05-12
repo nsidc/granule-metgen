@@ -31,10 +31,10 @@ def extract_metadata(
 # Add new data_datetime strategy that gets DATE and TIME columns and finds range
 
 
-def data_datetime(csvreader, premet_path) -> list:
+def data_datetime(csvreader, premet_content: dict) -> list:
     """Get temporal extent from premet file if it exists, otherwise parse from CSV"""
-    if premet_path is not None:
-        return utilities.temporal_from_premet(premet_path)
+    if premet_content:
+        return utilities.temporal_from_premet(premet_content)
 
     pattern = re.compile("^.*Date")
 

@@ -7,12 +7,8 @@ from funcy import first, keep, last
 from nsidc.metgen import constants
 
 
-def temporal_from_premet(premet_path: str) -> list:
-    if premet_path == "":
-        raise Exception(
-            "premet_dir is specified but no premet file exists for granule."
-        )
-
+def temporal_from_premet(pdict: dict) -> list:
+    # Show error if no date/time information is in file
     begin_date_keys = ["RangeBeginningDate", "Begin_date"]
     begin_time_keys = ["RangeBeginningTime", "Begin_time"]
     end_date_keys = [
@@ -21,7 +17,6 @@ def temporal_from_premet(premet_path: str) -> list:
     ]
     end_time_keys = ["RangeEndingTime", "End_time"]
 
-    pdict = premet_values(premet_path)
     begin = list(
         keep(
             [
@@ -57,12 +52,30 @@ def find_key_aliases(aliases: list, datetime_parts: dict) -> str:
 
 def premet_values(premet_path: str) -> dict:
     pdict = {}
+
+    if premet_path is None:
+        return None
+
+    additional_atts = []
     with open(premet_path) as premet_file:
         for line in premet_file:
-            key, val = re.sub(r"\s+", "", line).split("=")
-            pdict[key] = val
+            key, val = parse_premet_entry(line)
+            if re.match("Container", key):
+                _, namevalue = parse_premet_entry(next(premet_file))
+                _, attvalue = parse_premet_entry(next(premet_file))
+                additional_atts.append({"Name": namevalue, "Values": [attvalue]})
+            else:
+                pdict[key] = val
+
+    # Include any additional attributes
+    if additional_atts:
+        pdict["AdditionalAttributes"] = additional_atts
 
     return pdict
+
+
+def parse_premet_entry(pline: str):
+    return re.sub(r"\s+", "", pline).split("=")
 
 
 def ensure_iso_datetime(datetime_str):
