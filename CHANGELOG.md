@@ -7,7 +7,7 @@
 
 * Add support for reading IRWIS2 CSV files (Issue-154)
 * Store `GranuleSpatialRepresentation` value from CMR collection metadata in the
-  `Collection` object.
+  `Collection` object. (Issue-163)
 * Read temporal extents from `premet` files if they exist. (Issue-160)
 * Read spatial information from `spatial` files if they exist. (Issue-161)
 * Read spatial information from `spo` files and reverse point order to create a
