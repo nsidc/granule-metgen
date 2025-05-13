@@ -995,12 +995,11 @@ def populate_temporal(datetime_values):
 
 
 def populate_additional_attributes(premet_content):
-    # temporarily show any additional attributes in premet file
     if "AdditionalAttributes" in premet_content:
-        logger = logging.getLogger(constants.ROOT_LOGGER)
-        logger.info("")
-        logger.info("Additional attributes in premet file:")
-        logger.info(premet_content["AdditionalAttributes"])
+        return ummg_additional_attributes_template().safe_substitute(
+            {"attributes": premet_content["AdditionalAttributes"]}
+        )
+
     return ""
 
 
@@ -1022,6 +1021,10 @@ def ummg_spatial_gpolygon_template():
 
 def ummg_spatial_point_template():
     return initialize_template(constants.UMMG_SPATIAL_POINT_TEMPLATE)
+
+
+def ummg_additional_attributes_template():
+    return initialize_template(constants.UMMG_ADDITIONAL_ATTRIBUTES_TEMPLATE)
 
 
 def cnms_body_template():

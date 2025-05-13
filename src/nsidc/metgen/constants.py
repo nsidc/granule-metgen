@@ -68,3 +68,7 @@ UMMG_SPATIAL_RECTANGLE_TEMPLATE = (
     "nsidc.metgen.templates",
     "ummg_horizontal_rectangle_template.txt",
 )
+UMMG_ADDITIONAL_ATTRIBUTES_TEMPLATE = (
+    "nsidc.metgen.templates",
+    "ummg_additional_attributes_template.txt",
+)
