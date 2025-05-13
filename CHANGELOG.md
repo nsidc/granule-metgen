@@ -2,7 +2,7 @@
 
 * Parse `AdditionalAttributes` from `.premet` file. (Issue-162) 
 
-## v1.5.0rc8
+## v1.5.0
 
 * Add support for reading IRWIS2 CSV files (Issue-154)
 * Store `GranuleSpatialRepresentation` value from CMR collection metadata in the
