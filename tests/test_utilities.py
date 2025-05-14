@@ -128,14 +128,14 @@ def test_datetime_from_premet(input, expected):
     assert utilities.temporal_from_premet(input) == expected
 
 
-def test_one_additional_attribute_in_premet():
+def test_one_additional_attribute():
     premet_content = utilities.premet_values("./fixtures/premet/one_attribute.premet")
     assert premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES] == [
         {"Name": "first_attribute", "Values": ["first_value"]}
     ]
 
 
-def test_two_additional_attributes_in_premet():
+def test_two_additional_attributes():
     premet_content = utilities.premet_values("./fixtures/premet/two_attributes.premet")
     assert {"Name": "first_attribute", "Values": ["first_value"]} in premet_content[
         constants.UMMG_ADDITIONAL_ATTRIBUTES
