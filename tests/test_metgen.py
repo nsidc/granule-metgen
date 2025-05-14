@@ -1,5 +1,6 @@
 import datetime as dt
 import logging
+import re
 from pathlib import Path
 from unittest.mock import mock_open, patch
 
@@ -580,3 +581,12 @@ def test_umm_key_required(umm_content, validated_response, log_message, caplog):
     assert metgen.validate_cmr_response(umm_content) is validated_response
     assert caplog.record_tuples == log_tuples
     caplog.clear()
+
+
+# TODO: move population of templates to utilities?
+def test_one_additional_attribute_in_ummg():
+    attr_list = [{"name": "pets", "values": ["mabel"]}]
+    premet_content = {constants.UMMG_ADDITIONAL_ATTRIBUTES: attr_list}
+    ummg_string = metgen.populate_additional_attributes(premet_content)
+    print(ummg_string)
+    assert re.search('"AdditionalAttributes": [{"name": "pets", "values": ["mabel"]}],', ummg_string)

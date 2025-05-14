@@ -999,7 +999,7 @@ def populate_additional_attributes(premet_content):
         return ummg_additional_attributes_template().safe_substitute(
             {
                 "key": constants.UMMG_ADDITIONAL_ATTRIBUTES,
-                "attributes": premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES],
+                "attributes": json.dumps(premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]),
             }
         )
 

@@ -135,16 +135,6 @@ def test_one_additional_attribute_in_premet():
     ]
 
 
-def test_one_additional_attribute_in_ummg():
-    premet_content = {
-        constants.UMMG_ADDITIONAL_ATTRIBUTES: {
-            "Name": "first_attribute",
-            "Values": ["first_value"],
-        }
-    }
-    assert True
-
-
 def test_two_additional_attributes_in_premet():
     premet_content = utilities.premet_values("./fixtures/premet/two_attributes.premet")
     assert {"Name": "first_attribute", "Values": ["first_value"]} in premet_content[
@@ -154,10 +144,6 @@ def test_two_additional_attributes_in_premet():
         constants.UMMG_ADDITIONAL_ATTRIBUTES
     ]
     assert len(premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]) == 2
-
-
-def test_two_additional_attributes_in_ummg():
-    assert True
 
 
 @patch("builtins.open", new_callable=mock_open, read_data="-105.253 40.0126")
