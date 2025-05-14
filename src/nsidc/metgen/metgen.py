@@ -995,9 +995,12 @@ def populate_temporal(datetime_values):
 
 
 def populate_additional_attributes(premet_content):
-    if "AdditionalAttributes" in premet_content:
+    if constants.UMMG_ADDITIONAL_ATTRIBUTES in premet_content:
         return ummg_additional_attributes_template().safe_substitute(
-            {"attributes": premet_content["AdditionalAttributes"]}
+            {
+                "key": constants.UMMG_ADDITIONAL_ATTRIBUTES,
+                "attributes": premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES],
+            }
         )
 
     return ""

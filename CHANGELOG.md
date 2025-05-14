@@ -2,6 +2,7 @@
 
 * Parse `AdditionalAttributes` from `.premet` file and include them in UMM-G
   output. (Issue-162, Issue-186) 
+* Rename template files with `.txt` extension.
 
 ## v1.5.0
 

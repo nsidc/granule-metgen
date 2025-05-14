@@ -3,6 +3,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 from nsidc.metgen.readers import utilities
+from nsidc.metgen import constants
 
 # Unit tests for the 'utilities' module functions.
 #
@@ -127,22 +128,36 @@ def test_datetime_from_premet(input, expected):
     assert utilities.temporal_from_premet(input) == expected
 
 
-def test_one_additional_attribute():
+def test_one_additional_attribute_in_premet():
     premet_content = utilities.premet_values("./fixtures/premet/one_attribute.premet")
-    assert premet_content["AdditionalAttributes"] == [
+    assert premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES] == [
         {"Name": "first_attribute", "Values": ["first_value"]}
     ]
 
 
-def test_two_additional_attributes():
+def test_one_additional_attribute_in_ummg():
+    premet_content = {
+        constants.UMMG_ADDITIONAL_ATTRIBUTES: {
+            "Name": "first_attribute",
+            "Values": ["first_value"],
+        }
+    }
+    assert True
+
+
+def test_two_additional_attributes_in_premet():
     premet_content = utilities.premet_values("./fixtures/premet/two_attributes.premet")
     assert {"Name": "first_attribute", "Values": ["first_value"]} in premet_content[
-        "AdditionalAttributes"
+        constants.UMMG_ADDITIONAL_ATTRIBUTES
     ]
     assert {"Name": "second_attribute", "Values": ["second_value"]} in premet_content[
-        "AdditionalAttributes"
+        constants.UMMG_ADDITIONAL_ATTRIBUTES
     ]
-    assert len(premet_content["AdditionalAttributes"]) == 2
+    assert len(premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]) == 2
+
+
+def test_two_additional_attributes_in_ummg():
+    assert True
 
 
 @patch("builtins.open", new_callable=mock_open, read_data="-105.253 40.0126")

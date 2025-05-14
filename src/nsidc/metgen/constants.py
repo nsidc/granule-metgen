@@ -44,6 +44,9 @@ NETCDF_SUFFIX = ".nc"
 # Spatial coverage
 DEFAULT_SPATIAL_AXIS_SIZE = 6
 
+# UMM-G keys
+UMMG_ADDITIONAL_ATTRIBUTES = "AdditionalAttributes"
+
 # Templates
 CNM_BODY_TEMPLATE = ("nsidc.metgen.templates", "cnm_body_template.txt")
 CNM_FILES_TEMPLATE = ("nsidc.metgen.templates", "cnm_files_template.txt")
