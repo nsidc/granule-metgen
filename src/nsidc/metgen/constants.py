@@ -44,27 +44,34 @@ NETCDF_SUFFIX = ".nc"
 # Spatial coverage
 DEFAULT_SPATIAL_AXIS_SIZE = 6
 
+# UMM-G keys
+UMMG_ADDITIONAL_ATTRIBUTES = "AdditionalAttributes"
+
 # Templates
-CNM_BODY_TEMPLATE = ("nsidc.metgen.templates", "cnm_body_template.json")
-CNM_FILES_TEMPLATE = ("nsidc.metgen.templates", "cnm_files_template.json")
-UMMG_BODY_TEMPLATE = ("nsidc.metgen.templates", "ummg_body_template.json")
+CNM_BODY_TEMPLATE = ("nsidc.metgen.templates", "cnm_body_template.txt")
+CNM_FILES_TEMPLATE = ("nsidc.metgen.templates", "cnm_files_template.txt")
+UMMG_BODY_TEMPLATE = ("nsidc.metgen.templates", "ummg_body_template.txt")
 UMMG_TEMPORAL_SINGLE_TEMPLATE = (
     "nsidc.metgen.templates",
-    "ummg_temporal_single_template.json",
+    "ummg_temporal_single_template.txt",
 )
 UMMG_TEMPORAL_RANGE_TEMPLATE = (
     "nsidc.metgen.templates",
-    "ummg_temporal_range_template.json",
+    "ummg_temporal_range_template.txt",
 )
 UMMG_SPATIAL_GPOLYGON_TEMPLATE = (
     "nsidc.metgen.templates",
-    "ummg_horizontal_gpolygon_template.json",
+    "ummg_horizontal_gpolygon_template.txt",
 )
 UMMG_SPATIAL_POINT_TEMPLATE = (
     "nsidc.metgen.templates",
-    "ummg_horizontal_point_template.json",
+    "ummg_horizontal_point_template.txt",
 )
 UMMG_SPATIAL_RECTANGLE_TEMPLATE = (
     "nsidc.metgen.templates",
-    "ummg_horizontal_rectangle_template.json",
+    "ummg_horizontal_rectangle_template.txt",
+)
+UMMG_ADDITIONAL_ATTRIBUTES_TEMPLATE = (
+    "nsidc.metgen.templates",
+    "ummg_additional_attributes_template.txt",
 )

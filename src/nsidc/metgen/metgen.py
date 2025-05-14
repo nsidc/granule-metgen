@@ -739,13 +739,6 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         )
     premet_content = utilities.premet_values(granule.premet_filename)
 
-    # temporarily show any additional attributes in premet file
-    if "AdditionalAttributes" in premet_content:
-        logger = logging.getLogger(constants.ROOT_LOGGER)
-        logger.info("")
-        logger.info(f"Additional attributes in premet file {granule.premet_filename}:")
-        logger.info(premet_content["AdditionalAttributes"])
-
     # Populated metadata_details dict looks like:
     # {
     #   data_file: {
@@ -767,6 +760,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     summary = metadata_summary(metadata_details)
     summary["spatial_extent"] = populate_spatial(summary["geometry"])
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
+    summary["additional_attributes"] = populate_additional_attributes(premet_content)
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
 
     # Populate the body template
@@ -1000,6 +994,24 @@ def populate_temporal(datetime_values):
         )
 
 
+def populate_additional_attributes(premet_content):
+    if constants.UMMG_ADDITIONAL_ATTRIBUTES in premet_content:
+        # Setting this up as a generic key-value in the template because I didn't
+        # want to put the constant value in the template as well.
+        # TODO: Get rid of all of this repetition of the constant! Also, should
+        # the "populate" methods be in utilities, not here?
+        return ummg_additional_attributes_template().safe_substitute(
+            {
+                "key": constants.UMMG_ADDITIONAL_ATTRIBUTES,
+                "attributes": json.dumps(
+                    premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]
+                ),
+            }
+        )
+
+    return ""
+
+
 def ummg_body_template():
     return initialize_template(constants.UMMG_BODY_TEMPLATE)
 
@@ -1018,6 +1030,10 @@ def ummg_spatial_gpolygon_template():
 
 def ummg_spatial_point_template():
     return initialize_template(constants.UMMG_SPATIAL_POINT_TEMPLATE)
+
+
+def ummg_additional_attributes_template():
+    return initialize_template(constants.UMMG_ADDITIONAL_ATTRIBUTES_TEMPLATE)
 
 
 def cnms_body_template():

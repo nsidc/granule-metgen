@@ -69,7 +69,7 @@ def premet_values(premet_path: str) -> dict:
 
     # Include any additional attributes
     if additional_atts:
-        pdict["AdditionalAttributes"] = additional_atts
+        pdict[constants.UMMG_ADDITIONAL_ATTRIBUTES] = additional_atts
 
     return pdict
 

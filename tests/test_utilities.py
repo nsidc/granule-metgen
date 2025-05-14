@@ -2,6 +2,7 @@ import re
 from unittest.mock import mock_open, patch
 
 import pytest
+from nsidc.metgen import constants
 from nsidc.metgen.readers import utilities
 
 # Unit tests for the 'utilities' module functions.
@@ -36,14 +37,15 @@ def not_a_polygon():
 @pytest.mark.parametrize(
     "input,expected",
     [
-        ('akey = somevalue', ['akey', 'somevalue']),
-        ('adate =   2020-01-01', ['adate', '2020-01-01']),
-        ('alat=74.5', ['alat', '74.5']),
-        ('alon  =100', ['alon', '100'])
-    ]
+        ("akey = somevalue", ["akey", "somevalue"]),
+        ("adate =   2020-01-01", ["adate", "2020-01-01"]),
+        ("alat=74.5", ["alat", "74.5"]),
+        ("alon  =100", ["alon", "100"]),
+    ],
 )
 def test_parse_premet_ignores_whitespace(input, expected):
     assert utilities.parse_premet_entry(input) == expected
+
 
 @pytest.mark.parametrize(
     "input,expected",
@@ -128,7 +130,7 @@ def test_datetime_from_premet(input, expected):
 
 def test_one_additional_attribute():
     premet_content = utilities.premet_values("./fixtures/premet/one_attribute.premet")
-    assert premet_content["AdditionalAttributes"] == [
+    assert premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES] == [
         {"Name": "first_attribute", "Values": ["first_value"]}
     ]
 
@@ -136,12 +138,12 @@ def test_one_additional_attribute():
 def test_two_additional_attributes():
     premet_content = utilities.premet_values("./fixtures/premet/two_attributes.premet")
     assert {"Name": "first_attribute", "Values": ["first_value"]} in premet_content[
-        "AdditionalAttributes"
+        constants.UMMG_ADDITIONAL_ATTRIBUTES
     ]
     assert {"Name": "second_attribute", "Values": ["second_value"]} in premet_content[
-        "AdditionalAttributes"
+        constants.UMMG_ADDITIONAL_ATTRIBUTES
     ]
-    assert len(premet_content["AdditionalAttributes"]) == 2
+    assert len(premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]) == 2
 
 
 @patch("builtins.open", new_callable=mock_open, read_data="-105.253 40.0126")

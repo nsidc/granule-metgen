@@ -1,12 +1,14 @@
 ## v1.6.0rc0
 
-* Parse `AdditionalAttributes` from `.premet` file. (Issue-162) 
+* Parse `AdditionalAttributes` from `.premet` file and include them in UMM-G
+  output. (Issue-162, Issue-186) 
+* Rename template files with `.txt` extension.
 
 ## v1.5.0
 
 * Add support for reading IRWIS2 CSV files (Issue-154)
 * Store `GranuleSpatialRepresentation` value from CMR collection metadata in the
-  `Collection` object.
+  `Collection` object. (Issue-163)
 * Read temporal extents from `premet` files if they exist. (Issue-160)
 * Read spatial information from `spatial` files if they exist. (Issue-161)
 * Read spatial information from `spo` files and reverse point order to create a
