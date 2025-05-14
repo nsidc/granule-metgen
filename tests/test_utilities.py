@@ -2,8 +2,8 @@ import re
 from unittest.mock import mock_open, patch
 
 import pytest
-from nsidc.metgen.readers import utilities
 from nsidc.metgen import constants
+from nsidc.metgen.readers import utilities
 
 # Unit tests for the 'utilities' module functions.
 #

@@ -996,10 +996,16 @@ def populate_temporal(datetime_values):
 
 def populate_additional_attributes(premet_content):
     if constants.UMMG_ADDITIONAL_ATTRIBUTES in premet_content:
+        # Setting this up as a generic key-value in the template because I didn't
+        # want to put the constant value in the template as well.
+        # TODO: Get rid of all of this repetition of the constant! Also, should
+        # the "populate" methods be in utilities, not here?
         return ummg_additional_attributes_template().safe_substitute(
             {
                 "key": constants.UMMG_ADDITIONAL_ATTRIBUTES,
-                "attributes": json.dumps(premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]),
+                "attributes": json.dumps(
+                    premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]
+                ),
             }
         )
 
