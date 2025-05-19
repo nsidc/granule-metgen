@@ -1,4 +1,4 @@
-## v1.6.0rc1
+## v1.6.0
 
 * Parse `AdditionalAttributes` from `.premet` file and include them in UMM-G
   output. (Issue-162, Issue-186) 
