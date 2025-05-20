@@ -87,8 +87,8 @@ Finally, restrict the permissions of the directory and files:
 
     $ chmod -R go-rwx ~/.aws
 
-Instructions for obtaining an AWS key pair are [covered here](https://nsidc.atlassian.net/l/cp/YYj1gGsp). Once 
-generated edit your `~/.aws/credentials` file and replace `TBD` with the public and secret key values.
+**Instructions for obtaining an AWS key pair are [covered here](https://github.com/nsidc/granule-metgen/wiki/MetGenC-Ancillary-Resources#22-generate-aws-long-term-access-key).**
+Once generated edit your `~/.aws/credentials` file and replace `TBD` with the public and secret key values.
 
 ### Option 2: Using the AWS CLI to Create Configuration Files
 
@@ -108,8 +108,8 @@ and files with your values.
 
 ## CMR Authentication and use of Collection Metadata
 
-MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials retrieved
-from the environment to retrieve collection metadata. If authentication fails,
+MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials
+to retrieve collection metadata. If authentication fails,
 collection metadata will not be available to compensate for metadata elements 
 missing from `ini` files or the data files themselves.
 
@@ -119,11 +119,11 @@ to start data ingest:
     $ export EARTHDATA_USERNAME=your-EDL-user-name
     $ export EARTHDATA_PASSWORD=your-EDL-password
 
-If you have a different user name/password combo for the UAT and PROD
+If you have a different user name/password combo for UAT and PROD
 environments, be sure to set the values appropriate for the environment you're
 ingesting to.
 
-If collection metadata are unavailable, either due to an authentication failure
+If collection metadata are unavailable either due to an authentication failure
 or because the collection information doesn't yet exist in CMR, MetGenC will
 continue processing with the information available from the `ini` file and the
 data files.
