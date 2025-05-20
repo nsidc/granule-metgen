@@ -430,7 +430,7 @@ Using configuration:
 ```
 
 * environment: reflects `uat` as this is the default environment. This can be changed on the command line when `metgenc process` is run by adding the `-e` / `--env` option (e.g., metgenc process -e prod).
-* data_dir:, auth_id:, version:, provider:, local_output_dir:, and ummg_dir: are set by the operator in the config file.
+* data_dir:, auth_id:, version:, provider:, local_output_dir:, and ummg_dir: (which is relative to the local_output_dir) are set by the operator in the config file.
 * kinesis_stream_name: and staging_bucket_name: could be changed by the operator in the config file, but should be left as-is!
 * write_cnm_file:, and overwrite_ummg: are editable by operators in the config file
   * write_cnm_file: can be set here as `true` or `false`. Setting this to `true` when testing allows you to visually qc cnm content as well as run `metgenc validate` to assure they're valid for ingest. Once known to be valid, and you're ready to ingest data end-to-end, this can be edited to `false` to prevent cnm files from being written locally if desired. They'll always be sent to AWS regardless of the value being `true` or `false`.
