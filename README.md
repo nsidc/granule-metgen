@@ -130,12 +130,46 @@ data files.
 
 ## Before Running MetGenC: Tips and Assumptions
 
+* Activate your venv:
+
+        $ source ~/<name of your venv>/bin/activate
+  
 * Verify the application version:
 
         $ metgenc --version
         metgenc, version 1.3.0
+  
+* Before you run end-to-end ingest, be sure to source your AWS credentials:
 
-* Show the help text:
+        $ source metgenc-env.sh cumulus-uat
+
+Or, if you can't remember if you have, run the following to confirm whether you've already sourced them:
+
+        $ aws configure list
+
+and either the following will be returned, indicating you need to source your credentials:
+```
+Name                    Value             Type    Location
+----                    -----             ----    --------
+profile               <not set>           None    None
+access_key            <not set>           None    None
+secret_key            <not set>           None    None
+region                <not set>           None    None
+```
+
+or you'll see that you're all set to kick off ingest to Cumulus:
+
+```
+      Name                    Value             Type    Location
+      ----                    -----             ----    --------
+   profile              cumulus-uat              env    ['AWS_PROFILE', 'AWS_DEFAULT_PROFILE']
+access_key     ****************SQXY              env    
+secret_key     ****************cJ+5              env    
+    region                us-west-2              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']    
+```
+Once you've sourced your AWS profile, it'll be effective for however long you're working in your activated venv.
+
+* Show MetGenC's help text:
 
         $ metgenc --help
         Usage: metgenc [OPTIONS] COMMAND [ARGS]...
@@ -448,30 +482,6 @@ Notes: Before running **process** to ingest granules to CUAT (i.e., not run in d
 * You'll need to have sourced (or source now), your AWS profile by running `source metgenc-env.sh cumulus-uat`
   where `cumulus-uat` reflects the profile name specified in your AWS credential and config files.
   If you can't remember whether you've sourced your AWS profile, run `aws configure list` at the prompt.
-  You'll either see:
-```
-Name                    Value             Type    Location
-----                    -----             ----    --------
-profile               <not set>           None    None
-access_key            <not set>           None    None
-secret_key            <not set>           None    None
-region                <not set>           None    None
-```
-
-if it's not been sourced, or:
-
-```
-      Name                    Value             Type    Location
-      ----                    -----             ----    --------
-   profile              cumulus-uat              env    ['AWS_PROFILE', 'AWS_DEFAULT_PROFILE']
-access_key     ****************SQXY              env    
-secret_key     ****************cJ+5              env    
-    region                us-west-2              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']    
-```
-  if it has.
-  
-  Once your AWS profile has been sourced, it'll be effective for however long you're
-  working in your activated venv.
   
 ---
 
