@@ -68,28 +68,27 @@ First, create a directory in your user's home directory to store the AWS configu
 
 In the `~/.aws` directory, create a file named `config` with the contents:
 
-    [default]
+    [profile cumulus-uat]
     region = us-west-2
     output = json
 
 In the `~/.aws` directory, create a file named `credentials` with the contents:
 
-    [default]
+    [cumulus-uat]
     aws_access_key_id = TBD
     aws_secret_access_key = TBD
 
-The examples above create a [default AWS profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-format-profile).
-If you require access to multiple AWS accounts, each with their own configuration--for example, different accounts for pre-production vs. production--you
-can use the [AWS CLI 'profile' feature to manage settings for each account](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles).
+The examples above create a [cumulus-uat AWS profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-format-profile).
+If you require access to multiple AWS accounts, each with their own configuration--for example, different accounts for CUAT vs. CPROD--you
+can use the [AWS CLI 'profile' feature to manage settings for each account](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles), or you can edit the config and credentials files to add in cumulus-prod details.
 
 
 Finally, restrict the permissions of the directory and files:
 
     $ chmod -R go-rwx ~/.aws
 
-When you've obtained the AWS key pair ([covered here]([https://nsidc.atlassian.net/l/cp/YYj1gGsp])),
-edit your newly created `~/.aws/credentials` file and replace `TBD` with the public and secret
-key values.
+Instructions for obtaining an AWS key pair are [covered here](https://nsidc.atlassian.net/l/cp/YYj1gGsp). Once 
+generated edit your `~/.aws/credentials` file and replace `TBD` with the public and secret key values.
 
 ### Option 2: Using the AWS CLI to Create Configuration Files
 
@@ -109,19 +108,20 @@ and files with your values.
 
 ## CMR Authentication and use of Collection Metadata
 
-MetGenC will attempt to authenticate with Earthdata using credentials retrieved
-from the environment and retrieve collection metadata. If authentication fails,
+MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials retrieved
+from the environment to retrieve collection metadata. If authentication fails,
 collection metadata will not be available to compensate for metadata elements 
 missing from `ini` files or the data files themselves.
 
-Export the following variables to your environment before you kick off MetGenC:
+Export the following variables to your environment before you run `metgenc process`
+to start data ingest:
 
     $ export EARTHDATA_USERNAME=your-EDL-user-name
     $ export EARTHDATA_PASSWORD=your-EDL-password
 
-If you have a different user name and password for the UAT and production
-environments, be sure to set the values appropriate for the environment option
-passed to `metgenc process`.
+If you have a different user name/password combo for the UAT and PROD
+environments, be sure to set the values appropriate for the environment you're
+ingesting to.
 
 If collection metadata are unavailable, either due to an authentication failure
 or because the collection information doesn't yet exist in CMR, MetGenC will
@@ -143,11 +143,12 @@ data files.
 
         $ source metgenc-env.sh cumulus-uat
 
-Or, if you can't remember if you have, run the following to confirm whether you've already sourced them:
+  * If you think you've already run it but can't remember, run the following:
 
-        $ aws configure list
+            $ aws configure list
 
-and either the following will be returned, indicating you need to source your credentials:
+and either what's returned will indicate that you need to source your credentials:
+      
 ```
 Name                    Value             Type    Location
 ----                    -----             ----    --------
@@ -156,8 +157,7 @@ access_key            <not set>           None    None
 secret_key            <not set>           None    None
 region                <not set>           None    None
 ```
-
-or you'll see that you're all set to kick off ingest to Cumulus:
+or it'll show that you're all set (AWS comms-wise) for ingesting to Cumulus:
 
 ```
       Name                    Value             Type    Location
@@ -167,7 +167,6 @@ access_key     ****************SQXY              env
 secret_key     ****************cJ+5              env    
     region                us-west-2              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']    
 ```
-Once you've sourced your AWS profile, it'll be effective for however long you're working in your activated venv.
 
 * Show MetGenC's help text:
 
@@ -190,6 +189,12 @@ Once you've sourced your AWS profile, it'll be effective for however long you're
 * For detailed help on each command, run: metgenc <command> --help, for example:
 
         $ metgenc process --help
+  
+* If you find you'd like to view a ummg or cnm json file in your shell, but don't want
+  to wade through unformatted json chaos, use `cat <ummg or cnm file name> | jq "."` to
+  pretty-print json file content to your screen, e.g.:
+   
+        $ cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "."
         
 ### Assumptions for netCDF files for MetGenC
 
@@ -513,16 +518,11 @@ The package `check-jsonschema` is also installed by MetGenC and can be used to v
     $ check-jsonschema --schemafile <path to schema file> <path to cnm file>
 
 
-## Tips and Troubleshooting
+## Troubleshooting
 
 If you run `$ metgenc process -c ./init/test.ini` to test end-to-end ingest, but you get a flurry of errors,
 see if sourcing your AWS credentials (`source metgenc-env.sh cumulus-uat`) solves the problem! Forgetting
-to set up communications between MetGenC and AWS is easy to do, and thankfully, easy to fix.
-
-Do you want to look at a ummg or cnm file in your shell, but not see unformatted json chaos? Use the following to
-print json file content to your screen: `cat <ummg or cnm file name> | jq "."`
-e.g.
-`cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "."`
+to set up communications between MetGenC and AWS is easy to do, but thankfully, easy to fix.
 
 
 ## For Developers
