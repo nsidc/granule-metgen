@@ -452,22 +452,23 @@ def validate_cmr_response(umm: list):
     """
     Confirm required elements exist in the UMM-C record returned from CMR.
     """
-    val = None
-    logger = logging.getLogger(constants.ROOT_LOGGER)
 
     if not umm:
-        logger.info("No UMM-C content returned from CMR.")
-        return val
+        raise config.ValidationError("Empty UMM-C response from CMR.")
 
     if len(umm) > 1:
-        logger.info("Multiple UMM-C records returned from CMR, none will be used.")
-        return val
+        raise config.ValidationError(
+            "Multiple UMM-C records returned from CMR, none will be used."
+        )
 
     if not isinstance(umm[0], dict) or "umm" not in umm[0]:
-        logger.info("Malformed UMM-C content returned from CMR.")
-        return None
+        raise config.ValidationError("No UMM-C content in CMR response.")
 
-    return umm[0]["umm"]
+    ummc = umm[0]["umm"]
+    if not isinstance(ummc, dict):
+        raise config.ValidationError("Malformed UMM-C content returned from CMR.")
+
+    return ummc
 
 
 def ummc_content(ummc: dict, key: str) -> str:
@@ -526,20 +527,28 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
             has_granules=None,
             provider=edl_provider(environment),
         )
-        ummc = validate_cmr_response(cmr_response)
     else:
-        logger.info("Earthdata login failed, UMM-C metadata will not be used.")
-        ummc = None
+        raise Exception(
+            f"Earthdata login failed, cannot retrieve UMM-C metadata for {auth_id}.{version}."
+        )
+
+    ummc = validate_cmr_response(cmr_response)
 
     # FYI: data format (e.g. NetCDF) is available in the umm-c response in
     # ArchiveAndDistributionInformation should we decide to use it.
     spatial_extent = ummc_content(ummc, "SpatialExtent")
+    granule_spatial_rep = ummc_content(spatial_extent, constants.GRANULE_SPATIAL_REP)
+
+    # return error if no GranuleSpatialRepresentation
+    if not granule_spatial_rep:
+        raise Exception(
+            f"{constants.GRANULE_SPATIAL_REP} not available in UMM-C metadata for {auth_id}.{version}."
+        )
+
     return Collection(
         auth_id,
         version,
-        granule_spatial_representation=ummc_content(
-            spatial_extent, "GranuleSpatialRepresentation"
-        ),
+        granule_spatial_representation=granule_spatial_rep,
         spatial_extent=spatial_extent,
         temporal_extent=ummc_content(ummc, "TemporalExtents"),
     )
@@ -966,12 +975,36 @@ def checksum(file):
     return sha256.hexdigest()
 
 
+def geometry_decider(granule: Granule, spatial_values: dict):
+    """
+    Use UMM-C GranuleSpatialRepresentation value to determine the nature of
+    UMM-G spatial values.
+    """
+    # valid umm-c GranuleSpatialRepresentation ["CARTESIAN", "GEODETIC", "ORBIT", "NO_SPATIAL"]
+    match granule.collection.granule_spatial_representation:
+        case "CARTESIAN":
+            # if one lon, lat, then is a point. Otherwise, rectangle.
+            if len(spatial_values["points"]) > 1:
+                return ummg_spatial_point_template
+
+            # return error
+            raise Exception("cannot create bounding rectangle yet")
+
+        case "GEODETIC":
+            return ummg_spatial_gpolygon_template
+
+
 # TODO: Use the GranuleSpatialRepresentation value in the collection metadata
 # to determine the expected spatial type. See Issue #15. For now, use either
 # GPolygon or Points, depending on how many points are in the spatial values.
-def populate_spatial(spatial_values):
-    # spatial_values is a dict suitable for use in template substitution, like:
-    # { 'points': string representation of an array of {lon: lat:} dicts }
+def populate_spatial(spatial_values: dict) -> str:
+    """
+    Return a string representation of a geometry (point, bounding box, gpolygon)
+    """
+    # match geometry_decider():
+    #    case "Point":
+    #        return "point"
+
     if len(spatial_values["points"]) == 1:
         return ummg_spatial_point_template().safe_substitute(
             {"points": json.dumps(spatial_values["points"])}

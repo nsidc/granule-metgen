@@ -1,11 +1,11 @@
 import datetime as dt
-import logging
+import re
 from pathlib import Path
 from unittest.mock import mock_open, patch
 
 import pytest
 from funcy import identity, partial
-from nsidc.metgen import config, constants, metgen
+from nsidc.metgen import config, metgen
 
 # Unit tests for the 'metgen' module functions.
 #
@@ -115,8 +115,13 @@ def test_uses_first_file_as_default(multi_file_granule):
     assert summary["geometry"] == "big"
 
 
-def test_returns_only_gpolygon():
-    result = metgen.populate_spatial({"points": "some list of points"})
+def test_returns_points():
+    result = metgen.populate_spatial({"points": ["a point"]})
+    assert re.search('"Geometry": {\n(\s+)"Points": \["a point"\]', result)
+
+
+def test_returns_polygon():
+    result = metgen.populate_spatial({"points": ["pt 1", "pt 2"]})
     assert "GPolygons" in result
 
 
@@ -532,51 +537,51 @@ def test_edl_login_environment(ingest_env, edl_env):
     assert (environment) == edl_env
 
 
-def test_handles_no_cmr_response(fake_ummc_response):
+def test_handles_missing_ummc_key(fake_ummc_response):
     assert metgen.ummc_content({}, "fakekey") is None
     assert metgen.ummc_content(fake_ummc_response, "DOI") is None
 
 
-def test_handles_good_cmr_response(fake_ummc_response):
+def test_finds_existing_ummc_key(fake_ummc_response):
     assert metgen.ummc_content(fake_ummc_response, "Version") == 1
 
 
-@patch("nsidc.metgen.metgen.edl_login", return_value=False)
-def test_no_ummc_if_login_fails(mock_edl_login):
-    new_collection = metgen.collection_from_cmr("uat", "BigData", 1)
-    assert new_collection.spatial_extent is None
-    assert new_collection.temporal_extent is None
-    assert new_collection.granule_spatial_representation is None
+def test_looks_for_umm_dict(fake_ummc_response):
+    ummc = metgen.validate_cmr_response([{"umm": fake_ummc_response}])
+    assert ummc == fake_ummc_response
+
+
+@patch("nsidc.metgen.metgen.edl_login", return_value=True)
+def test_requires_spatial_representation(mock_edl_login, fake_ummc_response):
+    fake_return = [{"umm": fake_ummc_response}]
+    with patch("earthaccess.search_datasets", return_value=fake_return):
+        with pytest.raises(Exception):
+            metgen.collection_from_cmr("uat", "bigdata", 1)
 
 
 @pytest.mark.parametrize(
-    "umm_content,validated_response,log_message",
+    "umm_content,error",
     [
-        ([], None, "No UMM-C content returned from CMR."),
+        ([], "Empty UMM-C response from CMR."),
         (
             ["ummc1", "ummc2"],
-            None,
             "Multiple UMM-C records returned from CMR, none will be used.",
         ),
         (
             ["ummc1"],
-            None,
-            "Malformed UMM-C content returned from CMR.",
+            "No UMM-C content in CMR response.",
         ),
         (
             [{"ummc1": "some ummc"}],
-            None,
+            "No UMM-C content in CMR response.",
+        ),
+        (
+            [{"umm": "some ummc"}],
             "Malformed UMM-C content returned from CMR.",
         ),
-        ([{"umm": "some ummc"}], "some ummc", []),
     ],
 )
-def test_umm_key_required(umm_content, validated_response, log_message, caplog):
-    caplog.set_level(logging.INFO, logger=constants.ROOT_LOGGER)
-    if log_message:
-        log_tuples = [(constants.ROOT_LOGGER, logging.INFO, log_message)]
-    else:
-        log_tuples = []
-    assert metgen.validate_cmr_response(umm_content) is validated_response
-    assert caplog.record_tuples == log_tuples
-    caplog.clear()
+def test_umm_key_required(umm_content, error):
+    with pytest.raises(config.ValidationError) as exc_info:
+        metgen.validate_cmr_response(umm_content)
+    assert re.search(error, exc_info.value.args[0])

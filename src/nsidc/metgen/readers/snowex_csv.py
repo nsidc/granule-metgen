@@ -45,9 +45,6 @@ def data_datetime(csvreader, premet_content: dict) -> list:
         return None
 
 
-# Add new spatial_values strategy that gets LAT & LON columns
-
-
 def spatial_values(csvreader, spatial_path, _):
     """Get spatial coverage from spatial file if it exists, otherwise parse from CSV"""
     if spatial_path is not None:
