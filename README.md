@@ -46,12 +46,14 @@ On a Mac, open Terminal and run:
     $ python -m venv /Users/afitzger/metgenc (i.e. provide the path and name of the venv where you'll house MetGenC)
     $ source ~/metgenc/bin/activate (i.e., activates your newly created metgenc venv)
 
-On a Windows machine, open a command prompt, navigate to the desired project directory in which to create your venv, then run:
+On a Windows machine, open a command prompt, navigate to the desired project directory in which you wish to create your venv, then run:
 
     > python -m venv metgenc (i.e., in this case, a venv named "metgenc" is created within the current directory)
     > .\<path to venv>\Scripts\activate (i.e., activates your newly created metgenc venv) 
 
-Now, whatever your OS, install MetGenC into the virtual environment using `pip`:
+cd into the venv directory (e.g., `$ cd metgenc`) 
+
+Now install MetGenC into the virtual environment using `pip` (this command _should_ be OS-agnostic):
 
     $ pip install nsidc-metgenc
 
@@ -80,7 +82,7 @@ In the `~/.aws` directory, create a file named `credentials` with the contents:
 
 The examples above create a [cumulus-uat AWS profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-format-profile).
 If you require access to multiple AWS accounts, each with their own configuration--for example, different accounts for CUAT vs. CPROD--you
-can use the [AWS CLI 'profile' feature to manage settings for each account](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles), or you can edit the config and credentials files to add in cumulus-prod details.
+can use the [AWS CLI 'profile' feature to manage settings for each account](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles), or you can edit the config and credentials files and just add `profile cumulus-prod` and `cumulus-prod` details, respectively.
 
 
 Finally, restrict the permissions of the directory and files:
