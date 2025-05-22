@@ -49,7 +49,7 @@ def extract_metadata(
         "temporal": time_range(
             os.path.basename(netcdf_path), netcdf, premet_content, configuration
         ),
-        "geometry": {"points": spatial_values(netcdf, spatial_path, configuration)},
+        "geometry": spatial_values(netcdf, spatial_path, configuration),
     }
 
 
@@ -111,12 +111,12 @@ Set `time_coverage_duration` in the configuration file."
             )
 
 
-def spatial_values(netcdf, spatial_path, configuration):
+def spatial_values(netcdf, spatial_path, configuration) -> list[dict]:
     """
     Return an array of dicts, each dict representing one lat/lon pair like so:
         {
-            "Longitude: float,
-            "Latitude: float
+            "Longitude": float,
+            "Latitude": float
         }
     Eventually this should be pulled out of the netCDF-specific code into a
     general-use module.

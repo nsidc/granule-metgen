@@ -1,3 +1,9 @@
+## UNRELEASED
+
+* Refactor logic for identifying granule spatial representation. (Issue-159)
+* End processing if UMM-C metadata can't be retrieved and/or don't contain a
+  `GranuleSpatialRepresentation` element.
+
 ## v1.6.0
 
 * Parse `AdditionalAttributes` from `.premet` file and include them in UMM-G

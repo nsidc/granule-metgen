@@ -22,9 +22,7 @@ def extract_metadata(
             "size_in_bytes": os.path.getsize(csv_path),
             "production_date_time": configuration.date_modified,
             "temporal": data_datetime(csvreader, premet_path),
-            "geometry": {
-                "points": spatial_values(csvreader, spatial_path, configuration)
-            },
+            "geometry": spatial_values(csvreader, spatial_path, configuration),
         }
 
 
@@ -43,9 +41,6 @@ def data_datetime(csvreader, premet_content: dict) -> list:
         return [utilities.ensure_iso_datetime(val)]
     else:
         return None
-
-
-# Add new spatial_values strategy that gets LAT & LON columns
 
 
 def spatial_values(csvreader, spatial_path, _):
