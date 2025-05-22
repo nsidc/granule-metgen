@@ -26,7 +26,7 @@ nsidc@nsidc.org for more information.
 
 ## Requirements
 
-To use the `nsidc-metgen` command-line tool, `metgenc`, you must first have
+To use the `nsidc-metgen` command-line tool, `metgenc`, you must have
 Python version 3.12 installed. To determine the version of Python you have, run
 this at the command-line:
 
@@ -59,10 +59,10 @@ Now install MetGenC into the virtual environment using `pip` (this command _shou
 
 ## AWS Credentials
 
-In order to process science data and stage it for Cumulus, you must first create & setup your AWS
-credentials. Two options for doing this are:
+In order to process science data and stage it for Cumulus, you must create & setup AWS
+credentials. There are two options to do this:
 
-### Option 1: Manually Creating Configuration Files
+### Option 1: Manually Create Configuration Files
 
 First, create a directory in your user's home directory to store the AWS configuration:
 
@@ -92,7 +92,7 @@ Finally, restrict the permissions of the directory and files:
 **Instructions for obtaining an AWS key pair are [covered here](https://github.com/nsidc/granule-metgen/wiki/MetGenC-Ancillary-Resources#22-generate-aws-long-term-access-key).**
 Once generated edit your `~/.aws/credentials` file and replace `TBD` with the public and secret key values.
 
-### Option 2: Using the AWS CLI to Create Configuration Files
+### Option 2: Use the AWS CLI to Create Configuration Files
 
 You may install (or already have it installed) the AWS Command Line Interface on the
 machine where you are running the tool. Follow the
