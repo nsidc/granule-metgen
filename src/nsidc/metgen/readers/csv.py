@@ -21,7 +21,7 @@ def extract_metadata(
         "size_in_bytes": os.path.getsize(csv_path),
         "production_date_time": configuration.date_modified,
         "temporal": data_datetime(df, premet_content),
-        "geometry": {"points": bbox(spatial_values(df, spatial_path, configuration))},
+        "geometry": bbox(spatial_values(df, spatial_path, configuration)),
     }
 
 

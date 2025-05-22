@@ -5,7 +5,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 from funcy import identity, partial
-from nsidc.metgen import config, metgen
+from nsidc.metgen import config, constants, metgen
 
 # Unit tests for the 'metgen' module functions.
 #
@@ -114,14 +114,21 @@ def test_uses_first_file_as_default(multi_file_granule):
     assert summary["temporal"] == "now"
     assert summary["geometry"] == "big"
 
+def test_geometry_decider():
+    assert metgen.geometry_decider(constants.CARTESIAN, 1) == metgen.ummg_spatial_point_template
+    assert metgen.geometry_decider(constants.GEODETIC, 1) == metgen.ummg_spatial_gpolygon_template
+
+def test_no_bounding_rectangle_support():
+    with pytest.raises(Exception):
+        metgen.geometry_decider(constants.CARTESIAN, 5)
 
 def test_returns_points():
-    result = metgen.populate_spatial({"points": ["a point"]})
+    result = metgen.populate_spatial(constants.CARTESIAN, ["a point"])
     assert re.search('"Geometry": {\n(\s+)"Points": \["a point"\]', result)
 
 
 def test_returns_polygon():
-    result = metgen.populate_spatial({"points": ["pt 1", "pt 2"]})
+    result = metgen.populate_spatial(constants.GEODETIC, ["pt 1", "pt 2"])
     assert "GPolygons" in result
 
 

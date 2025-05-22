@@ -755,8 +755,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     #       'production_date_time'  => iso datetime string,
     #       'temporal' => an array of one (data represent a single point in time)
     #                     or two (data cover a time range) datetime strings
-    #       'geometry' => { 'points': a string representation of one or more
-    #                                 lat/lon pairs }
+    #       'geometry' => { 'points': an array of {'Longitude': x, 'Latitude': y} dicts
     #   }
     # }
     metadata_details = {}
@@ -767,7 +766,9 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)
-    summary["spatial_extent"] = populate_spatial(summary["geometry"])
+    summary["spatial_extent"] = populate_spatial(
+        granule.collection.granule_spatial_representation, summary["geometry"]
+    )
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
     summary["additional_attributes"] = populate_additional_attributes(premet_content)
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
@@ -975,45 +976,35 @@ def checksum(file):
     return sha256.hexdigest()
 
 
-def geometry_decider(granule: Granule, spatial_values: dict):
+def geometry_decider(spatial_representation: str, num_spatial: int):
     """
     Use UMM-C GranuleSpatialRepresentation value to determine the nature of
     UMM-G spatial values.
     """
     # valid umm-c GranuleSpatialRepresentation ["CARTESIAN", "GEODETIC", "ORBIT", "NO_SPATIAL"]
-    match granule.collection.granule_spatial_representation:
-        case "CARTESIAN":
+    match spatial_representation:
+        case constants.CARTESIAN:
             # if one lon, lat, then is a point. Otherwise, rectangle.
-            if len(spatial_values["points"]) > 1:
+            if num_spatial == 1:
                 return ummg_spatial_point_template
 
-            # return error
+            # no rectangles yet!
             raise Exception("cannot create bounding rectangle yet")
 
-        case "GEODETIC":
+        case constants.GEODETIC:
             return ummg_spatial_gpolygon_template
 
 
 # TODO: Use the GranuleSpatialRepresentation value in the collection metadata
 # to determine the expected spatial type. See Issue #15. For now, use either
 # GPolygon or Points, depending on how many points are in the spatial values.
-def populate_spatial(spatial_values: dict) -> str:
+def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
     """
     Return a string representation of a geometry (point, bounding box, gpolygon)
     """
-    # match geometry_decider():
-    #    case "Point":
-    #        return "point"
 
-    if len(spatial_values["points"]) == 1:
-        return ummg_spatial_point_template().safe_substitute(
-            {"points": json.dumps(spatial_values["points"])}
-        )
-
-    # Default is a polygon
-    return ummg_spatial_gpolygon_template().safe_substitute(
-        {"points": json.dumps(spatial_values["points"])}
-    )
+    template = geometry_decider(spatial_representation, len(spatial_values))
+    return template().safe_substitute({"points": json.dumps(spatial_values)})
 
 
 def populate_temporal(datetime_values):
