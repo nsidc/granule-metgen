@@ -84,9 +84,9 @@ def test_extract_snex_metadata(test_config, snowex_csv):
     assert metadata["size_in_bytes"] == os.path.getsize(snowex_csv)
     assert metadata["production_date_time"] == test_config.date_modified
     assert metadata["temporal"] == ["2023-03-06T11:00:00.000Z"]
-    assert metadata["geometry"] == {
-        "points": [{"Latitude": 64.86197446452954, "Longitude": -147.71408586635164}]
-    }
+    assert metadata["geometry"] == [
+        {"Latitude": 64.86197446452954, "Longitude": -147.71408586635164}
+    ]
 
 
 def test_extract_generic_metadata(test_config, generic_csv_content, generic_csv):
@@ -97,13 +97,11 @@ def test_extract_generic_metadata(test_config, generic_csv_content, generic_csv)
         "2012-03-16T23:00:00.000Z",
         "2012-03-17T05:00:00.123Z",
     ]
-    assert len(metadata["geometry"]["points"]) == 5
-    assert metadata["geometry"] == {
-        "points": [
-            {"Latitude": 61.418877, "Longitude": -148.987869},
-            {"Latitude": 61.208763, "Longitude": -148.987869},
-            {"Latitude": 61.208763, "Longitude": -146.751678},
-            {"Latitude": 61.418877, "Longitude": -146.751678},
-            {"Latitude": 61.418877, "Longitude": -148.987869},
-        ]
-    }
+    assert len(metadata["geometry"]) == 5
+    assert metadata["geometry"] == [
+        {"Latitude": 61.418877, "Longitude": -148.987869},
+        {"Latitude": 61.208763, "Longitude": -148.987869},
+        {"Latitude": 61.208763, "Longitude": -146.751678},
+        {"Latitude": 61.418877, "Longitude": -146.751678},
+        {"Latitude": 61.418877, "Longitude": -148.987869},
+    ]

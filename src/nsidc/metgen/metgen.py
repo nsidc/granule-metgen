@@ -452,22 +452,23 @@ def validate_cmr_response(umm: list):
     """
     Confirm required elements exist in the UMM-C record returned from CMR.
     """
-    val = None
-    logger = logging.getLogger(constants.ROOT_LOGGER)
 
     if not umm:
-        logger.info("No UMM-C content returned from CMR.")
-        return val
+        raise config.ValidationError("Empty UMM-C response from CMR.")
 
     if len(umm) > 1:
-        logger.info("Multiple UMM-C records returned from CMR, none will be used.")
-        return val
+        raise config.ValidationError(
+            "Multiple UMM-C records returned from CMR, none will be used."
+        )
 
     if not isinstance(umm[0], dict) or "umm" not in umm[0]:
-        logger.info("Malformed UMM-C content returned from CMR.")
-        return None
+        raise config.ValidationError("No UMM-C content in CMR response.")
 
-    return umm[0]["umm"]
+    ummc = umm[0]["umm"]
+    if not isinstance(ummc, dict):
+        raise config.ValidationError("Malformed UMM-C content returned from CMR.")
+
+    return ummc
 
 
 def ummc_content(ummc: dict, key: str) -> str:
@@ -526,20 +527,28 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
             has_granules=None,
             provider=edl_provider(environment),
         )
-        ummc = validate_cmr_response(cmr_response)
     else:
-        logger.info("Earthdata login failed, UMM-C metadata will not be used.")
-        ummc = None
+        raise Exception(
+            f"Earthdata login failed, cannot retrieve UMM-C metadata for {auth_id}.{version}."
+        )
+
+    ummc = validate_cmr_response(cmr_response)
 
     # FYI: data format (e.g. NetCDF) is available in the umm-c response in
     # ArchiveAndDistributionInformation should we decide to use it.
     spatial_extent = ummc_content(ummc, "SpatialExtent")
+    granule_spatial_rep = ummc_content(spatial_extent, constants.GRANULE_SPATIAL_REP)
+
+    # return error if no GranuleSpatialRepresentation
+    if not granule_spatial_rep:
+        raise Exception(
+            f"{constants.GRANULE_SPATIAL_REP} not available in UMM-C metadata for {auth_id}.{version}."
+        )
+
     return Collection(
         auth_id,
         version,
-        granule_spatial_representation=ummc_content(
-            spatial_extent, "GranuleSpatialRepresentation"
-        ),
+        granule_spatial_representation=granule_spatial_rep,
         spatial_extent=spatial_extent,
         temporal_extent=ummc_content(ummc, "TemporalExtents"),
     )
@@ -746,8 +755,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     #       'production_date_time'  => iso datetime string,
     #       'temporal' => an array of one (data represent a single point in time)
     #                     or two (data cover a time range) datetime strings
-    #       'geometry' => { 'points': a string representation of one or more
-    #                                 lat/lon pairs }
+    #       'geometry' => { 'points': an array of {'Longitude': x, 'Latitude': y} dicts
     #   }
     # }
     metadata_details = {}
@@ -758,7 +766,9 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)
-    summary["spatial_extent"] = populate_spatial(summary["geometry"])
+    summary["spatial_extent"] = populate_spatial(
+        granule.collection.granule_spatial_representation, summary["geometry"]
+    )
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
     summary["additional_attributes"] = populate_additional_attributes(premet_content)
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
@@ -966,21 +976,35 @@ def checksum(file):
     return sha256.hexdigest()
 
 
+def geometry_decider(spatial_representation: str, num_spatial: int):
+    """
+    Use UMM-C GranuleSpatialRepresentation value to determine the nature of
+    UMM-G spatial values.
+    """
+    # valid umm-c GranuleSpatialRepresentation ["CARTESIAN", "GEODETIC", "ORBIT", "NO_SPATIAL"]
+    match spatial_representation:
+        case constants.CARTESIAN:
+            # if one lon, lat, then is a point. Otherwise, rectangle.
+            if num_spatial == 1:
+                return ummg_spatial_point_template
+
+            # no rectangles yet!
+            raise Exception("cannot create bounding rectangle yet")
+
+        case constants.GEODETIC:
+            return ummg_spatial_gpolygon_template
+
+
 # TODO: Use the GranuleSpatialRepresentation value in the collection metadata
 # to determine the expected spatial type. See Issue #15. For now, use either
 # GPolygon or Points, depending on how many points are in the spatial values.
-def populate_spatial(spatial_values):
-    # spatial_values is a dict suitable for use in template substitution, like:
-    # { 'points': string representation of an array of {lon: lat:} dicts }
-    if len(spatial_values["points"]) == 1:
-        return ummg_spatial_point_template().safe_substitute(
-            {"points": json.dumps(spatial_values["points"])}
-        )
+def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
+    """
+    Return a string representation of a geometry (point, bounding box, gpolygon)
+    """
 
-    # Default is a polygon
-    return ummg_spatial_gpolygon_template().safe_substitute(
-        {"points": json.dumps(spatial_values["points"])}
-    )
+    template = geometry_decider(spatial_representation, len(spatial_values))
+    return template().safe_substitute({"points": json.dumps(spatial_values)})
 
 
 def populate_temporal(datetime_values):
