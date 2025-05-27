@@ -26,7 +26,7 @@ nsidc@nsidc.org for more information.
 
 ## Requirements
 
-To use the `nsidc-metgen` command-line tool, `metgenc`, you must first have
+To use the `nsidc-metgen` command-line tool, `metgenc`, you must have
 Python version 3.12 installed. To determine the version of Python you have, run
 this at the command-line:
 
@@ -46,21 +46,23 @@ On a Mac, open Terminal and run:
     $ python -m venv /Users/afitzger/metgenc (i.e. provide the path and name of the venv where you'll house MetGenC)
     $ source ~/metgenc/bin/activate (i.e., activates your newly created metgenc venv)
 
-On a Windows machine, open a command prompt, navigate to the desired project directory in which to create your venv, then run:
+On a Windows machine, open a command prompt, navigate to the desired project directory in which you wish to create your venv, then run:
 
     > python -m venv metgenc (i.e., in this case, a venv named "metgenc" is created within the current directory)
     > .\<path to venv>\Scripts\activate (i.e., activates your newly created metgenc venv) 
 
-Now, whatever your OS, install MetGenC into the virtual environment using `pip`:
+cd into the venv directory (e.g., `$ cd metgenc`) 
+
+Now install MetGenC into the virtual environment using `pip` (this command _should_ be OS-agnostic):
 
     $ pip install nsidc-metgenc
 
 ## AWS Credentials
 
-In order to process science data and stage it for Cumulus, you must first create & setup your AWS
-credentials. Two options for doing this are:
+In order to process science data and stage it for Cumulus, you must create & setup AWS
+credentials. There are two options to do this:
 
-### Option 1: Manually Creating Configuration Files
+### Option 1: Manually Create Configuration Files
 
 First, create a directory in your user's home directory to store the AWS configuration:
 
@@ -68,30 +70,29 @@ First, create a directory in your user's home directory to store the AWS configu
 
 In the `~/.aws` directory, create a file named `config` with the contents:
 
-    [default]
+    [profile cumulus-uat]
     region = us-west-2
     output = json
 
 In the `~/.aws` directory, create a file named `credentials` with the contents:
 
-    [default]
+    [cumulus-uat]
     aws_access_key_id = TBD
     aws_secret_access_key = TBD
 
-The examples above create a [default AWS profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-format-profile).
-If you require access to multiple AWS accounts, each with their own configuration--for example, different accounts for pre-production vs. production--you
-can use the [AWS CLI 'profile' feature to manage settings for each account](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles).
+The examples above create a [cumulus-uat AWS profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-format-profile).
+If you require access to multiple AWS accounts, each with their own configuration--for example, different accounts for CUAT vs. CPROD--you
+can use the [AWS CLI 'profile' feature to manage settings for each account](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles), or you can edit the config and credentials files and just add `profile cumulus-prod` and `cumulus-prod` details, respectively.
 
 
 Finally, restrict the permissions of the directory and files:
 
     $ chmod -R go-rwx ~/.aws
 
-When you've obtained the AWS key pair ([covered here]([https://nsidc.atlassian.net/l/cp/YYj1gGsp])),
-edit your newly created `~/.aws/credentials` file and replace `TBD` with the public and secret
-key values.
+**Instructions for obtaining an AWS key pair are [covered here](https://github.com/nsidc/granule-metgen/wiki/MetGenC-Ancillary-Resources#22-generate-aws-long-term-access-key).**
+Once generated edit your `~/.aws/credentials` file and replace `TBD` with the public and secret key values.
 
-### Option 2: Using the AWS CLI to Create Configuration Files
+### Option 2: Use the AWS CLI to Create Configuration Files
 
 You may install (or already have it installed) the AWS Command Line Interface on the
 machine where you are running the tool. Follow the
@@ -109,33 +110,67 @@ and files with your values.
 
 ## CMR Authentication and use of Collection Metadata
 
-MetGenC will attempt to authenticate with Earthdata using credentials retrieved
-from the environment and retrieve collection metadata. If authentication fails,
+MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials
+to retrieve collection metadata. If authentication fails,
 collection metadata will not be available to compensate for metadata elements 
 missing from `ini` files or the data files themselves.
 
-Export the following variables to your environment before you kick off MetGenC:
+Export the following variables to your environment before you run `metgenc process`
+to start data ingest:
 
     $ export EARTHDATA_USERNAME=your-EDL-user-name
     $ export EARTHDATA_PASSWORD=your-EDL-password
 
-If you have a different user name and password for the UAT and production
-environments, be sure to set the values appropriate for the environment option
-passed to `metgenc process`.
+If you have a different user name/password combo for UAT and PROD
+environments, be sure to set the values appropriate for the environment you're
+ingesting to.
 
-If collection metadata are unavailable, either due to an authentication failure
+If collection metadata are unavailable either due to an authentication failure
 or because the collection information doesn't yet exist in CMR, MetGenC will
 continue processing with the information available from the `ini` file and the
 data files.
 
 ## Before Running MetGenC: Tips and Assumptions
 
+* Activate your venv:
+
+        $ source ~/<name of your venv>/bin/activate
+  
 * Verify the application version:
 
         $ metgenc --version
         metgenc, version 1.3.0
+  
+* Before you run end-to-end ingest, be sure to source your AWS credentials:
 
-* Show the help text:
+        $ source metgenc-env.sh cumulus-uat
+
+  * If you think you've already run it but can't remember, run the following:
+
+            $ aws configure list
+
+and either what's returned will indicate that you need to source your credentials:
+      
+```
+Name                    Value             Type    Location
+----                    -----             ----    --------
+profile               <not set>           None    None
+access_key            <not set>           None    None
+secret_key            <not set>           None    None
+region                <not set>           None    None
+```
+or it'll show that you're all set (AWS comms-wise) for ingesting to Cumulus:
+
+```
+      Name                    Value             Type    Location
+      ----                    -----             ----    --------
+   profile              cumulus-uat              env    ['AWS_PROFILE', 'AWS_DEFAULT_PROFILE']
+access_key     ****************SQXY              env    
+secret_key     ****************cJ+5              env    
+    region                us-west-2              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']    
+```
+
+* Show MetGenC's help text:
 
         $ metgenc --help
         Usage: metgenc [OPTIONS] COMMAND [ARGS]...
@@ -156,6 +191,12 @@ data files.
 * For detailed help on each command, run: metgenc <command> --help, for example:
 
         $ metgenc process --help
+  
+* If you find you'd like to view a ummg or cnm json file in your shell, but don't want
+  to wade through unformatted json chaos, use `cat <ummg or cnm file name> | jq "."` to
+  pretty-print json file content to your screen, e.g.:
+   
+        $ cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "."
         
 ### Assumptions for netCDF files for MetGenC
 
@@ -247,8 +288,8 @@ your data set, or edit an existing .ini file.
 * You can skip this step if you've already made an .ini file and prefer editing it
   manually (any text editor will work).
 * An existing configuration file can also be copied and renamed to be used for a different
-  data set, just be sure to update the data_dir, auth_id, version, and provider!
-* Make sure to confirm the configuration file's checksum_type is set to SHA256.
+  data set, just be sure to update the data_dir, auth_id, version, provider, and any other details!
+* The configuration file's checksum_type should always be set to SHA256.
 
 ```
 metgenc init --help
@@ -272,7 +313,7 @@ in the granule data file(s). This approach assumes the attribute values
 are the same for all granules. These values must be manually added to the
 `ini` file; they are not included in the `metgenc init` functionality.
 
-See the file `fixtures/test.ini` for examples.
+See this project's GitHub file, `fixtures/test.ini` for examples.
 
 | (NetCDF) Attribute  | `ini` section | `ini` element | Note |
 | --------------------|-------------- | ------------- | ----- |
@@ -347,7 +388,7 @@ single data file granules, the file extension will be added to the granule name)
 
 ### info
 
-The **info** command can be used to display the information within the configuration file.
+The **info** command can be used to display the information within the configuration file as well as MetGenC system default values for data ingest.
 
 ```
 metgenc info --help
@@ -362,16 +403,52 @@ Options:
 
 Example running **info**
 
-    $ metgenc info --config example/modscg.ini
+```
+metgenc info -c init/0081DUCkBRWS.ini
+                   __                       
+   ____ ___  ___  / /_____ ____  ____  _____
+  / __ `__ \/ _ \/ __/ __ `/ _ \/ __ \/ ___/
+ / / / / / /  __/ /_/ /_/ /  __/ / / / /__  
+/_/ /_/ /_/\___/\__/\__, /\___/_/ /_/\___/  
+                   /____/                         
+Using configuration:
+  + environment: uat
+  + data_dir: ./data/0081DUCk
+  + auth_id: NSIDC-0081DUCk
+  + version: 2
+  + provider: DPT
+  + local_output_dir: output
+  + ummg_dir: ummg
+  + kinesis_stream_name: nsidc-cumulus-uat-external_notification
+  + staging_bucket_name: nsidc-cumulus-uat-ingest-staging
+  + write_cnm_file: True
+  + overwrite_ummg: True
+  + checksum_type: SHA256
+  + number: 1000000
+  + dry_run: False
+  + premet_dir: None
+  + spatial_dir: None
+  + time_start_regex: None
+  + time_coverage_duration: None
+  + pixel_size: None
+  + date_modified: None
+  + browse_regex: _brws
+  + granule_regex: (NSIDC0081_SEAICE_PS_)(?P<granuleid>[NS]{1}\d{2}km_\d{8})(_v2.0_)(?:F\d{2}_)?(DUCk)
+```
 
+* environment: reflects `uat` as this is the default environment. This can be changed on the command line when `metgenc process` is run by adding the `-e` / `--env` option (e.g., metgenc process -e prod).
+* data_dir:, auth_id:, version:, provider:, local_output_dir:, and ummg_dir: (which is relative to the local_output_dir) are set by the operator in the config file.
+* kinesis_stream_name: and staging_bucket_name: could be changed by the operator in the config file, but should be left as-is!
+* write_cnm_file:, and overwrite_ummg: are editable by operators in the config file
+  * write_cnm_file: can be set here as `true` or `false`. Setting this to `true` when testing allows you to visually qc cnm content as well as run `metgenc validate` to assure they're valid for ingest. Once known to be valid, and you're ready to ingest data end-to-end, this can be edited to `false` to prevent cnm files from being written locally if desired. They'll always be sent to AWS regardless of the value being `true` or `false`.
+  * overwrite_ummg: when set to `true` will overwrite any existing ummg files for a data set present in the output/ummg directory. If set to `false` any existing files would be preserved, and only new files would be written.
+* checksum_type: is another config file entry that could be changed by the operator, but should be left as-is!
+* number: 1000000 is the default max granule count for ingest. This value is not found in the config file, thus it can only be changed by a DUCk developer if necessary.
+* dry_run: reflects the option included (or not) by the operator in the command line when `metgenc process` is run.
+* premet_dir:, spatial_dir:, time_start_regex:, time_coverage_duration:, pixel_size:, date_modified:, browse_regex:, and granule_regex: are all optional as they're data set dependent and should be set when necessary by operators within the config file. 
 ---
 
 ### process
-
-The **process** command is used either to generate UMM-G and CNM files locally to give
-you a chance to review them before ingesting them (with either `-d`, `--dry-run` option), or to
-kick off end-to-end ingest of data and UMM-G files to Cumulus UAT. 
-
 ```
 metgenc process --help
 
@@ -388,29 +465,31 @@ Options:
   -o, --overwrite     Overwrite existing UMM-G files.
   --help              Show this message and exit.
 ```
+The **process** command can be run either with or without specifying the `-d` / `--dry-run` option.
+* When the dry run option is specified _and_ the `-wc` / `--write-cnm` option is invoked, or your config
+file contains `write_cnm_file = true` (instead of `= false`), CNM files will be written locally to the output/cnm
+directory. This allows you to validate and visually QC their content before letting them guide ingest to CUAT. 
+* When run without the dry run option, metgenc will transfer cnm messages to AWS, kicking off end-to-end ingest of
+data and ummg files to CUAT.
 
-Notes: 
-* Before running **process**, remember to source your AWS profile by running
-  `$ source metgenc-env.sh cumulus-uat` — in this case `cumulus-uat` is the profile name I specified
-  in my AWS credential and config files; use whatever profile name you've specified for `uat` in your 
-  config and credential files!
-* If you can't remember whether you've sourced your AWS profile yet in a given MetGenC session,
-  there's no harm in sourcing it again. Once run though, you'll be all set for however long
-  you're working in your active venv.
-* Before running end-to-end ingest, as a courtesy send a Slack message to NSIDC's `#Cumulus`
-  channel so if they happen to notice activity, they know it's your handiwork.
-  
 Examples running **process**
 
-The following is an example of using the dry run option for three granules:
+The following is an example of using the dry run option (-d) to generate ummg and write cnm as files (-wc) for three granules (-n 3):
 
-    $ metgenc process -c ./init/test.ini -e uat  -d -n 3
+    $ metgenc process -c ./init/test.ini -d -n 3 -wc
 
-This next example runs an end-to-end ingest of granules and their ummg files into 
-Cumulus UAT:
+This next example would run end-to-end ingest of all granules (assuming < 1000000 granules) in the data directory specified in the test.ini config file
+and their ummg files into the CUAT environment:
 
     $ metgenc process -c ./init/test.ini -e uat
 
+Notes: Before running **process** to ingest granules to CUAT (i.e., not run in dry run mode):
+* **As a courtesy to Cumulus devs and ops folks, post Slack messages to NSIDC's `#Cumulus` and `cloud-ingest-ops`
+  channels, and post a quick "done" note when you're done ingest testing.**
+* You'll need to have sourced (or source now), your AWS profile by running `source metgenc-env.sh cumulus-uat`
+  where `cumulus-uat` reflects the profile name specified in your AWS credential and config files.
+  If you can't remember whether you've sourced your AWS profile, run `aws configure list` at the prompt.
+  
 ---
 
 ### validate
@@ -433,24 +512,20 @@ Options:
 
 Example running **validate**
 
-    $ metgenc validate -c example/modscg.ini -t ummg
+    $ metgenc validate -c init/modscg.ini -t ummg (this will validate all ummg files)
+    $ metgenc validate -c init/modscg.ini (this will validate all cnm files that have been written locally)
 
-The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file:
+The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file at a time:
 
     $ check-jsonschema --schemafile <path to schema file> <path to cnm file>
 
 
 ## Troubleshooting
 
-If you run `$ metgenc process -c ./init/test.ini` to test end-to-end ingest, but you get a flurry of errors, run: 
+If you run `$ metgenc process -c ./init/test.ini` to test end-to-end ingest, but you get a flurry of errors,
+see if sourcing your AWS credentials (`source metgenc-env.sh cumulus-uat`) solves the problem! Forgetting
+to set up communications between MetGenC and AWS is easy to do, but thankfully, easy to fix.
 
-    source metgenc-env.sh cumulus-uat
-
-Replacing `cumulus-uat` (if necessary) with the name of the AWS credentials
-profile you set up for the Cumulus `uat` environment. If you've been running
-other metgenc commands successfully (even `metgenc process` but with the
---dry-run option), having forgotten to set up communications between MetGenC and
-AWS is very easy to do, but thankfully, very easy to resolve.
 
 ## For Developers
 ### Contributing
