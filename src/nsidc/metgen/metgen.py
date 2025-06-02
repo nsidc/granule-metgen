@@ -748,6 +748,8 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         )
     premet_content = utilities.premet_values(granule.premet_filename)
 
+    # spatial_handler = spatial_gsr_helper(granule.collection.granule_spatial_representation)
+
     # Populated metadata_details dict looks like:
     # {
     #   data_file: {
@@ -976,6 +978,16 @@ def checksum(file):
     return sha256.hexdigest()
 
 
+def spatial_gsr_helper(spatial_representation: str, spatial_data_structure: str):
+    match spatial_data_structure:
+        case "raster":
+            return "get_perimeter"
+        case "cloud":
+            return "get_box"
+
+    return None
+
+
 def geometry_decider(spatial_representation: str, num_spatial: int):
     """
     Use UMM-C GranuleSpatialRepresentation value to determine the nature of
@@ -988,16 +1000,16 @@ def geometry_decider(spatial_representation: str, num_spatial: int):
             if num_spatial == 1:
                 return ummg_spatial_point_template
 
-            # no rectangles yet!
-            raise Exception("cannot create bounding rectangle yet")
+            else:
+                return ummg_spatial_rectangle_template
 
         case constants.GEODETIC:
             return ummg_spatial_gpolygon_template
 
+        case _:
+            raise Exception("Unknown granule spatial representation.")
 
-# TODO: Use the GranuleSpatialRepresentation value in the collection metadata
-# to determine the expected spatial type. See Issue #15. For now, use either
-# GPolygon or Points, depending on how many points are in the spatial values.
+
 def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
     """
     Return a string representation of a geometry (point, bounding box, gpolygon)
@@ -1019,6 +1031,9 @@ def populate_temporal(datetime_values):
 
 
 def populate_additional_attributes(premet_content):
+    if premet_content is None:
+        return ""
+
     if constants.UMMG_ADDITIONAL_ATTRIBUTES in premet_content:
         # Setting this up as a generic key-value in the template because I didn't
         # want to put the constant value in the template as well.
@@ -1050,6 +1065,10 @@ def ummg_temporal_range_template():
 
 def ummg_spatial_gpolygon_template():
     return initialize_template(constants.UMMG_SPATIAL_GPOLYGON_TEMPLATE)
+
+
+def ummg_spatial_rectangle_template():
+    return initialize_template(constants.UMMG_SPATIAL_RECTANGLE_TEMPLATE)
 
 
 def ummg_spatial_point_template():

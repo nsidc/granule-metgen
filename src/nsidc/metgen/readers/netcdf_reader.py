@@ -123,24 +123,43 @@ def spatial_values(netcdf, spatial_path, configuration) -> list[dict]:
     """
 
     # Get spatial coverage from spatial file if it exists
+    # could be perimeter, flightline requiring sock, bounding rectangle, or point
     if spatial_path is not None:
         return utilities.points_from_spatial(spatial_path)
 
+    # if cartesian, look for bounding rectangle attributes
+#     geospatial_bounds (global)    | R    |                | R                |
+# | geospatial_bounds_crs (global)| R    |                | R                |
+# | geospatial_lat_min (global)   | R    |                | R                |
+# | geospatial_lat_max (global)   | R    |                | R                |
+# | geospatial_lat_units (global) | R    |                | R                |
+# | geospatial_lon_min (global)   | R    |                | R                |
+# | geospatial_lon_max (global)   | R    |                | R                |
+# | geospatial_lon_units (global) | R    |                | R                |
+
+    # else find perimeter or single value and transform to 4326
     grid_mapping_name = find_grid_mapping(netcdf)
     xformer = crs_transformer(netcdf[grid_mapping_name])
     pad = pixel_padding(netcdf[grid_mapping_name], configuration)
     xdata = find_coordinate_data_by_standard_name(netcdf, "projection_x_coordinate")
     ydata = find_coordinate_data_by_standard_name(netcdf, "projection_y_coordinate")
 
-    # Extract the perimeter points and transform to lon, lat
-    perimeter = [
-        xformer.transform(x, y) for (x, y) in thinned_perimeter(xdata, ydata, pad)
-    ]
+    # Extract a subset of points (or the single point) and transform to lon, lat
+    points = [xformer.transform(x, y) for (x, y) in distill_points(xdata, ydata, pad)]
 
     return [
-        {"Longitude": round(lon, 8), "Latitude": round(lat, 8)}
-        for (lon, lat) in perimeter
+        {"Longitude": round(lon, 8), "Latitude": round(lat, 8)} for (lon, lat) in points
     ]
+
+
+def distill_points(xdata, ydata, pad):
+    # TODO return error if only two points?
+    if len(xdata) > 1 or len(ydata) > 1:
+        # vector or grid
+        return thinned_perimeter(xdata, ydata, pad)
+
+    # single point
+    return [(xdata[0], ydata[0])]
 
 
 def find_grid_mapping(netcdf):
