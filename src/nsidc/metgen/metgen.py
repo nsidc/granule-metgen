@@ -757,13 +757,18 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     #       'production_date_time'  => iso datetime string,
     #       'temporal' => an array of one (data represent a single point in time)
     #                     or two (data cover a time range) datetime strings
-    #       'geometry' => { 'points': an array of {'Longitude': x, 'Latitude': y} dicts
+    #       'geometry' => an array of {'Longitude': x, 'Latitude': y} dicts (point, gpolygon)
+    #                     or an array of {west: north: east: south: }
     #   }
     # }
     metadata_details = {}
     for data_file in granule.data_filenames:
         metadata_details[data_file] = granule.data_reader(
-            data_file, premet_content, granule.spatial_filename, configuration
+            data_file,
+            premet_content,
+            granule.spatial_filename,
+            configuration,
+            granule.collection.granule_spatial_representation,
         )
 
     # Collapse information about (possibly) multiple files into a granule summary.
@@ -1016,6 +1021,18 @@ def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
     """
 
     template = geometry_decider(spatial_representation, len(spatial_values))
+    # bounding rectangle should be passed to template as-is
+    # len will not be an accurate assessment. pass upper left/lower right points here and then reformat them?
+    if len(spatial_values) == 2:
+        return template().safe_substitute(
+            {
+                "west": spatial_values[0]["Longitude"],
+                "north": spatial_values[0]["Latitude"],
+                "east": spatial_values[1]["Longitude"],
+                "south": spatial_values[1]["Latitude"],
+            }
+        )
+
     return template().safe_substitute({"points": json.dumps(spatial_values)})
 
 

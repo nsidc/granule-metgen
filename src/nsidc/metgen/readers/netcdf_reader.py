@@ -19,7 +19,11 @@ from nsidc.metgen.readers import utilities
 
 
 def extract_metadata(
-    netcdf_path: str, premet_content: dict, spatial_path: str, configuration: Config
+    netcdf_path: str,
+    premet_content: dict,
+    spatial_path: str,
+    configuration: Config,
+    gsr: str,
 ) -> dict:
     """
     Read the content at netcdf_path and return a structure with temporal coverage
@@ -49,7 +53,7 @@ def extract_metadata(
         "temporal": time_range(
             os.path.basename(netcdf_path), netcdf, premet_content, configuration
         ),
-        "geometry": spatial_values(netcdf, spatial_path, configuration),
+        "geometry": spatial_values(netcdf, spatial_path, configuration, gsr),
     }
 
 
@@ -111,7 +115,7 @@ Set `time_coverage_duration` in the configuration file."
             )
 
 
-def spatial_values(netcdf, spatial_path, configuration) -> list[dict]:
+def spatial_values(netcdf, spatial_path, configuration, gsr) -> list[dict]:
     """
     Return an array of dicts, each dict representing one lat/lon pair like so:
         {
@@ -125,17 +129,7 @@ def spatial_values(netcdf, spatial_path, configuration) -> list[dict]:
     # Get spatial coverage from spatial file if it exists
     # could be perimeter, flightline requiring sock, bounding rectangle, or point
     if spatial_path is not None:
-        return utilities.points_from_spatial(spatial_path)
-
-    # if cartesian, look for bounding rectangle attributes
-#     geospatial_bounds (global)    | R    |                | R                |
-# | geospatial_bounds_crs (global)| R    |                | R                |
-# | geospatial_lat_min (global)   | R    |                | R                |
-# | geospatial_lat_max (global)   | R    |                | R                |
-# | geospatial_lat_units (global) | R    |                | R                |
-# | geospatial_lon_min (global)   | R    |                | R                |
-# | geospatial_lon_max (global)   | R    |                | R                |
-# | geospatial_lon_units (global) | R    |                | R                |
+        return utilities.points_from_spatial(spatial_path, gsr)
 
     # else find perimeter or single value and transform to 4326
     grid_mapping_name = find_grid_mapping(netcdf)
@@ -143,6 +137,20 @@ def spatial_values(netcdf, spatial_path, configuration) -> list[dict]:
     pad = pixel_padding(netcdf[grid_mapping_name], configuration)
     xdata = find_coordinate_data_by_standard_name(netcdf, "projection_x_coordinate")
     ydata = find_coordinate_data_by_standard_name(netcdf, "projection_y_coordinate")
+
+    # if cartesian and more than one point, look for bounding rectangle attributes
+    # and return upper left and lower right points
+    # TODO: look for geospatial_bounds and geospatial_bounds_crs attribute and
+    # parse points from its polygon?
+    if gsr == constants.CARTESIAN and (len(xdata) > 1 or len(ydata) > 1):
+        lat_min = netcdf["geospatial_lat_min"]
+        lat_max = netcdf["geospatial_lat_max"]
+        lon_min = netcdf["geospatial_lon_min"]
+        lon_max = netcdf["geospatial_lon_max"]
+        return [
+            {"Longitude": lon_min, "Latitude": lat_max},
+            {"Longitude": lon_max, "Latitude": lat_min},
+        ]
 
     # Extract a subset of points (or the single point) and transform to lon, lat
     points = [xformer.transform(x, y) for (x, y) in distill_points(xdata, ydata, pad)]

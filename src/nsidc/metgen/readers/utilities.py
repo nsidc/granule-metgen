@@ -94,7 +94,7 @@ def format_timezone(iso_obj):
     )
 
 
-def points_from_spatial(spatial_path: str) -> list:
+def points_from_spatial(spatial_path: str, gsr: str) -> list:
     """
     Read (lon, lat) points from a .spatial or .spo file.
     """
@@ -103,22 +103,49 @@ def points_from_spatial(spatial_path: str) -> list:
             "spatial_dir is specified but no .spatial or .spo file exists for granule."
         )
 
+    # TODO: We only need to do the "spo vs spatial" check once, since the same file
+    # type will be used for all granules.
+    is_spo = False
     if re.search(constants.SPO_SUFFIX, spatial_path):
-        return parse_spo(spatial_path)
+        is_spo = True
 
-    # TODO: Add extra "sock" handling for points in a .spatial file
+    # confirm the number of points makes sense for this granule spatial representation
+    points = raw_points(spatial_path)
+    if not spatial_config_is_valid(gsr, is_spo, len(points)):
+        raise Exception("Illegal combination of gsr and points")
+
+    if is_spo:
+        return parse_spo(points)
+
+    # TODO: If point count is greater than 2, need to either create a bounding rectangle
+    # enclosing all points (in the cartesian case) or one or more polygons representing
+    # a "sock" around something like a flight line.
     # These files can be huge so might need another approach to handling the content
-    # For now, simply return the points from the file with no changes.
-    return raw_points(spatial_path)
+    return points
 
 
-def parse_spo(spatial_path: str) -> list:
+def spatial_config_is_valid(gsr: str, is_spo: bool, point_count: int) -> bool:
+    # if is_spo and gsr is cartesian, fail
+    # if is_spo and number of points is less than two, fail
+    if is_spo and gsr == constants.CARTESIAN:
+        return False
+
+    if is_spo and point_count <= 2:
+        return False
+
+    if not is_spo and point_count == 2 and gsr == constants.GEODETIC:
+        return False
+
+    return True
+
+
+def parse_spo(points: list) -> list:
     """
     Read points from a .spo file, reverse the order of the points to comply with
     the Cumulus requirement for a clockwise order to polygon points, and ensure
     the polygon is closed.
     """
-    return [p for p in reversed(closed_polygon(raw_points(spatial_path)))]
+    return [p for p in reversed(closed_polygon(points))]
 
 
 def raw_points(spatial_path: str) -> list:
