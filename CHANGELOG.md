@@ -1,3 +1,7 @@
+## Unreleased
+
+* Fix oversight which made additional attributes required, not optional.
+
 ## v1.6.0
 
 * Parse `AdditionalAttributes` from `.premet` file and include them in UMM-G

@@ -995,6 +995,9 @@ def populate_temporal(datetime_values):
 
 
 def populate_additional_attributes(premet_content):
+    if premet_content is None:
+        return ""
+
     if constants.UMMG_ADDITIONAL_ATTRIBUTES in premet_content:
         # Setting this up as a generic key-value in the template because I didn't
         # want to put the constant value in the template as well.

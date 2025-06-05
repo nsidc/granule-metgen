@@ -382,6 +382,10 @@ def test_matches_ancillary_files(granuleid, spatial_files, expected):
     )
 
 
+def test_no_additional_attributes():
+    assert metgen.populate_additional_attributes(None) == ""
+
+
 def test_no_attempt_to_match_empty_ancillary_files():
     assert metgen.matched_ancillary_file("key1", None) is None
 
