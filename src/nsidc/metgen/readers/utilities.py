@@ -98,53 +98,49 @@ def points_from_spatial(spatial_path: str, gsr: str) -> list:
     """
     Read (lon, lat) points from a .spatial or .spo file.
     """
-    if spatial_path == "":
-        raise Exception(
-            "spatial_dir is specified but no .spatial or .spo file exists for granule."
-        )
+
+    if spatial_path is None:
+        return None
+
+    points = raw_points(spatial_path)
 
     # TODO: We only need to do the "spo vs spatial" check once, since the same file
     # type will be used for all granules.
-    is_spo = False
     if re.search(constants.SPO_SUFFIX, spatial_path):
-        is_spo = True
+        return parse_spo(gsr, points)
 
     # confirm the number of points makes sense for this granule spatial representation
-    points = raw_points(spatial_path)
-    if not spatial_config_is_valid(gsr, is_spo, len(points)):
-        raise Exception("Illegal combination of gsr and points")
+    if not valid_spatial_config(gsr, len(points)):
+        raise Exception(
+            "Unsupported combination of granule spatial representation and point count"
+        )
 
-    if is_spo:
-        return parse_spo(points)
-
-    # TODO: If point count is greater than 2, need to either create a bounding rectangle
-    # enclosing all points (in the cartesian case) or one or more polygons representing
-    # a "sock" around something like a flight line.
-    # These files can be huge so might need another approach to handling the content
+    # TODO: If point count is greater than 1, we need to create or one or more polygons
+    # around a point cloud (could be a flight line, or only a few points).
+    # Flight line files can be huge so might need another approach to handling the content!
     return points
 
 
-def spatial_config_is_valid(gsr: str, is_spo: bool, point_count: int) -> bool:
-    # if is_spo and gsr is cartesian, fail
-    # if is_spo and number of points is less than two, fail
-    if is_spo and gsr == constants.CARTESIAN:
-        return False
+def valid_spatial_config(gsr: str, point_count: int) -> str:
+    if (gsr == constants.CARTESIAN) and (point_count == 2):
+        return True
 
-    if is_spo and point_count <= 2:
-        return False
+    if gsr == constants.GEODETIC:
+        return True
 
-    if not is_spo and point_count == 2 and gsr == constants.GEODETIC:
-        return False
-
-    return True
+    return None
 
 
-def parse_spo(points: list) -> list:
+def parse_spo(gsr: str, points: list) -> list:
     """
     Read points from a .spo file, reverse the order of the points to comply with
     the Cumulus requirement for a clockwise order to polygon points, and ensure
-    the polygon is closed.
+    the polygon is closed. Raise an exception if either the granule spatial representation
+    or the number of points don't support a gpolygon.
     """
+    if (gsr == constants.CARTESIAN) or (len(points) <= 2):
+        raise Exception("spo content invalid")
+
     return [p for p in reversed(closed_polygon(points))]
 
 

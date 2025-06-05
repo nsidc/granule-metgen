@@ -741,14 +741,25 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         configuration.ummg_path(), granule.producer_granule_id
     )
 
-    # get premet if it exists
+    gsr = granule.collection.granule_spatial_representation
+
+    # TODO: Relying on an empty string to indicate a missing premet or spatial/spo
+    # file name feels fragile. Figure out a more robust means of ensuring an ancillary
+    # file exists if the .ini file includes a premet and/or spatial directory location.
+    # Get premet content if it exists.
     if granule.premet_filename == "":
         raise Exception(
-            f"premet_dir {granule.premet_filename} is specified but no premet file exists for granule."
+            f"premet_dir {configuration.premet_dir} is specified but no premet file exists for granule."
         )
     premet_content = utilities.premet_values(granule.premet_filename)
 
-    # spatial_handler = spatial_gsr_helper(granule.collection.granule_spatial_representation)
+    # Get spatial coverage from spatial file if it exists
+    # TODO: spatial content could be huge! Take this into account!
+    if granule.spatial_filename == "":
+        raise Exception(
+            f"spatial_dir {configuration.spatial_dir} is specified but no .spatial or .spo file exists for granule."
+        )
+    spatial_content = utilities.points_from_spatial(granule.spatial_filename, gsr)
 
     # Populated metadata_details dict looks like:
     # {
@@ -757,8 +768,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     #       'production_date_time'  => iso datetime string,
     #       'temporal' => an array of one (data represent a single point in time)
     #                     or two (data cover a time range) datetime strings
-    #       'geometry' => an array of {'Longitude': x, 'Latitude': y} dicts (point, gpolygon)
-    #                     or an array of {west: north: east: south: }
+    #       'geometry' => an array of {'Longitude': x, 'Latitude': y} dicts
     #   }
     # }
     metadata_details = {}
@@ -766,16 +776,14 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         metadata_details[data_file] = granule.data_reader(
             data_file,
             premet_content,
-            granule.spatial_filename,
+            spatial_content,
             configuration,
-            granule.collection.granule_spatial_representation,
+            gsr,
         )
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)
-    summary["spatial_extent"] = populate_spatial(
-        granule.collection.granule_spatial_representation, summary["geometry"]
-    )
+    summary["spatial_extent"] = populate_spatial(gsr, summary["geometry"])
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
     summary["additional_attributes"] = populate_additional_attributes(premet_content)
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
@@ -998,7 +1006,6 @@ def geometry_decider(spatial_representation: str, num_spatial: int):
     Use UMM-C GranuleSpatialRepresentation value to determine the nature of
     UMM-G spatial values.
     """
-    # valid umm-c GranuleSpatialRepresentation ["CARTESIAN", "GEODETIC", "ORBIT", "NO_SPATIAL"]
     match spatial_representation:
         case constants.CARTESIAN:
             # if one lon, lat, then is a point. Otherwise, rectangle.
@@ -1008,8 +1015,12 @@ def geometry_decider(spatial_representation: str, num_spatial: int):
             else:
                 return ummg_spatial_rectangle_template
 
+        # could also be a point
         case constants.GEODETIC:
-            return ummg_spatial_gpolygon_template
+            if num_spatial == 1:
+                return ummg_spatial_point_template
+            else:
+                return ummg_spatial_gpolygon_template
 
         case _:
             raise Exception("Unknown granule spatial representation.")
@@ -1021,8 +1032,7 @@ def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
     """
 
     template = geometry_decider(spatial_representation, len(spatial_values))
-    # bounding rectangle should be passed to template as-is
-    # len will not be an accurate assessment. pass upper left/lower right points here and then reformat them?
+
     if len(spatial_values) == 2:
         return template().safe_substitute(
             {

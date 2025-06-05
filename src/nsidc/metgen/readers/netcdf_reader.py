@@ -21,7 +21,7 @@ from nsidc.metgen.readers import utilities
 def extract_metadata(
     netcdf_path: str,
     premet_content: dict,
-    spatial_path: str,
+    spatial_content: list,
     configuration: Config,
     gsr: str,
 ) -> dict:
@@ -47,20 +47,28 @@ def extract_metadata(
     except Exception:
         raise Exception(f"Could not open netCDF file {netcdf_path}")
 
+    # Use temporal coverage from premet file if it exists
+    if premet_content is not None:
+        temporal = utilities.temporal_from_premet(premet_content)
+    else:
+        temporal = time_range(os.path.basename(netcdf_path), netcdf, configuration)
+
+    # Use spatial coverage from spatial (or spo) file if it exists
+    if spatial_content is not None:
+        geom = spatial_content
+    else:
+        geom = spatial_values(netcdf, configuration, gsr)
+
     return {
         "size_in_bytes": os.path.getsize(netcdf_path),
         "production_date_time": date_modified(netcdf, configuration),
-        "temporal": time_range(
-            os.path.basename(netcdf_path), netcdf, premet_content, configuration
-        ),
-        "geometry": spatial_values(netcdf, spatial_path, configuration, gsr),
+        "temporal": temporal,
+        "geometry": geom,
     }
 
 
-def time_range(netcdf_filename, netcdf, premet_content: dict, configuration):
+def time_range(netcdf_filename, netcdf, configuration):
     """Return an array of datetime strings"""
-    if premet_content:
-        return utilities.temporal_from_premet(premet_content)
 
     coverage_start = time_coverage_start(netcdf_filename, netcdf, configuration)
     coverage_end = time_coverage_end(netcdf, configuration, coverage_start)
@@ -115,7 +123,7 @@ Set `time_coverage_duration` in the configuration file."
             )
 
 
-def spatial_values(netcdf, spatial_path, configuration, gsr) -> list[dict]:
+def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     """
     Return an array of dicts, each dict representing one lat/lon pair like so:
         {
@@ -126,12 +134,6 @@ def spatial_values(netcdf, spatial_path, configuration, gsr) -> list[dict]:
     general-use module.
     """
 
-    # Get spatial coverage from spatial file if it exists
-    # could be perimeter, flightline requiring sock, bounding rectangle, or point
-    if spatial_path is not None:
-        return utilities.points_from_spatial(spatial_path, gsr)
-
-    # else find perimeter or single value and transform to 4326
     grid_mapping_name = find_grid_mapping(netcdf)
     xformer = crs_transformer(netcdf[grid_mapping_name])
     pad = pixel_padding(netcdf[grid_mapping_name], configuration)
@@ -140,17 +142,11 @@ def spatial_values(netcdf, spatial_path, configuration, gsr) -> list[dict]:
 
     # if cartesian and more than one point, look for bounding rectangle attributes
     # and return upper left and lower right points
-    # TODO: look for geospatial_bounds and geospatial_bounds_crs attribute and
-    # parse points from its polygon?
     if gsr == constants.CARTESIAN and (len(xdata) > 1 or len(ydata) > 1):
-        lat_min = netcdf["geospatial_lat_min"]
-        lat_max = netcdf["geospatial_lat_max"]
-        lon_min = netcdf["geospatial_lon_min"]
-        lon_max = netcdf["geospatial_lon_max"]
-        return [
-            {"Longitude": lon_min, "Latitude": lat_max},
-            {"Longitude": lon_max, "Latitude": lat_min},
-        ]
+        return bounding_rectangle_from_attrs(netcdf)
+
+    if len(xdata) * len(ydata) == 2:
+        raise Exception("don't know how to create polygon around two points")
 
     # Extract a subset of points (or the single point) and transform to lon, lat
     points = [xformer.transform(x, y) for (x, y) in distill_points(xdata, ydata, pad)]
@@ -160,14 +156,38 @@ def spatial_values(netcdf, spatial_path, configuration, gsr) -> list[dict]:
     ]
 
 
-def distill_points(xdata, ydata, pad):
-    # TODO return error if only two points?
-    if len(xdata) > 1 or len(ydata) > 1:
-        # vector or grid
-        return thinned_perimeter(xdata, ydata, pad)
+# TODO: If no bounding attributes, look for geospatial_bounds global attribute and
+# parse points from its polygon?
+def bounding_rectangle_from_attrs(netcdf):
+    global_attrs = set(netcdf.attrs.keys())
+    bounding_attrs = {
+        "geospatial_lon_max",
+        "geospatial_lat_max",
+        "geospatial_lon_min",
+        "geospatial_lat_min",
+    }
+    if bounding_attrs.issubset(global_attrs):
+        return [
+            {
+                "Longitude": netcdf.attrs["geospatial_lon_min"],
+                "Latitude": netcdf.attrs["geospatial_lat_max"],
+            },
+            {
+                "Longitude": netcdf.attrs["geospatial_lon_max"],
+                "Latitude": netcdf.attrs["geospatial_lat_min"],
+            },
+        ]
 
-    # single point
-    return [(xdata[0], ydata[0])]
+    # Global attributes not available, show error
+    log_and_raise_error("Global attributes for bounding rectangle not available")
+
+
+def distill_points(xdata, ydata, pad):
+    # check for single point
+    if len(xdata) * len(ydata) == 1:
+        return [(xdata[0], ydata[0])]
+
+    return thinned_perimeter(xdata, ydata, pad)
 
 
 def find_grid_mapping(netcdf):
@@ -271,6 +291,7 @@ def thinned_perimeter(rawx, rawy, pad=0):
         top.interpolate(fract, normalized=True) for fract in [0, 0.2, 0.4, 0.6, 0.8, 1]
     ]
 
+    # TODO: ensure points are some minimum distance from each other (need CMR requirements)
     # need tests:
     # leftpts[0] should be upper left point
     # bottompts[0] should be lower left point

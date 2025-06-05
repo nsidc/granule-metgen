@@ -46,8 +46,9 @@ DEFAULT_SPATIAL_AXIS_SIZE = 6
 GRANULE_SPATIAL_REP = "GranuleSpatialRepresentation"
 CARTESIAN = "CARTESIAN"
 GEODETIC = "GEODETIC"
-ORBIT = "ORBIT"
-NO_SPATIAL = "NO_SPATIAL"
+POINT = "point"
+BRECTANGLE = "rectangle"
+GPOLYGON = "gpolygon"
 
 # UMM-G keys
 UMMG_ADDITIONAL_ATTRIBUTES = "AdditionalAttributes"
