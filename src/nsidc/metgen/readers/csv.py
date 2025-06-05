@@ -17,7 +17,7 @@ def extract_metadata(
     premet_content: dict,
     spatial_path: str,
     configuration: Config,
-    gsr: str,
+    _,
 ) -> dict:
     df = pd.read_csv(csv_path)
 

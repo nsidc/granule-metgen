@@ -159,7 +159,7 @@ def test_empty_lonlat_file():
 
 def test_error_if_no_filename():
     with pytest.raises(Exception) as exc_info:
-        utilities.points_from_spatial("")
+        utilities.points_from_spatial("", "fake_gsr")
     assert re.search("spatial_dir is specified but no", exc_info.value.args[0])
 
 

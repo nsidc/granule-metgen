@@ -99,6 +99,11 @@ def points_from_spatial(spatial_path: str, gsr: str) -> list:
     Read (lon, lat) points from a .spatial or .spo file.
     """
 
+    if spatial_path == "":
+        raise Exception(
+            f"spatial_dir {configuration.spatial_dir} is specified but no .spatial or .spo file exists for granule."
+        )
+
     if spatial_path is None:
         return None
 

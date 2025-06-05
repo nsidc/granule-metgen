@@ -13,7 +13,7 @@ from nsidc.metgen.readers import utilities
 
 
 def extract_metadata(
-    csv_path: str, premet_path: str, spatial_path: str, configuration: Config, gsr: str
+    csv_path: str, premet_path: str, spatial_path: str, configuration: Config, _
 ) -> dict:
     with open(csv_path, newline="") as csvfile:
         csvreader = csv.reader(csvfile, delimiter=",")

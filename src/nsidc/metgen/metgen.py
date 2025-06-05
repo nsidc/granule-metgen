@@ -755,10 +755,6 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
 
     # Get spatial coverage from spatial file if it exists
     # TODO: spatial content could be huge! Take this into account!
-    if granule.spatial_filename == "":
-        raise Exception(
-            f"spatial_dir {configuration.spatial_dir} is specified but no .spatial or .spo file exists for granule."
-        )
     spatial_content = utilities.points_from_spatial(granule.spatial_filename, gsr)
 
     # Populated metadata_details dict looks like:
@@ -1008,17 +1004,19 @@ def geometry_decider(spatial_representation: str, num_spatial: int):
     """
     match spatial_representation:
         case constants.CARTESIAN:
-            # if one lon, lat, then is a point. Otherwise, rectangle.
-            if num_spatial == 1:
-                return ummg_spatial_point_template
-
-            else:
+            # Only bounding rectangle is allowed.
+            if num_spatial == 2:
                 return ummg_spatial_rectangle_template
+            else:
+                raise Exception(f"Cartesian granule spatial representation cannot handle {num_spatial} points.")
 
-        # could also be a point
+
+        # Can represent a point or polygon
         case constants.GEODETIC:
             if num_spatial == 1:
                 return ummg_spatial_point_template
+            elif num_spatial < 4:
+                raise Exception("Polygon must have at least four points.")
             else:
                 return ummg_spatial_gpolygon_template
 

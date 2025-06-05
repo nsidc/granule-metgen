@@ -140,13 +140,13 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     xdata = find_coordinate_data_by_standard_name(netcdf, "projection_x_coordinate")
     ydata = find_coordinate_data_by_standard_name(netcdf, "projection_y_coordinate")
 
+    if len(xdata) * len(ydata) == 2:
+        raise Exception("don't know how to create polygon around two points")
+
     # if cartesian and more than one point, look for bounding rectangle attributes
     # and return upper left and lower right points
     if gsr == constants.CARTESIAN and (len(xdata) > 1 or len(ydata) > 1):
         return bounding_rectangle_from_attrs(netcdf)
-
-    if len(xdata) * len(ydata) == 2:
-        raise Exception("don't know how to create polygon around two points")
 
     # Extract a subset of points (or the single point) and transform to lon, lat
     points = [xformer.transform(x, y) for (x, y) in distill_points(xdata, ydata, pad)]

@@ -117,13 +117,25 @@ def test_uses_first_file_as_default(multi_file_granule):
 
 def test_geometry_decider():
     assert (
+        metgen.geometry_decider(constants.CARTESIAN, 2)
+        == metgen.ummg_spatial_rectangle_template
+    )
+    with pytest.raises(Exception):
         metgen.geometry_decider(constants.CARTESIAN, 1)
-        == metgen.ummg_spatial_point_template
+
+    with pytest.raises(Exception):
+        metgen.geometry_decider(constants.CARTESIAN, 3)
+
+    assert (
+        metgen.geometry_decider(constants.GEODETIC, 4)
+        == metgen.ummg_spatial_gpolygon_template
     )
     assert (
         metgen.geometry_decider(constants.GEODETIC, 1)
-        == metgen.ummg_spatial_gpolygon_template
+        == metgen.ummg_spatial_point_template
     )
+    with pytest.raises(Exception):
+        metgen.geometry_decider(constants.GEODETIC, 2)
 
 
 def test_no_bounding_rectangle_support():
@@ -131,13 +143,13 @@ def test_no_bounding_rectangle_support():
         metgen.geometry_decider(constants.CARTESIAN, 5)
 
 
-def test_returns_points():
-    result = metgen.populate_spatial(constants.CARTESIAN, ["a point"])
-    assert re.search('"Geometry": {\n(\s+)"Points": \["a point"\]', result)
+def test_no_cartesian_points():
+    with pytest.raises(Exception):
+        metgen.populate_spatial(constants.CARTESIAN, ["a point"])
 
 
 def test_returns_polygon():
-    result = metgen.populate_spatial(constants.GEODETIC, ["pt 1", "pt 2"])
+    result = metgen.populate_spatial(constants.GEODETIC, ["pt 1", "pt 2", "pt 3", "pt 4"])
     assert "GPolygons" in result
 
 
