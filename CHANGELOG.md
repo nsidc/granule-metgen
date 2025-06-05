@@ -1,9 +1,7 @@
-## Unreleased
-
-* Fix oversight which made additional attributes required, not optional.
-
 ## v1.6.1rc0
 
+* Fix oversight which made additional attributes required, not optional.
+  (Issue-200)
 * Parse `AdditionalAttributes` from `.premet` file and include them in UMM-G
   output. (Issue-162, Issue-186) 
 * Rename template files with `.txt` extension.
