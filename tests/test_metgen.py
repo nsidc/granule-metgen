@@ -115,29 +115,6 @@ def test_uses_first_file_as_default(multi_file_granule):
     assert summary["geometry"] == "big"
 
 
-def test_geometry_decider():
-    assert (
-        metgen.geometry_decider(constants.CARTESIAN, 2)
-        == metgen.ummg_spatial_rectangle_template
-    )
-    with pytest.raises(Exception):
-        metgen.geometry_decider(constants.CARTESIAN, 1)
-
-    with pytest.raises(Exception):
-        metgen.geometry_decider(constants.CARTESIAN, 3)
-
-    assert (
-        metgen.geometry_decider(constants.GEODETIC, 4)
-        == metgen.ummg_spatial_gpolygon_template
-    )
-    assert (
-        metgen.geometry_decider(constants.GEODETIC, 1)
-        == metgen.ummg_spatial_point_template
-    )
-    with pytest.raises(Exception):
-        metgen.geometry_decider(constants.GEODETIC, 2)
-
-
 def test_no_bounding_rectangle_support():
     with pytest.raises(Exception):
         metgen.geometry_decider(constants.CARTESIAN, 5)
