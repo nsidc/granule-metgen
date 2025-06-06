@@ -60,7 +60,6 @@ def extract_metadata(
         geom = spatial_values(netcdf, configuration, gsr)
 
     return {
-        "size_in_bytes": os.path.getsize(netcdf_path),
         "production_date_time": date_modified(netcdf, configuration),
         "temporal": temporal,
         "geometry": geom,

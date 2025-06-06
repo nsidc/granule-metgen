@@ -149,7 +149,9 @@ def test_no_cartesian_points():
 
 
 def test_returns_polygon():
-    result = metgen.populate_spatial(constants.GEODETIC, ["pt 1", "pt 2", "pt 3", "pt 4"])
+    result = metgen.populate_spatial(
+        constants.GEODETIC, ["pt 1", "pt 2", "pt 3", "pt 4"]
+    )
     assert "GPolygons" in result
 
 

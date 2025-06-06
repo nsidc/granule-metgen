@@ -743,18 +743,10 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
 
     gsr = granule.collection.granule_spatial_representation
 
-    # TODO: Relying on an empty string to indicate a missing premet or spatial/spo
-    # file name feels fragile. Figure out a more robust means of ensuring an ancillary
-    # file exists if the .ini file includes a premet and/or spatial directory location.
     # Get premet content if it exists.
-    if granule.premet_filename == "":
-        raise Exception(
-            f"premet_dir {configuration.premet_dir} is specified but no premet file exists for granule."
-        )
     premet_content = utilities.premet_values(granule.premet_filename)
 
     # Get spatial coverage from spatial file if it exists
-    # TODO: spatial content could be huge! Take this into account!
     spatial_content = utilities.points_from_spatial(granule.spatial_filename, gsr)
 
     # Populated metadata_details dict looks like:
@@ -769,7 +761,10 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     # }
     metadata_details = {}
     for data_file in granule.data_filenames:
-        metadata_details[data_file] = granule.data_reader(
+        metadata_details[data_file] = {
+            "size_in_bytes": os.path.getsize(data_file),
+            "production_date_time": configuration.date_modified,
+        } | granule.data_reader(
             data_file,
             premet_content,
             spatial_content,
@@ -1008,8 +1003,9 @@ def geometry_decider(spatial_representation: str, num_spatial: int):
             if num_spatial == 2:
                 return ummg_spatial_rectangle_template
             else:
-                raise Exception(f"Cartesian granule spatial representation cannot handle {num_spatial} points.")
-
+                raise Exception(
+                    f"Cartesian granule spatial representation cannot handle {num_spatial} points."
+                )
 
         # Can represent a point or polygon
         case constants.GEODETIC:

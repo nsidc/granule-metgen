@@ -165,13 +165,13 @@ def test_error_if_no_filename():
 
 def test_reverses_closed_spo_points():
     lonlats = utilities.raw_points("./fixtures/spatial/closed.spo")
-    spo_lonlats = utilities.parse_spo("./fixtures/spatial/closed.spo")
+    spo_lonlats = utilities.parse_spo(constants.GEODETIC, lonlats)
     assert lonlats[1] == spo_lonlats[-2]
 
 
 def test_reverses_open_spo_points():
     lonlats = utilities.raw_points("./fixtures/spatial/open.spo")
-    spo_lonlats = utilities.parse_spo("./fixtures/spatial/open.spo")
+    spo_lonlats = utilities.parse_spo(constants.GEODETIC, lonlats)
     assert lonlats[1] == spo_lonlats[-2]
     assert len(lonlats) == len(spo_lonlats) - 1
 
