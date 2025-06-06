@@ -142,9 +142,9 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     if len(xdata) * len(ydata) == 2:
         raise Exception("don't know how to create polygon around two points")
 
-    # if cartesian and more than one point, look for bounding rectangle attributes
+    # if cartesian and multiple points, look for bounding rectangle attributes
     # and return upper left and lower right points
-    if gsr == constants.CARTESIAN and (len(xdata) > 1 or len(ydata) > 1):
+    if gsr == constants.CARTESIAN and (len(xdata) * len(ydata) >= 2):
         return bounding_rectangle_from_attrs(netcdf)
 
     # Extract a subset of points (or the single point) and transform to lon, lat
@@ -155,8 +155,11 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     ]
 
 
-# TODO: If no bounding attributes, look for geospatial_bounds global attribute and
-# parse points from its polygon?
+# TODO: If no bounding attributes, add fallback options?
+# - look for geospatial_bounds global attribute and parse points from its polygon
+# - pull points from spatial coordinate values (but this might only be appropriate for
+#   some projections, for example EASE-GRID2)
+# Also TODO: clean up this ugly attribute name management.
 def bounding_rectangle_from_attrs(netcdf):
     global_attrs = set(netcdf.attrs.keys())
     bounding_attrs = {
@@ -165,15 +168,20 @@ def bounding_rectangle_from_attrs(netcdf):
         "geospatial_lon_min",
         "geospatial_lat_min",
     }
+    LON_MAX = 0
+    LAT_MAX = 1
+    LON_MIN = 2
+    LAT_MIN = 3
+
     if bounding_attrs.issubset(global_attrs):
         return [
             {
-                "Longitude": netcdf.attrs["geospatial_lon_min"],
-                "Latitude": netcdf.attrs["geospatial_lat_max"],
+                "Longitude": netcdf.attrs[bounding_attrs[LON_MIN]],
+                "Latitude": netcdf.attrs[bounding_attrs[LAT_MAX]],
             },
             {
-                "Longitude": netcdf.attrs["geospatial_lon_max"],
-                "Latitude": netcdf.attrs["geospatial_lat_min"],
+                "Longitude": netcdf.attrs[bounding_attrs[LON_MAX]],
+                "Latitude": netcdf.attrs[bounding_attrs[LAT_MIN]],
             },
         ]
 

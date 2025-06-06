@@ -128,10 +128,8 @@ def points_from_spatial(spatial_path: str, gsr: str) -> list:
             f"Unsupported combination of {gsr} and point count of {len(points)}."
         )
 
-    # TODO: If point count is greater than 1 and gsr is geodetic, we need to
-    # create or one or more polygons around a point cloud (points could represent
-    # a flight line, or only a few points).  Flight line files can be huge so
-    # might need another approach to handling the content!
+    # TODO: Handle point cloud creation here if point count is greater than 1 and gsr
+    # is geodetic. Note! Flight line files can be huge!
     return points
 
 

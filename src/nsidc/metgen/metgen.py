@@ -992,43 +992,25 @@ def spatial_gsr_helper(spatial_representation: str, spatial_data_structure: str)
     return None
 
 
-def geometry_decider(spatial_representation: str, num_spatial: int):
+def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
     """
-    Use UMM-C GranuleSpatialRepresentation value to determine the nature of
-    UMM-G spatial values.
+    Return a string representation of a geometry (point, bounding box, gpolygon)
     """
     match spatial_representation:
         case constants.CARTESIAN:
-            # Only bounding rectangle is allowed.
-            if num_spatial == 2:
-                return ummg_spatial_rectangle_template
-            else:
-                raise Exception(
-                    f"Cartesian granule spatial representation cannot handle {num_spatial} points."
-                )
+            return populate_bounding_rectangle(spatial_values)
 
-        # Can represent a point or polygon
         case constants.GEODETIC:
-            if num_spatial == 1:
-                return ummg_spatial_point_template
-            elif num_spatial < 4:
-                raise Exception("Polygon must have at least four points.")
-            else:
-                return ummg_spatial_gpolygon_template
+            return populate_point_or_polygon(spatial_values)
 
         case _:
             raise Exception("Unknown granule spatial representation.")
 
 
-def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
-    """
-    Return a string representation of a geometry (point, bounding box, gpolygon)
-    """
-
-    template = geometry_decider(spatial_representation, len(spatial_values))
-
+def populate_bounding_rectangle(spatial_values):
+    # Only two points representing (UL, LR) of a rectangle are allowed.
     if len(spatial_values) == 2:
-        return template().safe_substitute(
+        ummg_spatial_rectangle_template().safe_substitute(
             {
                 "west": spatial_values[0]["Longitude"],
                 "north": spatial_values[0]["Latitude"],
@@ -1036,6 +1018,19 @@ def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
                 "south": spatial_values[1]["Latitude"],
             }
         )
+    else:
+        raise Exception(
+            "Cartesian granule spatial representation only supports two points for a bounding rectangle."
+        )
+
+
+def populate_point_or_polygon(spatial_values):
+    template = ummg_spatial_gpolygon_template
+
+    if len(spatial_values) == 1:
+        template = ummg_spatial_point_template
+    elif len(spatial_values) < 4:
+        raise Exception("Closed polygon requires at least four points.")
 
     return template().safe_substitute({"points": json.dumps(spatial_values)})
 
