@@ -1,3 +1,10 @@
+## UNRELEASED
+
+* Refactor logic for identifying granule spatial representation. (Issue-159)
+* End processing if UMM-C metadata can't be retrieved and/or do not contain a
+  `GranuleSpatialRepresentation` element.
+* Add support for bounding rectangles. (Issue-157)
+
 ## v1.6.1rc1
 
 * Fix oversight which made additional attributes required, not optional.

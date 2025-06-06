@@ -53,6 +53,14 @@ def find_key_aliases(aliases: list, datetime_parts: dict) -> str:
 def premet_values(premet_path: str) -> dict:
     pdict = {}
 
+    # TODO: Relying on an empty string to indicate a missing premet or spatial/spo
+    # file name feels fragile. Figure out a more robust means of ensuring an ancillary
+    # file exists if the .ini file includes a premet and/or spatial directory location.
+    if premet_path == "":
+        raise Exception(
+            "premet_dir is specified but no premet file exists for granule."
+        )
+
     if premet_path is None:
         return None
 
@@ -94,31 +102,63 @@ def format_timezone(iso_obj):
     )
 
 
-def points_from_spatial(spatial_path: str) -> list:
+def points_from_spatial(spatial_path: str, gsr: str) -> list:
     """
     Read (lon, lat) points from a .spatial or .spo file.
     """
+
     if spatial_path == "":
         raise Exception(
             "spatial_dir is specified but no .spatial or .spo file exists for granule."
         )
 
+    if spatial_path is None:
+        return None
+
+    points = raw_points(spatial_path)
+
+    # TODO: We really only need to do the "spo vs spatial" check once, since the same
+    # file type will (should) be used for all granules.
     if re.search(constants.SPO_SUFFIX, spatial_path):
-        return parse_spo(spatial_path)
+        return parse_spo(gsr, points)
 
-    # TODO: Add extra "sock" handling for points in a .spatial file
-    # These files can be huge so might need another approach to handling the content
-    # For now, simply return the points from the file with no changes.
-    return raw_points(spatial_path)
+    # confirm the number of points makes sense for this granule spatial representation
+    if not valid_spatial_config(gsr, len(points)):
+        raise Exception(
+            f"Unsupported combination of {gsr} and point count of {len(points)}."
+        )
+
+    # TODO: Handle point cloud creation here if point count is greater than 1 and gsr
+    # is geodetic. Note! Flight line files can be huge!
+    return points
 
 
-def parse_spo(spatial_path: str) -> list:
+def valid_spatial_config(gsr: str, point_count: int) -> str:
+    if (gsr == constants.CARTESIAN) and (point_count == 2):
+        return True
+
+    if gsr == constants.GEODETIC:
+        return True
+
+    return False
+
+
+def parse_spo(gsr: str, points: list) -> list:
     """
     Read points from a .spo file, reverse the order of the points to comply with
     the Cumulus requirement for a clockwise order to polygon points, and ensure
-    the polygon is closed.
+    the polygon is closed. Raise an exception if either the granule spatial representation
+    or the number of points don't support a gpolygon.
     """
-    return [p for p in reversed(closed_polygon(raw_points(spatial_path)))]
+    if gsr == constants.CARTESIAN:
+        raise Exception(
+            f"Granule spatial representation {gsr} cannot be applied to spo content."
+        )
+
+    if len(points) <= 2:
+        raise Exception("spo file must contain at least three points.")
+
+    return [p for p in reversed(closed_polygon(points))]
 
 
 def raw_points(spatial_path: str) -> list:

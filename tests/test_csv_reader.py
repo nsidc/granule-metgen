@@ -1,5 +1,3 @@
-import os.path
-
 import pytest
 from nsidc.metgen import config
 from nsidc.metgen.readers import csv as csv_reader
@@ -80,30 +78,26 @@ def test_config():
 
 @pytest.mark.parametrize("snowex_csv", ["6", "6W", "6N", "6ABC"], indirect=True)
 def test_extract_snex_metadata(test_config, snowex_csv):
-    metadata = snowex_csv_reader.extract_metadata(snowex_csv, None, None, test_config)
-    assert metadata["size_in_bytes"] == os.path.getsize(snowex_csv)
-    assert metadata["production_date_time"] == test_config.date_modified
+    metadata = snowex_csv_reader.extract_metadata(
+        snowex_csv, None, None, test_config, None
+    )
     assert metadata["temporal"] == ["2023-03-06T11:00:00.000Z"]
-    assert metadata["geometry"] == {
-        "points": [{"Latitude": 64.86197446452954, "Longitude": -147.71408586635164}]
-    }
+    assert metadata["geometry"] == [
+        {"Latitude": 64.86197446452954, "Longitude": -147.71408586635164}
+    ]
 
 
 def test_extract_generic_metadata(test_config, generic_csv_content, generic_csv):
-    metadata = csv_reader.extract_metadata(generic_csv, None, None, test_config)
-    assert metadata["size_in_bytes"] == len(generic_csv_content)
-    assert metadata["production_date_time"] == test_config.date_modified
+    metadata = csv_reader.extract_metadata(generic_csv, None, None, test_config, None)
     assert metadata["temporal"] == [
         "2012-03-16T23:00:00.000Z",
         "2012-03-17T05:00:00.123Z",
     ]
-    assert len(metadata["geometry"]["points"]) == 5
-    assert metadata["geometry"] == {
-        "points": [
-            {"Latitude": 61.418877, "Longitude": -148.987869},
-            {"Latitude": 61.208763, "Longitude": -148.987869},
-            {"Latitude": 61.208763, "Longitude": -146.751678},
-            {"Latitude": 61.418877, "Longitude": -146.751678},
-            {"Latitude": 61.418877, "Longitude": -148.987869},
-        ]
-    }
+    assert len(metadata["geometry"]) == 5
+    assert metadata["geometry"] == [
+        {"Latitude": 61.418877, "Longitude": -148.987869},
+        {"Latitude": 61.208763, "Longitude": -148.987869},
+        {"Latitude": 61.208763, "Longitude": -146.751678},
+        {"Latitude": 61.418877, "Longitude": -146.751678},
+        {"Latitude": 61.418877, "Longitude": -148.987869},
+    ]

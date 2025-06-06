@@ -3,7 +3,6 @@ Read a csv data file specific to SNOWEX.
 """
 
 import csv
-import os.path
 import re
 
 from pyproj import CRS, Transformer
@@ -13,18 +12,14 @@ from nsidc.metgen.readers import utilities
 
 
 def extract_metadata(
-    csv_path: str, premet_path: str, spatial_path: str, configuration: Config
+    csv_path: str, premet_content: dict, spatial_content: list, configuration: Config, _
 ) -> dict:
     with open(csv_path, newline="") as csvfile:
         csvreader = csv.reader(csvfile, delimiter=",")
 
         return {
-            "size_in_bytes": os.path.getsize(csv_path),
-            "production_date_time": configuration.date_modified,
-            "temporal": data_datetime(csvreader, premet_path),
-            "geometry": {
-                "points": spatial_values(csvreader, spatial_path, configuration)
-            },
+            "temporal": data_datetime(csvreader, premet_content),
+            "geometry": spatial_values(csvreader, spatial_content, configuration),
         }
 
 
@@ -45,13 +40,10 @@ def data_datetime(csvreader, premet_content: dict) -> list:
         return None
 
 
-# Add new spatial_values strategy that gets LAT & LON columns
-
-
-def spatial_values(csvreader, spatial_path, _):
+def spatial_values(csvreader, spatial_content, _):
     """Get spatial coverage from spatial file if it exists, otherwise parse from CSV"""
-    if spatial_path is not None:
-        return utilities.points_from_spatial(spatial_path)
+    if spatial_content is not None:
+        return spatial_content
 
     zone_string = get_key_value(csvreader, "^.*UTM_Zone")
     zone = int(re.sub(r"\D", "", zone_string)) if zone_string else 0
