@@ -115,11 +115,6 @@ def test_uses_first_file_as_default(multi_file_granule):
     assert summary["geometry"] == "big"
 
 
-def test_no_bounding_rectangle_support():
-    with pytest.raises(Exception):
-        metgen.geometry_decider(constants.CARTESIAN, 5)
-
-
 def test_no_cartesian_points():
     with pytest.raises(Exception):
         metgen.populate_spatial(constants.CARTESIAN, ["a point"])

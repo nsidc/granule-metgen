@@ -159,7 +159,7 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
 # - look for geospatial_bounds global attribute and parse points from its polygon
 # - pull points from spatial coordinate values (but this might only be appropriate for
 #   some projections, for example EASE-GRID2)
-# Also TODO: clean up this ugly attribute name management.
+# Also TODO: clean up this attribute name management.
 def bounding_rectangle_from_attrs(netcdf):
     global_attrs = set(netcdf.attrs.keys())
     bounding_attrs = {

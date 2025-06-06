@@ -14,7 +14,7 @@ from nsidc.metgen.readers import utilities
 def extract_metadata(
     csv_path: str,
     premet_content: dict,
-    spatial_content: dict,
+    spatial_content: list,
     configuration: Config,
     _,
 ) -> dict:

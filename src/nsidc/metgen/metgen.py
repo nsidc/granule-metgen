@@ -982,16 +982,6 @@ def checksum(file):
     return sha256.hexdigest()
 
 
-def spatial_gsr_helper(spatial_representation: str, spatial_data_structure: str):
-    match spatial_data_structure:
-        case "raster":
-            return "get_perimeter"
-        case "cloud":
-            return "get_box"
-
-    return None
-
-
 def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
     """
     Return a string representation of a geometry (point, bounding box, gpolygon)
