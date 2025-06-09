@@ -139,15 +139,10 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     xdata = find_coordinate_data_by_standard_name(netcdf, "projection_x_coordinate")
     ydata = find_coordinate_data_by_standard_name(netcdf, "projection_y_coordinate")
 
-    # if cartesian and multiple points, look for bounding rectangle attributes
-    # and return upper left and lower right points
-    if gsr == constants.CARTESIAN and (len(xdata) * len(ydata) >= 2):
-        return bounding_rectangle_from_attrs(netcdf)
-
+    # if cartesian, look for bounding rectangle attributes and return upper
+    # left and lower right points
     if gsr == constants.CARTESIAN:
-        raise Exception(
-            f"Granule spatial representation {gsr} cannot be applied to point data or projected grids."
-        )
+        return bounding_rectangle_from_attrs(netcdf)
 
     if len(xdata) * len(ydata) == 2:
         raise Exception("Don't know how to create polygon around two points")
