@@ -38,6 +38,7 @@ class Config:
     dry_run: bool
     premet_dir: Optional[str] = None
     spatial_dir: Optional[str] = None
+    collection_geometry_override: Optional[bool] = False
     time_start_regex: Optional[str] = None
     time_coverage_duration: Optional[str] = None
     pixel_size: Optional[int] = None
@@ -123,6 +124,7 @@ def configuration(
         "number": constants.DEFAULT_NUMBER,
         "dry_run": constants.DEFAULT_DRY_RUN,
         "browse_regex": constants.DEFAULT_BROWSE_REGEX,
+        "collection_geometry_override": constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE,
     }
     try:
         return Config(
@@ -196,6 +198,14 @@ def configuration(
             ),
             _get_configuration_value(
                 environment, "Source", "spatial_dir", str, config_parser, overrides
+            ),
+            _get_configuration_value(
+                environment,
+                "Source",
+                "collection_geometry_override",
+                bool,
+                config_parser,
+                overrides,
             ),
             _get_configuration_value(
                 environment,
@@ -308,3 +318,12 @@ def validate(configuration):
         return True
     else:
         raise ValidationError(errors)
+
+
+def validate_spatial_source(configuration):
+    if configuration.spatial_dir and configuration.collection_geometry_override:
+        raise ValidationError(
+            ["Cannot declare both spatial dir and collection geometry"]
+        )
+
+    return True

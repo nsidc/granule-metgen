@@ -29,6 +29,7 @@ from funcy import (
     concat,
     filter,
     first,
+    get_in,
     last,
     notnone,
     partial,
@@ -126,6 +127,11 @@ def init_config(configuration_file):
         constants.SOURCE_SECTION_NAME,
         "spatial_dir",
         Prompt.ask("Spatial directory"),
+    )
+    cfg_parser.set(
+        constants.SOURCE_SECTION_NAME,
+        "collection_geometry_override",
+        Prompt.ask("Use collection geometry"),
     )
     print()
 
@@ -288,6 +294,7 @@ def process(configuration: config.Config) -> None:
     # Ordered list of operations to perform on each granule
     operations = [
         granule_collection,
+        validate_collection,
         prepare_granule,
         find_existing_ummg,
         create_ummg,
@@ -471,9 +478,9 @@ def validate_cmr_response(umm: list):
     return ummc
 
 
-def ummc_content(ummc: dict, key: str) -> str:
+def ummc_content(ummc: dict, keys: list) -> str | dict:
     """
-    Look for a key in a UMM-C record (or a piece of the record), and log the status.
+    Look for list of keys in a UMM-C record and log the status.
     """
     val = None
     logger = logging.getLogger(constants.ROOT_LOGGER)
@@ -482,10 +489,10 @@ def ummc_content(ummc: dict, key: str) -> str:
         return val
 
     try:
-        val = ummc[key]
-        logger.debug(f"{key} information in umm-c response from CMR: {val}")
+        val = get_in(ummc, keys)
+        logger.debug(f"{keys} information in umm-c response from CMR: {val}")
     except KeyError:
-        logger.info(f"No {key} information in umm-c response from CMR.")
+        logger.info(f"No {keys} information in umm-c response from CMR.")
 
     return val
 
@@ -536,21 +543,22 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
 
     # FYI: data format (e.g. NetCDF) is available in the umm-c response in
     # ArchiveAndDistributionInformation should we decide to use it.
-    spatial_extent = ummc_content(ummc, "SpatialExtent")
-    granule_spatial_rep = ummc_content(spatial_extent, constants.GRANULE_SPATIAL_REP)
-
-    # return error if no GranuleSpatialRepresentation
-    if not granule_spatial_rep:
-        raise Exception(
-            f"{constants.GRANULE_SPATIAL_REP} not available in UMM-C metadata for {auth_id}.{version}."
-        )
-
     return Collection(
         auth_id,
         version,
-        granule_spatial_representation=granule_spatial_rep,
-        spatial_extent=spatial_extent,
-        temporal_extent=ummc_content(ummc, "TemporalExtents"),
+        granule_spatial_representation=ummc_content(
+            ummc, ["SpatialExtent", constants.GRANULE_SPATIAL_REP]
+        ),
+        spatial_extent=ummc_content(
+            ummc,
+            [
+                "SpatialExtent",
+                "HorizontalSpatialDomain",
+                "Geometry",
+                "BoundingRectangles",
+            ],
+        ),
+        temporal_extent=ummc_content(ummc, ["TemporalExtents"]),
     )
 
 
@@ -701,6 +709,38 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
             configuration.environment, configuration.auth_id, configuration.version
         ),
     )
+
+
+def validate_collection(configuration: config.Config, granule: Granule) -> Granule:
+    errors = config_is_valid(configuration, granule.collection)
+    if len(errors) == 0:
+        return granule
+    else:
+        raise config.ValidationError(errors)
+
+
+def config_is_valid(configuration, collection):
+    errors = []
+
+    # GranuleSpatialRepresentation must exist.
+    if not collection.granule_spatial_representation:
+        errors.add(
+            f"{constants.GRANULE_SPATIAL_REP} not available in UMM-C metadata for {collection.auth_id}.{collection.version}."
+        )
+
+    # If collection spatial extent is to be applied to granules, the spatial extent may
+    # only contain one bounding rectange, and the granule spatial representation must be cartesian
+    if configuration.collection_geometry_override:
+        if len(collection.spatial_extent > 1):
+            errors.add(
+                "Collection spatial extent must only contain one bounding rectangle when collection_geometry_override is set."
+            )
+        if collection.granule_spatial_representation != constants.CARTESIAN:
+            errors.add(
+                f"Collection {constants.GRANULE_SPATIAL_REP} must be {constants.CARTESIAN} when collection_geometry_override is set."
+            )
+
+    return errors
 
 
 def prepare_granule(_: config.Config, granule: Granule) -> Granule:

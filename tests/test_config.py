@@ -34,6 +34,7 @@ def expected_keys():
             "dry_run",
             "premet_dir",
             "spatial_dir",
+            "collection_geometry_override",
             "time_start_regex",
             "time_coverage_duration",
             "pixel_size",
@@ -157,6 +158,11 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
     [
         ("Source", "premet_dir", None),
         ("Source", "spatial_dir", None),
+        (
+            "Source",
+            "collection_geometry_override",
+            constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE,
+        ),
         (
             "Destination",
             "kinesis_stream_name",

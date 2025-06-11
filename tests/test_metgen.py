@@ -544,25 +544,17 @@ def test_edl_login_environment(ingest_env, edl_env):
 
 
 def test_handles_missing_ummc_key(fake_ummc_response):
-    assert metgen.ummc_content({}, "fakekey") is None
-    assert metgen.ummc_content(fake_ummc_response, "DOI") is None
+    assert metgen.ummc_content({}, ["fakekey"]) is None
+    assert metgen.ummc_content(fake_ummc_response, ["DOI"]) is None
 
 
 def test_finds_existing_ummc_key(fake_ummc_response):
-    assert metgen.ummc_content(fake_ummc_response, "Version") == 1
+    assert metgen.ummc_content(fake_ummc_response, ["Version"]) == 1
 
 
 def test_looks_for_umm_dict(fake_ummc_response):
     ummc = metgen.validate_cmr_response([{"umm": fake_ummc_response}])
     assert ummc == fake_ummc_response
-
-
-@patch("nsidc.metgen.metgen.edl_login", return_value=True)
-def test_requires_spatial_representation(mock_edl_login, fake_ummc_response):
-    fake_return = [{"umm": fake_ummc_response}]
-    with patch("earthaccess.search_datasets", return_value=fake_return):
-        with pytest.raises(Exception):
-            metgen.collection_from_cmr("uat", "bigdata", 1)
 
 
 @pytest.mark.parametrize(
