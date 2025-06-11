@@ -1000,7 +1000,7 @@ def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
 def populate_bounding_rectangle(spatial_values):
     # Only two points representing (UL, LR) of a rectangle are allowed.
     if len(spatial_values) == 2:
-        ummg_spatial_rectangle_template().safe_substitute(
+        return ummg_spatial_rectangle_template().safe_substitute(
             {
                 "west": spatial_values[0]["Longitude"],
                 "north": spatial_values[0]["Latitude"],

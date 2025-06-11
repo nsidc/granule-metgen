@@ -139,13 +139,13 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     xdata = find_coordinate_data_by_standard_name(netcdf, "projection_x_coordinate")
     ydata = find_coordinate_data_by_standard_name(netcdf, "projection_y_coordinate")
 
-    if len(xdata) * len(ydata) == 2:
-        raise Exception("don't know how to create polygon around two points")
-
-    # if cartesian and multiple points, look for bounding rectangle attributes
-    # and return upper left and lower right points
-    if gsr == constants.CARTESIAN and (len(xdata) * len(ydata) >= 2):
+    # if cartesian, look for bounding rectangle attributes and return upper
+    # left and lower right points
+    if gsr == constants.CARTESIAN:
         return bounding_rectangle_from_attrs(netcdf)
+
+    if len(xdata) * len(ydata) == 2:
+        raise Exception("Don't know how to create polygon around two points")
 
     # Extract a subset of points (or the single point) and transform to lon, lat
     points = [xformer.transform(x, y) for (x, y) in distill_points(xdata, ydata, pad)]
@@ -159,30 +159,27 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
 # - look for geospatial_bounds global attribute and parse points from its polygon
 # - pull points from spatial coordinate values (but this might only be appropriate for
 #   some projections, for example EASE-GRID2)
-# Also TODO: clean up this attribute name management.
+# Also TODO: Find a more elegant way to handle these attributes.
 def bounding_rectangle_from_attrs(netcdf):
     global_attrs = set(netcdf.attrs.keys())
-    bounding_attrs = {
+    bounding_attrs = [
         "geospatial_lon_max",
         "geospatial_lat_max",
         "geospatial_lon_min",
         "geospatial_lat_min",
-    }
+    ]
     LON_MAX = 0
     LAT_MAX = 1
     LON_MIN = 2
     LAT_MIN = 3
 
-    if bounding_attrs.issubset(global_attrs):
+    def latlon_attr(index):
+        return float(round(netcdf.attrs[bounding_attrs[index]], 8))
+
+    if set(bounding_attrs).issubset(global_attrs):
         return [
-            {
-                "Longitude": netcdf.attrs[bounding_attrs[LON_MIN]],
-                "Latitude": netcdf.attrs[bounding_attrs[LAT_MAX]],
-            },
-            {
-                "Longitude": netcdf.attrs[bounding_attrs[LON_MAX]],
-                "Latitude": netcdf.attrs[bounding_attrs[LAT_MIN]],
-            },
+            {"Longitude": latlon_attr(LON_MIN), "Latitude": latlon_attr(LAT_MAX)},
+            {"Longitude": latlon_attr(LON_MAX), "Latitude": latlon_attr(LAT_MIN)},
         ]
 
     # Global attributes not available, show error

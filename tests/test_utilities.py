@@ -188,3 +188,10 @@ def test_accepts_closed_polygon(closed_polygon):
 
 def test_ignores_tiny_spo(not_a_polygon):
     assert utilities.closed_polygon(not_a_polygon) == not_a_polygon
+
+
+def test_spo_is_geodetic():
+    with pytest.raises(Exception):
+        utilities.parse_spo(
+            constants.CARTESIAN, utilities.raw_points("./fixtures/spatial/open.spo")
+        )
