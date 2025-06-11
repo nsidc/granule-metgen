@@ -490,9 +490,9 @@ def ummc_content(ummc: dict, keys: list) -> str | dict:
 
     try:
         val = get_in(ummc, keys)
-        logger.debug(f"{keys} information in umm-c response from CMR: {val}")
+        logger.debug(f"{'/'.join(keys)} information in umm-c response from CMR: {val}")
     except KeyError:
-        logger.info(f"No {keys} information in umm-c response from CMR.")
+        logger.info(f"No {'/'.join(keys)} information in umm-c response from CMR.")
 
     return val
 
@@ -787,7 +787,9 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     premet_content = utilities.premet_values(granule.premet_filename)
 
     # Get spatial coverage from spatial file if it exists
-    spatial_content = utilities.points_from_spatial(granule.spatial_filename, gsr)
+    spatial_content = utilities.external_spatial_values(
+        configuration.collection_geometry_override, gsr, granule
+    )
 
     # Populated metadata_details dict looks like:
     # {

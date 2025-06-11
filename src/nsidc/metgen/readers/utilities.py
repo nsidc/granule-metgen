@@ -102,6 +102,14 @@ def format_timezone(iso_obj):
     )
 
 
+def external_spatial_values(collection_geometry_override, gsr, granule) -> list:
+    if collection_geometry_override:
+        # Get spatial coverage from collection
+        return points_from_collection(granule.collection.spatial_extent)
+
+    return points_from_spatial(granule.spatial_filename, gsr)
+
+
 def points_from_spatial(spatial_path: str, gsr: str) -> list:
     """
     Read (lon, lat) points from a .spatial or .spo file.
@@ -181,3 +189,16 @@ def closed_polygon(raw_points: list[dict]) -> list[dict]:
         points.append(first(points))
 
     return points
+
+
+def points_from_collection(collection_spatial):
+    return [
+        {
+            "Longitude": collection_spatial[0]["WestBoundingCoordinate"],
+            "Latitude": collection_spatial[0]["NorthBoundingCoordinate"],
+        },
+        {
+            "Longitude": collection_spatial[0]["EastBoundingCoordinate"],
+            "Latitude": collection_spatial[0]["SouthBoundingCoordinate"],
+        },
+    ]
