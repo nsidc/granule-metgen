@@ -37,6 +37,11 @@ def test_config():
 
 
 @pytest.fixture
+def test_collection():
+    return metgen.Collection("ABCD", 2)
+
+
+@pytest.fixture
 def multi_file_granule():
     return {
         "first_id": {
@@ -583,3 +588,35 @@ def test_umm_key_required(umm_content, error):
     with pytest.raises(config.ValidationError) as exc_info:
         metgen.validate_cmr_response(umm_content)
     assert re.search(error, exc_info.value.args[0])
+
+
+def test_gsr_is_required(test_config, test_collection):
+    errors = metgen.validate_collection_spatial(test_config, test_collection)
+    assert re.search("GranuleSpatialRepresentation not available", " ".join(errors))
+
+
+def test_cartesian_required_for_collection_geometry(test_config, test_collection):
+    test_config.collection_geometry_override = True
+    test_collection.spatial_extent = ["one extent"]
+    test_collection.granule_spatial_representation = constants.GEODETIC
+    errors = metgen.validate_collection_spatial(test_config, test_collection)
+    assert re.search("GranuleSpatialRepresentation must be", " ".join(errors))
+
+
+def test_spatial_extent_is_required_for_collection_geometry(
+    test_config, test_collection
+):
+    test_config.collection_geometry_override = True
+    test_collection.granule_spatial_representation = constants.CARTESIAN
+    errors = metgen.validate_collection_spatial(test_config, test_collection)
+    assert re.search("Collection must include a spatial extent", " ".join(errors))
+
+
+def test_only_one_bounding_rectangle_allowed_in_spatial_extent(
+    test_config, test_collection
+):
+    test_config.collection_geometry_override = True
+    test_collection.granule_spatial_representation = constants.CARTESIAN
+    test_collection.spatial_extent = ["extent one", "extent two"]
+    errors = metgen.validate_collection_spatial(test_config, test_collection)
+    assert re.search("spatial extent must only contain one", " ".join(errors))

@@ -323,7 +323,8 @@ def validate(configuration):
 def validate_spatial_source(configuration):
     if configuration.spatial_dir and configuration.collection_geometry_override:
         raise ValidationError(
-            ["Cannot declare both spatial dir and collection geometry"]
+            [
+                "Cannot declare both spatial_dir and collection_geometry_override in ini file."
+            ]
         )
-
     return True

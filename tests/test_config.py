@@ -1,4 +1,5 @@
 import dataclasses
+import re
 from configparser import ConfigParser, ExtendedInterpolation
 from unittest.mock import patch
 
@@ -238,3 +239,13 @@ def test_validates_optional_dirs_without_values(cfg_parser, dir_type, dir_path):
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
     assert f"The {dir_type} does not exist." not in exc_info.value.errors
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+def test_prevents_geometry_clash(cfg_parser):
+    cfg_parser.set("Source", "spatial_dir", "path/to/files")
+    cfg_parser.set("Source", "collection_geometry_override", "True")
+    cfg = config.configuration(cfg_parser, {})
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate_spatial_source(cfg)
+    assert re.search("Cannot declare both", exc_info.value.errors[0])

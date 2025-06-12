@@ -131,7 +131,10 @@ def init_config(configuration_file):
     cfg_parser.set(
         constants.SOURCE_SECTION_NAME,
         "collection_geometry_override",
-        Prompt.ask("Use collection geometry"),
+        Prompt.ask(
+            "Use collection geometry? (True/False)",
+            default=str(constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE),
+        ),
     )
     print()
 
@@ -400,6 +403,9 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
 
 
 def previous_failure(last_action: Action) -> bool:
+    """
+    Determine whether errors were raised during pipeline steps thus far.
+    """
     return last_action is not None and not last_action.successful
 
 
@@ -509,6 +515,9 @@ def edl_environment(environment):
 
 
 def edl_provider(environment):
+    """
+    Identify CMR provider based on application environment.
+    """
     return (
         constants.CMR_PROD_PROVIDER
         if environment.lower() == "prod"
@@ -712,31 +721,42 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
 
 
 def validate_collection(configuration: config.Config, granule: Granule) -> Granule:
-    errors = config_is_valid(configuration, granule.collection)
+    """
+    Confirm collection metadata meet requirements for our granule metadata generation.
+    """
+    errors = validate_collection_spatial(configuration, granule.collection)
     if len(errors) == 0:
         return granule
     else:
         raise config.ValidationError(errors)
 
 
-def config_is_valid(configuration, collection):
+def validate_collection_spatial(configuration, collection):
+    """
+    Ensure granule spatial representation exists, and verify the collection
+    geometry can be used if a collection geometry override is requested.
+    """
     errors = []
 
     # GranuleSpatialRepresentation must exist.
     if not collection.granule_spatial_representation:
-        errors.add(
+        errors.append(
             f"{constants.GRANULE_SPATIAL_REP} not available in UMM-C metadata for {collection.auth_id}.{collection.version}."
         )
 
     # If collection spatial extent is to be applied to granules, the spatial extent may
     # only contain one bounding rectange, and the granule spatial representation must be cartesian
     if configuration.collection_geometry_override:
-        if len(collection.spatial_extent > 1):
-            errors.add(
+        if not collection.spatial_extent:
+            errors.append("Collection must include a spatial extent.")
+
+        elif len(collection.spatial_extent) > 1:
+            errors.append(
                 "Collection spatial extent must only contain one bounding rectangle when collection_geometry_override is set."
             )
+
         if collection.granule_spatial_representation != constants.CARTESIAN:
-            errors.add(
+            errors.append(
                 f"Collection {constants.GRANULE_SPATIAL_REP} must be {constants.CARTESIAN} when collection_geometry_override is set."
             )
 
@@ -1040,6 +1060,9 @@ def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
 
 
 def populate_bounding_rectangle(spatial_values):
+    """
+    Return a string representation of a bounding rectangle
+    """
     # Only two points representing (UL, LR) of a rectangle are allowed.
     if len(spatial_values) == 2:
         return ummg_spatial_rectangle_template().safe_substitute(
@@ -1057,6 +1080,10 @@ def populate_bounding_rectangle(spatial_values):
 
 
 def populate_point_or_polygon(spatial_values):
+    """
+    Return a string representation of a point or polygon, based on the length
+    of the spatial_values list.
+    """
     template = ummg_spatial_gpolygon_template
 
     if len(spatial_values) == 1:
@@ -1068,6 +1095,9 @@ def populate_point_or_polygon(spatial_values):
 
 
 def populate_temporal(datetime_values):
+    """
+    Return a string representation of a temporal range or single value, as appropriate.
+    """
     if len(datetime_values) > 1:
         return ummg_temporal_range_template().safe_substitute(
             {"begin_date_time": datetime_values[0], "end_date_time": datetime_values[1]}
@@ -1079,6 +1109,9 @@ def populate_temporal(datetime_values):
 
 
 def populate_additional_attributes(premet_content):
+    """
+    Return a string representation of any additional attributes that were found in a premet file.
+    """
     if premet_content is None:
         return ""
 
