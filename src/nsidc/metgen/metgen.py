@@ -240,8 +240,8 @@ class Collection:
     auth_id: str
     version: int
     granule_spatial_representation: Optional[str] = None
-    spatial_extent: Optional[dict] = None
-    temporal_extent: Optional[dict] = None
+    spatial_extent: Optional[list] = None
+    temporal_extent: Optional[list] = None
 
 
 @dataclasses.dataclass
