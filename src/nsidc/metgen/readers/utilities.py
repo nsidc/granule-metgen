@@ -8,6 +8,9 @@ from nsidc.metgen import constants
 
 
 def temporal_from_premet(pdict: dict) -> list:
+    """
+    Extract temporal information from premet file contents.
+    """
     # Show error if no date/time information is in file
     begin_date_keys = ["RangeBeginningDate", "Begin_date"]
     begin_time_keys = ["RangeBeginningTime", "Begin_time"]
@@ -51,6 +54,10 @@ def find_key_aliases(aliases: list, datetime_parts: dict) -> str:
 
 
 def premet_values(premet_path: str) -> dict:
+    """
+    Read premet file and return a dict containing temporal information and
+    any included additional attributes.
+    """
     pdict = {}
 
     # TODO: Relying on an empty string to indicate a missing premet or spatial/spo
@@ -100,6 +107,18 @@ def format_timezone(iso_obj):
         .isoformat(timespec="milliseconds")
         .replace("+00:00", "Z")
     )
+
+
+def external_spatial_values(collection_geometry_override, gsr, granule) -> list:
+    """
+    Retrieve spatial information from a granule-specific spatial (or spo) file, or
+    the collection metadata.
+    """
+    if collection_geometry_override:
+        # Get spatial coverage from collection
+        return points_from_collection(granule.collection.spatial_extent)
+
+    return points_from_spatial(granule.spatial_filename, gsr)
 
 
 def points_from_spatial(spatial_path: str, gsr: str) -> list:
@@ -181,3 +200,23 @@ def closed_polygon(raw_points: list[dict]) -> list[dict]:
         points.append(first(points))
 
     return points
+
+
+def points_from_collection(collection_spatial):
+    """
+    Parse spatial information from collection metadata. Annoyingly, this process
+    will be reversed when we apply the template to populate UMM-G output. The
+    current approach allows for consistent template population steps regardless
+    of whether points were retrieved from a spatial file or the collection
+    metadata, though.
+    """
+    return [
+        {
+            "Longitude": collection_spatial[0]["WestBoundingCoordinate"],
+            "Latitude": collection_spatial[0]["NorthBoundingCoordinate"],
+        },
+        {
+            "Longitude": collection_spatial[0]["EastBoundingCoordinate"],
+            "Latitude": collection_spatial[0]["SouthBoundingCoordinate"],
+        },
+    ]

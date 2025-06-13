@@ -135,12 +135,12 @@ data files.
 * Activate your venv:
 
         $ source ~/<name of your venv>/bin/activate
-  
+
 * Verify the application version:
 
         $ metgenc --version
         metgenc, version 1.3.0
-  
+
 * Before you run end-to-end ingest, be sure to source your AWS credentials:
 
         $ source metgenc-env.sh cumulus-uat
@@ -150,7 +150,7 @@ data files.
             $ aws configure list
 
 and either what's returned will indicate that you need to source your credentials:
-      
+
 ```
 Name                    Value             Type    Location
 ----                    -----             ----    --------
@@ -191,13 +191,13 @@ secret_key     ****************cJ+5              env
 * For detailed help on each command, run: metgenc <command> --help, for example:
 
         $ metgenc process --help
-  
+
 * If you find you'd like to view a ummg or cnm json file in your shell, but don't want
   to wade through unformatted json chaos, use `cat <ummg or cnm file name> | jq "."` to
   pretty-print json file content to your screen, e.g.:
    
         $ cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "."
-        
+
 ### Assumptions for netCDF files for MetGenC
 
 * NetCDF files have an extension of `.nc` (per CF conventions).
@@ -215,7 +215,7 @@ secret_key     ****************cJ+5              env
   the same as the units of the spatial coordinate variables.
 * Date/time strings can be parsed using `datetime.fromisoformat`
 * Checksums are all SHA256
-  
+
 ### Reference links
 
 * https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3
@@ -380,8 +380,19 @@ included in the `ini` file. The user will be prompted for these values when runn
 
 | `ini` section | `ini` element |
 | ------------- | ------------- |
-| Collection    | premet_dir    |
-| Collection    | spatial_dir   |
+| Source        | premet_dir    |
+| Source        | spatial_dir   |
+
+If granule spatial information is not available by interrogating the data or via
+`spatial` or `.spo` files, the operator may set a flag to force the metadata
+representing each granule's spatial extents to be set to those of the collection.
+The user will be prompted for the `collection_geometry_override`
+value when running `metgenc init`; the default is `False`.
+
+| `ini` section | `ini` element                |
+| ------------- | ---------------------------- |
+| Source        | collection_geometry_override |
+
 
 ##### Example `granule_regex` application
 
