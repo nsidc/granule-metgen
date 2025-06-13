@@ -5,7 +5,7 @@
   `GranuleSpatialRepresentation` element.
 * Add support for bounding rectangles. (Issue-157)
 
-## v1.6.1rc1
+## v1.6.1
 
 * Fix oversight which made additional attributes required, not optional.
   (Issue-200)
