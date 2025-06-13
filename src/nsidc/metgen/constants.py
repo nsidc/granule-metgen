@@ -51,6 +51,18 @@ GEODETIC = "GEODETIC"
 # UMM-G keys
 UMMG_ADDITIONAL_ATTRIBUTES = "AdditionalAttributes"
 
+# Location of spatial and temporal information in collection metadata retrieved from CMR
+GRANULE_SPATIAL_REP_PATH = ["SpatialExtent", GRANULE_SPATIAL_REP]
+SPATIAL_EXTENT_PATH = (
+    [
+        "SpatialExtent",
+        "HorizontalSpatialDomain",
+        "Geometry",
+        "BoundingRectangles",
+    ],
+)
+TEMPORAL_EXTENT_PATH = ["TemporalExtents"]
+
 # Templates
 CNM_BODY_TEMPLATE = ("nsidc.metgen.templates", "cnm_body_template.txt")
 CNM_FILES_TEMPLATE = ("nsidc.metgen.templates", "cnm_files_template.txt")

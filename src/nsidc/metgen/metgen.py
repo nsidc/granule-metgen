@@ -556,18 +556,10 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
         auth_id,
         version,
         granule_spatial_representation=ummc_content(
-            ummc, ["SpatialExtent", constants.GRANULE_SPATIAL_REP]
+            ummc, constants.GRANULE_SPATIAL_REP_PATH
         ),
-        spatial_extent=ummc_content(
-            ummc,
-            [
-                "SpatialExtent",
-                "HorizontalSpatialDomain",
-                "Geometry",
-                "BoundingRectangles",
-            ],
-        ),
-        temporal_extent=ummc_content(ummc, ["TemporalExtents"]),
+        spatial_extent=ummc_content(ummc, constants.SPATIAL_EXTENT_PATH),
+        temporal_extent=ummc_content(ummc, constants.TEMPORAL_EXTENT_PATH),
     )
 
 
