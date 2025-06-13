@@ -288,24 +288,45 @@ class Ledger:
 # -------------------------------------------------------------------
 
 
-def process(configuration: config.Config) -> None:
+def plan_processing(configuration: config.Config) -> list[Callable]:
     """
-    Process all Granules and record the results and summary.
-    """
-    # TODO: Do any prep actions, like mkdir, etc
+    Plan the processing operations by examining the configuration and
+    querying CMR for collection metadata.
 
-    # Ordered list of operations to perform on each granule
-    operations = [
-        granule_collection,
-        validate_collection,
+    Returns a list of operations to perform on each granule.
+    """
+    # Query CMR for collection metadata
+    collection = collection_from_cmr(
+        configuration.environment, configuration.auth_id, configuration.version
+    )
+
+    # Store the collection in configuration for use by operations
+    configuration._collection = collection
+
+    # Return the list of operations with geometry reader and writer
+    # (In the future, this list may be dynamically generated based on
+    # collection metadata and configuration)
+    return [
         prepare_granule,
+        read_geometry,
         find_existing_ummg,
+        write_geometry,
         create_ummg,
         stage_files if not configuration.dry_run else null_operation,
         create_cnm,
         write_cnm,
         publish_cnm if not configuration.dry_run else null_operation,
     ]
+
+
+def process(configuration: config.Config) -> None:
+    """
+    Process all Granules and record the results and summary.
+    """
+    # TODO: Do any prep actions, like mkdir, etc
+
+    # Plan the processing operations
+    operations = plan_processing(configuration)
 
     # Bind the configuration to each operation
     configured_operations = [partial(fn, configuration) for fn in operations]
@@ -322,6 +343,7 @@ def process(configuration: config.Config) -> None:
     candidate_granules = [
         Granule(
             name,
+            collection=configuration._collection,
             data_filenames=data_files,
             browse_filenames=browse_files,
             premet_filename=premet_file,
@@ -433,6 +455,32 @@ def end_ledger(ledger: Ledger) -> Ledger:
 
 
 def null_operation(_: config.Config, granule: Granule) -> Granule:
+    return granule
+
+
+def read_geometry(_: config.Config, granule: Granule) -> Granule:
+    """
+    Read geometry information for the granule.
+
+    This is an identity operation for now. In the future, it will:
+    - Read geometry from collection metadata, OR
+    - Read geometry from .spatial or .spo ancillary files, OR
+    - Read geometry from the granule data files
+
+    The choice will depend on configuration and available data.
+    """
+    return granule
+
+
+def write_geometry(_: config.Config, granule: Granule) -> Granule:
+    """
+    Write/generate geometry information for the granule.
+
+    This is an identity operation for now. In the future, it will:
+    - Transform geometry data into the appropriate format for UMM-G
+    - Handle different geometry types (point, polygon, bounding box)
+    - Apply any necessary geometry processing rules
+    """
     return granule
 
 
@@ -698,18 +746,6 @@ def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
         return "".join(m.groups()) if m else ""
     else:
         return os.path.basename(a_file_path)
-
-
-def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
-    """
-    Associate collection information with the Granule.
-    """
-    return dataclasses.replace(
-        granule,
-        collection=collection_from_cmr(
-            configuration.environment, configuration.auth_id, configuration.version
-        ),
-    )
 
 
 def validate_collection(configuration: config.Config, granule: Granule) -> Granule:
