@@ -288,16 +288,25 @@ class Ledger:
 # -------------------------------------------------------------------
 
 
-def process(configuration: config.Config) -> None:
+def plan_processing(configuration: config.Config) -> list[Callable]:
     """
-    Process all Granules and record the results and summary.
-    """
-    # TODO: Do any prep actions, like mkdir, etc
+    Plan the processing operations by examining the configuration and
+    querying CMR for collection metadata.
 
-    # Ordered list of operations to perform on each granule
-    operations = [
-        granule_collection,
-        validate_collection,
+    Returns a list of operations to perform on each granule.
+    """
+    # Query CMR for collection metadata
+    collection = collection_from_cmr(
+        configuration.environment, configuration.auth_id, configuration.version
+    )
+
+    # Store the collection in configuration for use by operations
+    configuration._collection = collection
+
+    # Return the static list of operations
+    # (In the future, this list may be dynamically generated based on
+    # collection metadata and configuration)
+    return [
         prepare_granule,
         find_existing_ummg,
         create_ummg,
@@ -306,6 +315,16 @@ def process(configuration: config.Config) -> None:
         write_cnm,
         publish_cnm if not configuration.dry_run else null_operation,
     ]
+
+
+def process(configuration: config.Config) -> None:
+    """
+    Process all Granules and record the results and summary.
+    """
+    # TODO: Do any prep actions, like mkdir, etc
+
+    # Plan the processing operations
+    operations = plan_processing(configuration)
 
     # Bind the configuration to each operation
     configured_operations = [partial(fn, configuration) for fn in operations]
@@ -322,6 +341,7 @@ def process(configuration: config.Config) -> None:
     candidate_granules = [
         Granule(
             name,
+            collection=configuration._collection,
             data_filenames=data_files,
             browse_filenames=browse_files,
             premet_filename=premet_file,
@@ -700,16 +720,6 @@ def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
         return os.path.basename(a_file_path)
 
 
-def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
-    """
-    Associate collection information with the Granule.
-    """
-    return dataclasses.replace(
-        granule,
-        collection=collection_from_cmr(
-            configuration.environment, configuration.auth_id, configuration.version
-        ),
-    )
 
 
 def validate_collection(configuration: config.Config, granule: Granule) -> Granule:
