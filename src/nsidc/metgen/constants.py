@@ -43,6 +43,9 @@ NETCDF_SUFFIX = ".nc"
 
 # Spatial coverage
 DEFAULT_SPATIAL_AXIS_SIZE = 6
+GRANULE_SPATIAL_REP = "GranuleSpatialRepresentation"
+CARTESIAN = "CARTESIAN"
+GEODETIC = "GEODETIC"
 
 # UMM-G keys
 UMMG_ADDITIONAL_ATTRIBUTES = "AdditionalAttributes"

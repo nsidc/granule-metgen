@@ -279,6 +279,36 @@ See [Optional Configuration Elements](#optional-configuration-elements)
 | geospatial_lon_max (global)   | R    |                | R                |
 | geospatial_lon_units (global) | R    |                | R                |
 
+### Geometry logic
+
+Notes:
+1. `BR` = bounding rectangle
+2. `.spo` = `.spo` file associated with each granule data file.
+3. `.spatial` = `.spatial` file associated with each granule data file.
+4. The practice of NSIDC data curators is to always associate a
+  `GEODETIC` granule spatial representation with point data.
+
+| source | num points | GSR | error? | expected output | comments |
+| ------ | ------------ | ---- | ------ | ------- | --- |
+| .spo  |   any | cartesian | yes | | |
+| .spo   | <= 2 | geodetic | yes | | |
+| .spo  | > 2 | geodetic | no  | GPolygon as described by `.spo` file contents. | |
+| .spatial | 1 | cartesian | yes | | See note 4 above. |
+| .spatial | 1 | geodetic | no | point | |
+| .spatial | 2 | cartesian | no | BR | | |
+| .spatial | >= 2 | geodetic | no | GPolygon(s) calculated to enclose all points. | |
+| .spatial | > 2 | cartesian | yes | | |
+| data file | 1 | cartesian | yes | See note 4 above. |
+| data file | 1 | geodetic | no | point | |
+| data file (netCDF) | NA | cartesian | no | | BR; min/max lon/lat points for BR expected to be included in global attributes. |
+| data file (non-netCDF) | > 1 | cartesian | yes | | |
+| data file (netCDF, gridded data) | >= 3 | geodetic | no | GPolygon calculated from grid perimeter. |
+| data file (some collection of points) | >= 2 | geodetic | no | GPolygon(s) calculated to enclose all points. |
+| collection metadata with one BR | NA | cartesian | no | BR as described in collection metadata. |
+| collection metadata with two or more BR | NA | cartesian | yes |  |
+| collection metadata | NA | geodetic | yes | | |
+
+
 ## Running MetGenC: Its Commands In-depth
 
 ### init
