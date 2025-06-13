@@ -303,12 +303,14 @@ def plan_processing(configuration: config.Config) -> list[Callable]:
     # Store the collection in configuration for use by operations
     configuration._collection = collection
 
-    # Return the static list of operations
+    # Return the list of operations with geometry reader and writer
     # (In the future, this list may be dynamically generated based on
     # collection metadata and configuration)
     return [
         prepare_granule,
+        read_geometry,
         find_existing_ummg,
+        write_geometry,
         create_ummg,
         stage_files if not configuration.dry_run else null_operation,
         create_cnm,
@@ -453,6 +455,32 @@ def end_ledger(ledger: Ledger) -> Ledger:
 
 
 def null_operation(_: config.Config, granule: Granule) -> Granule:
+    return granule
+
+
+def read_geometry(_: config.Config, granule: Granule) -> Granule:
+    """
+    Read geometry information for the granule.
+
+    This is an identity operation for now. In the future, it will:
+    - Read geometry from collection metadata, OR
+    - Read geometry from .spatial or .spo ancillary files, OR
+    - Read geometry from the granule data files
+
+    The choice will depend on configuration and available data.
+    """
+    return granule
+
+
+def write_geometry(_: config.Config, granule: Granule) -> Granule:
+    """
+    Write/generate geometry information for the granule.
+
+    This is an identity operation for now. In the future, it will:
+    - Transform geometry data into the appropriate format for UMM-G
+    - Handle different geometry types (point, polygon, bounding box)
+    - Apply any necessary geometry processing rules
+    """
     return granule
 
 
