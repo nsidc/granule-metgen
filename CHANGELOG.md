@@ -1,4 +1,4 @@
-## v1.6.1rc1
+## v1.6.1
 
 * Fix oversight which made additional attributes required, not optional.
   (Issue-200)
