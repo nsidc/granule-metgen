@@ -2,7 +2,6 @@
 Read a csv data file containing LAT, LON, and DATE columns.
 """
 
-import os.path
 from datetime import timedelta, timezone
 
 import pandas as pd
@@ -13,15 +12,17 @@ from nsidc.metgen.readers import utilities
 
 
 def extract_metadata(
-    csv_path: str, premet_content: dict, spatial_path: str, configuration: Config
+    csv_path: str,
+    premet_content: dict,
+    spatial_content: list,
+    configuration: Config,
+    _,
 ) -> dict:
     df = pd.read_csv(csv_path)
 
     return {
-        "size_in_bytes": os.path.getsize(csv_path),
-        "production_date_time": configuration.date_modified,
         "temporal": data_datetime(df, premet_content),
-        "geometry": {"points": bbox(spatial_values(df, spatial_path, configuration))},
+        "geometry": bbox(spatial_values(df, spatial_content, configuration)),
     }
 
 
@@ -66,10 +67,10 @@ def bbox(points):
     ]
 
 
-def spatial_values(df, spatial_path, _):
+def spatial_values(df, spatial_content, _):
     """Get spatial coverage from spatial file if it exists, otherwise parse from CSV"""
-    if spatial_path is not None:
-        return utilities.points_from_spatial(spatial_path)
+    if spatial_content is not None:
+        return spatial_content
 
     return [
         {"Longitude": lon, "Latitude": lat} for (lon, lat) in zip(df["LON"], df["LAT"])
