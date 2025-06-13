@@ -29,6 +29,7 @@ from funcy import (
     concat,
     filter,
     first,
+    get_in,
     last,
     notnone,
     partial,
@@ -126,6 +127,14 @@ def init_config(configuration_file):
         constants.SOURCE_SECTION_NAME,
         "spatial_dir",
         Prompt.ask("Spatial directory"),
+    )
+    cfg_parser.set(
+        constants.SOURCE_SECTION_NAME,
+        "collection_geometry_override",
+        Prompt.ask(
+            "Use collection geometry? (True/False)",
+            default=str(constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE),
+        ),
     )
     print()
 
@@ -231,8 +240,8 @@ class Collection:
     auth_id: str
     version: int
     granule_spatial_representation: Optional[str] = None
-    spatial_extent: Optional[dict] = None
-    temporal_extent: Optional[dict] = None
+    spatial_extent: Optional[list] = None
+    temporal_extent: Optional[list] = None
 
 
 @dataclasses.dataclass
@@ -288,6 +297,7 @@ def process(configuration: config.Config) -> None:
     # Ordered list of operations to perform on each granule
     operations = [
         granule_collection,
+        validate_collection,
         prepare_granule,
         find_existing_ummg,
         create_ummg,
@@ -393,6 +403,9 @@ def recorder(fn: Callable[[Granule], Granule], ledger: Ledger) -> Ledger:
 
 
 def previous_failure(last_action: Action) -> bool:
+    """
+    Determine whether errors were raised during pipeline steps thus far.
+    """
     return last_action is not None and not last_action.successful
 
 
@@ -471,9 +484,9 @@ def validate_cmr_response(umm: list):
     return ummc
 
 
-def ummc_content(ummc: dict, key: str) -> str:
+def ummc_content(ummc: dict, keys: list) -> str | dict:
     """
-    Look for a key in a UMM-C record (or a piece of the record), and log the status.
+    Look for list of keys in a UMM-C record and log the status.
     """
     val = None
     logger = logging.getLogger(constants.ROOT_LOGGER)
@@ -482,10 +495,10 @@ def ummc_content(ummc: dict, key: str) -> str:
         return val
 
     try:
-        val = ummc[key]
-        logger.debug(f"{key} information in umm-c response from CMR: {val}")
+        val = get_in(ummc, keys)
+        logger.debug(f"{'/'.join(keys)} information in umm-c response from CMR: {val}")
     except KeyError:
-        logger.info(f"No {key} information in umm-c response from CMR.")
+        logger.info(f"No {'/'.join(keys)} information in umm-c response from CMR.")
 
     return val
 
@@ -502,6 +515,9 @@ def edl_environment(environment):
 
 
 def edl_provider(environment):
+    """
+    Identify CMR provider based on application environment.
+    """
     return (
         constants.CMR_PROD_PROVIDER
         if environment.lower() == "prod"
@@ -536,21 +552,14 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
 
     # FYI: data format (e.g. NetCDF) is available in the umm-c response in
     # ArchiveAndDistributionInformation should we decide to use it.
-    spatial_extent = ummc_content(ummc, "SpatialExtent")
-    granule_spatial_rep = ummc_content(spatial_extent, constants.GRANULE_SPATIAL_REP)
-
-    # return error if no GranuleSpatialRepresentation
-    if not granule_spatial_rep:
-        raise Exception(
-            f"{constants.GRANULE_SPATIAL_REP} not available in UMM-C metadata for {auth_id}.{version}."
-        )
-
     return Collection(
         auth_id,
         version,
-        granule_spatial_representation=granule_spatial_rep,
-        spatial_extent=spatial_extent,
-        temporal_extent=ummc_content(ummc, "TemporalExtents"),
+        granule_spatial_representation=ummc_content(
+            ummc, constants.GRANULE_SPATIAL_REP_PATH
+        ),
+        spatial_extent=ummc_content(ummc, constants.SPATIAL_EXTENT_PATH),
+        temporal_extent=ummc_content(ummc, constants.TEMPORAL_EXTENT_PATH),
     )
 
 
@@ -703,6 +712,49 @@ def granule_collection(configuration: config.Config, granule: Granule) -> Granul
     )
 
 
+def validate_collection(configuration: config.Config, granule: Granule) -> Granule:
+    """
+    Confirm collection metadata meet requirements for our granule metadata generation.
+    """
+    errors = validate_collection_spatial(configuration, granule.collection)
+    if len(errors) == 0:
+        return granule
+    else:
+        raise config.ValidationError(errors)
+
+
+def validate_collection_spatial(configuration, collection):
+    """
+    Ensure granule spatial representation exists, and verify the collection
+    geometry can be used if a collection geometry override is requested.
+    """
+    errors = []
+
+    # GranuleSpatialRepresentation must exist.
+    if not collection.granule_spatial_representation:
+        errors.append(
+            f"{constants.GRANULE_SPATIAL_REP} not available in UMM-C metadata for {collection.auth_id}.{collection.version}."
+        )
+
+    # If collection spatial extent is to be applied to granules, the spatial extent may
+    # only contain one bounding rectange, and the granule spatial representation must be cartesian
+    if configuration.collection_geometry_override:
+        if not collection.spatial_extent:
+            errors.append("Collection must include a spatial extent.")
+
+        elif len(collection.spatial_extent) > 1:
+            errors.append(
+                "Collection spatial extent must only contain one bounding rectangle when collection_geometry_override is set."
+            )
+
+        if collection.granule_spatial_representation != constants.CARTESIAN:
+            errors.append(
+                f"Collection {constants.GRANULE_SPATIAL_REP} must be {constants.CARTESIAN} when collection_geometry_override is set."
+            )
+
+    return errors
+
+
 def prepare_granule(_: config.Config, granule: Granule) -> Granule:
     """
     Prepare the Granule for creating metadata and submitting it.
@@ -747,7 +799,9 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     premet_content = utilities.premet_values(granule.premet_filename)
 
     # Get spatial coverage from spatial file if it exists
-    spatial_content = utilities.points_from_spatial(granule.spatial_filename, gsr)
+    spatial_content = utilities.external_spatial_values(
+        configuration.collection_geometry_override, gsr, granule
+    )
 
     # Populated metadata_details dict looks like:
     # {
@@ -998,6 +1052,9 @@ def populate_spatial(spatial_representation: str, spatial_values: list) -> str:
 
 
 def populate_bounding_rectangle(spatial_values):
+    """
+    Return a string representation of a bounding rectangle
+    """
     # Only two points representing (UL, LR) of a rectangle are allowed.
     if len(spatial_values) == 2:
         return ummg_spatial_rectangle_template().safe_substitute(
@@ -1015,6 +1072,10 @@ def populate_bounding_rectangle(spatial_values):
 
 
 def populate_point_or_polygon(spatial_values):
+    """
+    Return a string representation of a point or polygon, based on the length
+    of the spatial_values list.
+    """
     template = ummg_spatial_gpolygon_template
 
     if len(spatial_values) == 1:
@@ -1026,6 +1087,9 @@ def populate_point_or_polygon(spatial_values):
 
 
 def populate_temporal(datetime_values):
+    """
+    Return a string representation of a temporal range or single value, as appropriate.
+    """
     if len(datetime_values) > 1:
         return ummg_temporal_range_template().safe_substitute(
             {"begin_date_time": datetime_values[0], "end_date_time": datetime_values[1]}
@@ -1037,6 +1101,9 @@ def populate_temporal(datetime_values):
 
 
 def populate_additional_attributes(premet_content):
+    """
+    Return a string representation of any additional attributes that were found in a premet file.
+    """
     if premet_content is None:
         return ""
 

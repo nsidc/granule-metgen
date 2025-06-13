@@ -2,7 +2,7 @@ import re
 from unittest.mock import mock_open, patch
 
 import pytest
-from nsidc.metgen import constants
+from nsidc.metgen import constants, metgen
 from nsidc.metgen.readers import utilities
 
 # Unit tests for the 'utilities' module functions.
@@ -17,6 +17,18 @@ from nsidc.metgen.readers import utilities
 @pytest.fixture
 def open_polygon():
     return [{"lat": 40, "lon": 100}, {"lat": 45, "lon": 105}, {"lat": 50, "lon": 110}]
+
+
+@pytest.fixture
+def collection_spatial():
+    return [
+        {
+            "WestBoundingCoordinate": 0,
+            "NorthBoundingCoordinate": -1,
+            "EastBoundingCoordinate": 2,
+            "SouthBoundingCoordinate": 1,
+        }
+    ]
 
 
 @pytest.fixture
@@ -195,3 +207,22 @@ def test_spo_is_geodetic():
         utilities.parse_spo(
             constants.CARTESIAN, utilities.raw_points("./fixtures/spatial/open.spo")
         )
+
+
+@patch("nsidc.metgen.readers.utilities.points_from_collection")
+def test_uses_spatial_from_collection(collection_handler_mock, collection_spatial):
+    collection = metgen.Collection("ABCD", 2)
+    collection.spatial_extent = collection_spatial
+    fake_granule = metgen.Granule("fake_granule", collection=collection)
+
+    utilities.external_spatial_values(True, constants.CARTESIAN, fake_granule)
+    assert collection_handler_mock.called
+    assert collection_handler_mock.call_args.args[0] == collection_spatial
+
+
+def test_points_list_from_collection_spatial(collection_spatial):
+    points = utilities.points_from_collection(collection_spatial)
+    assert points[0]["Longitude"] == 0
+    assert points[0]["Latitude"] == -1
+    assert points[1]["Longitude"] == 2
+    assert points[1]["Latitude"] == 1

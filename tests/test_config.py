@@ -1,4 +1,5 @@
 import dataclasses
+import re
 from configparser import ConfigParser, ExtendedInterpolation
 from unittest.mock import patch
 
@@ -34,6 +35,7 @@ def expected_keys():
             "dry_run",
             "premet_dir",
             "spatial_dir",
+            "collection_geometry_override",
             "time_start_regex",
             "time_coverage_duration",
             "pixel_size",
@@ -158,6 +160,11 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
         ("Source", "premet_dir", None),
         ("Source", "spatial_dir", None),
         (
+            "Source",
+            "collection_geometry_override",
+            constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE,
+        ),
+        (
             "Destination",
             "kinesis_stream_name",
             f"nsidc-cumulus-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-external_notification",
@@ -232,3 +239,13 @@ def test_validates_optional_dirs_without_values(cfg_parser, dir_type, dir_path):
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
     assert f"The {dir_type} does not exist." not in exc_info.value.errors
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+def test_prevents_geometry_clash(cfg_parser):
+    cfg_parser.set("Source", "spatial_dir", "path/to/files")
+    cfg_parser.set("Source", "collection_geometry_override", "True")
+    cfg = config.configuration(cfg_parser, {})
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate_spatial_source(cfg)
+    assert re.search("Cannot declare both", exc_info.value.errors[0])

@@ -149,6 +149,7 @@ def process(config_filename, dry_run, env, number, write_cnm, overwrite):
         metgen.init_logging()
         configuration.show()
         config.validate(configuration)
+        config.validate_spatial_source(configuration)
         metgen.process(configuration)
     except config.ValidationError as e:
         logger = logging.getLogger(constants.ROOT_LOGGER)
