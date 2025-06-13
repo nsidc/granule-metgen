@@ -720,8 +720,6 @@ def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
         return os.path.basename(a_file_path)
 
 
-
-
 def validate_collection(configuration: config.Config, granule: Granule) -> Granule:
     """
     Confirm collection metadata meet requirements for our granule metadata generation.
