@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.7.0rc1
 
 * Refactor logic for identifying granule spatial representation. (Issue-159)
 * End processing if UMM-C metadata can't be retrieved and/or do not contain a
@@ -6,7 +6,7 @@
 * Add support for bounding rectangles. (Issue-157)
 * Add `.ini` option to use collection spatial information to describe each granule.
 
-## v1.6.1rc1
+## v1.6.1
 
 * Fix oversight which made additional attributes required, not optional.
   (Issue-200)
