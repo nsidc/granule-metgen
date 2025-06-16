@@ -136,6 +136,14 @@ def init_config(configuration_file):
             default=str(constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE),
         ),
     )
+    cfg_parser.set(
+        constants.SOURCE_SECTION_NAME,
+        "collection_temporal_override",
+        Prompt.ask(
+            "Use collection temporal extent? (True/False)",
+            default=str(constants.DEFAULT_COLLECTION_TEMPORAL_OVERRIDE),
+        ),
+    )
     print()
 
     print()
@@ -559,8 +567,16 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
             ummc, constants.GRANULE_SPATIAL_REP_PATH
         ),
         spatial_extent=ummc_content(ummc, constants.SPATIAL_EXTENT_PATH),
-        temporal_extent=ummc_content(ummc, constants.TEMPORAL_EXTENT_PATH),
+        temporal_extent=temporal_from_collection(ummc),
     )
+
+
+def temporal_from_collection(ummc) -> str | dict:
+    temporal = ummc_content(ummc, constants.TEMPORAL_RANGE_PATH)
+    if temporal is None:
+        return ummc_content(ummc, constants.TEMPORAL_SINGLE_PATH)
+
+    return temporal
 
 
 def grouped_granule_files(configuration: config.Config) -> list[tuple]:

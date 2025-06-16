@@ -4,7 +4,8 @@
 * End processing if UMM-C metadata can't be retrieved and/or do not contain a
   `GranuleSpatialRepresentation` element.
 * Add support for bounding rectangles. (Issue-157)
-* Add `.ini` option to use collection spatial information to describe each granule. (Issue-140)
+* Add `.ini` options to apply the collection spatial and/or temporal extent
+  information to the UMM-G output for each granule. (Issue-139, Issue-140)
 
 ## v1.6.1
 

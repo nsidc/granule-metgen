@@ -14,6 +14,7 @@ DEFAULT_NUMBER = 1000000
 DEFAULT_DRY_RUN = False
 DEFAULT_BROWSE_REGEX = "_brws"
 DEFAULT_COLLECTION_GEOMETRY_OVERRIDE = False
+DEFAULT_COLLECTION_TEMPORAL_OVERRIDE = False
 
 # Logging
 ROOT_LOGGER = "metgenc"
@@ -60,6 +61,8 @@ SPATIAL_EXTENT_PATH = [
     "BoundingRectangles",
 ]
 TEMPORAL_EXTENT_PATH = ["TemporalExtents"]
+TEMPORAL_RANGE_PATH = ["TemporalExtents", "RangeDateTimes"]
+TEMPORAL_SINGLE_PATH = ["TemporalExtents", "SingleDateTimes"]
 
 # Templates
 CNM_BODY_TEMPLATE = ("nsidc.metgen.templates", "cnm_body_template.txt")
