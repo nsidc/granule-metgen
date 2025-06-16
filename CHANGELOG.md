@@ -1,4 +1,4 @@
-## v1.7.0rc3
+## v1.7.0rc4
 
 * Refactor logic for identifying granule spatial representation. (Issue-159)
 * End processing if UMM-C metadata can't be retrieved and/or do not contain a
