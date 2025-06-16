@@ -42,7 +42,7 @@ from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws, config, constants
-from nsidc.metgen.readers import registry, utilities
+from nsidc.metgen.readers import generic, registry, utilities
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -372,7 +372,11 @@ def data_reader(
     # Lookup based on an arbitrary data file in the set
     _, extension = os.path.splitext(first(data_files))
 
-    return registry.lookup(auth_id, extension)
+    try:
+        return registry.lookup(auth_id, extension)
+    except (KeyError, Exception):
+        # Use generic reader if registry doesn't have a specific reader
+        return generic.extract_metadata
 
 
 # -------------------------------------------------------------------
