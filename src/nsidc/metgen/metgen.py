@@ -494,6 +494,9 @@ def ummc_content(ummc: dict, keys: list) -> str | dict:
     if ummc is None:
         return val
 
+    print(f"in ummc_content, content is {ummc['SpatialExtent']}")
+    print(f"in ummc_content, looking for {keys}")
+
     try:
         val = get_in(ummc, keys)
         logger.debug(f"{'/'.join(keys)} information in umm-c response from CMR: {val}")
