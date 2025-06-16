@@ -19,7 +19,7 @@ from collections.abc import Callable
 from functools import cache
 from pathlib import Path
 from string import Template
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import earthaccess
 import jsonschema
@@ -261,6 +261,9 @@ class Granule:
     data_reader: Callable[[str, str, str, config.Config], dict] = (
         lambda auth_id, cfg: dict()
     )
+    # Geometry pipeline attributes (dynamically added)
+    geometry_decision: Optional[Any] = None
+    geometry_data: Optional[Dict[str, Any]] = None
 
 
 @dataclasses.dataclass
@@ -458,29 +461,113 @@ def null_operation(_: config.Config, granule: Granule) -> Granule:
     return granule
 
 
-def read_geometry(_: config.Config, granule: Granule) -> Granule:
+def read_geometry(cfg: config.Config, granule: Granule) -> Granule:
     """
-    Read geometry information for the granule.
+    Read geometry information for the granule and determine the source.
 
-    This is an identity operation for now. In the future, it will:
-    - Read geometry from collection metadata, OR
-    - Read geometry from .spatial or .spo ancillary files, OR
-    - Read geometry from the granule data files
-
-    The choice will depend on configuration and available data.
+    This function:
+    1. Creates a geometry context from the granule and configuration
+    2. Resolves which geometry source to use based on the rules
+    3. Validates the decision and logs any errors
+    4. Stores the geometry decision in the granule for later use
     """
+    from nsidc.metgen.geometry_resolver import create_geometry_context, resolve_geometry, GeometryContext
+    from nsidc.metgen.geometry_extractor import extract_spatial_geometry, extract_spo_geometry
+    
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+    
+    # Create context for geometry resolution
+    context = create_geometry_context(granule, cfg)
+    
+    # If we have a spatial file, read it to get point count
+    if context.has_spo_file or context.has_spatial_file:
+        try:
+            if context.has_spo_file:
+                _, point_count = extract_spo_geometry(context.spo_filename)
+            else:
+                _, point_count = extract_spatial_geometry(context.spatial_filename)
+            
+            # Create new context with point count
+            context = GeometryContext(
+                gsr=context.gsr,
+                collection_geometry_override=context.collection_geometry_override,
+                has_spo_file=context.has_spo_file,
+                has_spatial_file=context.has_spatial_file,
+                has_data_file_geometry=context.has_data_file_geometry,
+                has_collection_geometry=context.has_collection_geometry,
+                point_count=point_count,
+                spo_filename=context.spo_filename,
+                spatial_filename=context.spatial_filename
+            )
+        except Exception as e:
+            logger.warning(f"Failed to read spatial file for point count: {e}")
+    
+    # Resolve geometry source and type
+    decision = resolve_geometry(context)
+    
+    # Store the decision in the granule for use in write_geometry
+    granule.geometry_decision = decision
+    
+    if not decision.is_valid:
+        logger.error(f"Geometry resolution error for {granule.name}: {decision.error}")
+    else:
+        logger.debug(f"Geometry resolved for {granule.name}: source={decision.source.name}, type={decision.geometry_type.name}")
+    
     return granule
 
 
-def write_geometry(_: config.Config, granule: Granule) -> Granule:
+def write_geometry(cfg: config.Config, granule: Granule) -> Granule:
     """
-    Write/generate geometry information for the granule.
+    Extract and transform geometry information for the granule.
 
-    This is an identity operation for now. In the future, it will:
-    - Transform geometry data into the appropriate format for UMM-G
-    - Handle different geometry types (point, polygon, bounding box)
-    - Apply any necessary geometry processing rules
+    This function:
+    1. Uses the geometry decision from read_geometry
+    2. Extracts geometry from the determined source
+    3. Validates the extracted geometry
+    4. Transforms it to the appropriate format
+    5. Stores it in the granule for UMM-G generation
     """
+    from nsidc.metgen.geometry_resolver import validate_geometry_points
+    from nsidc.metgen.geometry_extractor import extract_geometry, transform_geometry
+    
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+    
+    # Check if we have a valid geometry decision
+    if not hasattr(granule, 'geometry_decision'):
+        logger.error(f"No geometry decision found for {granule.name}")
+        return granule
+        
+    decision = granule.geometry_decision
+    if not decision.is_valid:
+        # Geometry error was already logged in read_geometry
+        return granule
+    
+    # Extract geometry from the determined source
+    points = extract_geometry(decision.source, granule, decision.geometry_type)
+    
+    if points is None:
+        logger.error(f"Failed to extract geometry from {decision.source.name} for {granule.name}")
+        return granule
+    
+    # Validate the extracted geometry
+    is_valid, error = validate_geometry_points(
+        points, 
+        decision.geometry_type,
+        granule.collection.granule_spatial_representation
+    )
+    
+    if not is_valid:
+        logger.error(f"Invalid geometry for {granule.name}: {error}")
+        return granule
+    
+    # Transform geometry to the appropriate format
+    try:
+        geometry_data = transform_geometry(points, decision.geometry_type)
+        granule.geometry_data = geometry_data
+        logger.debug(f"Geometry transformed for {granule.name}: {geometry_data['type']}")
+    except Exception as e:
+        logger.error(f"Failed to transform geometry for {granule.name}: {e}")
+    
     return granule
 
 
@@ -834,10 +921,15 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     # Get premet content if it exists.
     premet_content = utilities.premet_values(granule.premet_filename)
 
-    # Get spatial coverage from spatial file if it exists
-    spatial_content = utilities.external_spatial_values(
-        configuration.collection_geometry_override, gsr, granule
-    )
+    # Get spatial coverage from the geometry pipeline if available
+    if hasattr(granule, 'geometry_data') and granule.geometry_data:
+        # Use the geometry data prepared by the pipeline
+        spatial_content = granule.geometry_data.get('coordinates')
+    else:
+        # Fall back to the old method
+        spatial_content = utilities.external_spatial_values(
+            configuration.collection_geometry_override, gsr, granule
+        )
 
     # Populated metadata_details dict looks like:
     # {
@@ -864,7 +956,26 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)
-    summary["spatial_extent"] = populate_spatial(gsr, summary["geometry"])
+    
+    # Use geometry from pipeline if available, otherwise use summary geometry
+    if hasattr(granule, 'geometry_data') and granule.geometry_data:
+        # The geometry_data already contains the formatted spatial extent
+        geometry_type = granule.geometry_data['type']
+        geometry_coords = granule.geometry_data['coordinates']
+        
+        if geometry_type == 'BoundingRectangle':
+            # Convert dict to list format expected by populate_bounding_rectangle
+            br_list = [
+                {"Longitude": geometry_coords["WestBoundingCoordinate"], "Latitude": geometry_coords["SouthBoundingCoordinate"]},
+                {"Longitude": geometry_coords["EastBoundingCoordinate"], "Latitude": geometry_coords["NorthBoundingCoordinate"]}
+            ]
+            summary["spatial_extent"] = populate_bounding_rectangle(br_list)
+        elif geometry_type in ['Point', 'GPolygon']:
+            # populate_point_or_polygon handles both cases
+            summary["spatial_extent"] = populate_point_or_polygon(geometry_coords)
+    else:
+        summary["spatial_extent"] = populate_spatial(gsr, summary["geometry"])
+    
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
     summary["additional_attributes"] = populate_additional_attributes(premet_content)
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
