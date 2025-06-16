@@ -4,7 +4,7 @@ Extracts metadata from spatial/spo files when available.
 """
 
 import os.path
-from nsidc.metgen import constants
+
 from nsidc.metgen.readers import utilities
 
 
@@ -17,7 +17,7 @@ def extract_metadata(
 ) -> dict:
     """
     Extract metadata for generic data files.
-    
+
     This reader is used when no specific reader exists for the data file type.
     It relies on spatial/spo files for geometry information and premet files
     for temporal information.
@@ -26,7 +26,7 @@ def extract_metadata(
         "size_in_bytes": os.path.getsize(data_file),
         "production_date_time": configuration.date_modified,
     }
-    
+
     # Get temporal information from premet if available
     if premet_content:
         temporal = utilities.temporal_from_premet(premet_content)
@@ -38,7 +38,7 @@ def extract_metadata(
     else:
         # Default to a single point in time using production date
         metadata["temporal"] = [configuration.date_modified]
-    
+
     # Use the spatial content passed in (which comes from external_spatial_values)
     if spatial_content:
         metadata["geometry"] = spatial_content
@@ -46,5 +46,5 @@ def extract_metadata(
         # If no spatial content provided, return empty geometry
         # This will cause an error in UMM-G generation, which is appropriate
         metadata["geometry"] = []
-    
+
     return metadata
