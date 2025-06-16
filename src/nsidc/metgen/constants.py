@@ -53,14 +53,12 @@ UMMG_ADDITIONAL_ATTRIBUTES = "AdditionalAttributes"
 
 # Location of spatial and temporal information in collection metadata retrieved from CMR
 GRANULE_SPATIAL_REP_PATH = ["SpatialExtent", GRANULE_SPATIAL_REP]
-SPATIAL_EXTENT_PATH = (
-    [
-        "SpatialExtent",
-        "HorizontalSpatialDomain",
-        "Geometry",
-        "BoundingRectangles",
-    ],
-)
+SPATIAL_EXTENT_PATH = [
+    "SpatialExtent",
+    "HorizontalSpatialDomain",
+    "Geometry",
+    "BoundingRectangles",
+]
 TEMPORAL_EXTENT_PATH = ["TemporalExtents"]
 
 # Templates
