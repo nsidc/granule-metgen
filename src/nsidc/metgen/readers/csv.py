@@ -13,7 +13,7 @@ from nsidc.metgen.readers import utilities
 
 def extract_metadata(
     csv_path: str,
-    premet_content: dict,
+    temporal_content: list,
     spatial_content: list,
     configuration: Config,
     _,
@@ -21,14 +21,14 @@ def extract_metadata(
     df = pd.read_csv(csv_path)
 
     return {
-        "temporal": data_datetime(df, premet_content),
+        "temporal": data_datetime(df, temporal_content),
         "geometry": bbox(spatial_values(df, spatial_content, configuration)),
     }
 
 
-def data_datetime(df, premet_content: dict) -> list:
-    if premet_content:
-        return utilities.temporal_from_premet(premet_content)
+def data_datetime(df, temporal_content: dict) -> list:
+    if temporal_content:
+        return temporal_content
 
     def formatted(date, dt):
         return (

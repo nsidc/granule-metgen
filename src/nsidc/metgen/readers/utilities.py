@@ -11,7 +11,6 @@ def temporal_from_premet(pdict: dict) -> list:
     """
     Extract temporal information from premet file contents.
     """
-    # Show error if no date/time information is in file
     begin_date_keys = ["RangeBeginningDate", "Begin_date"]
     begin_time_keys = ["RangeBeginningTime", "Begin_time"]
     end_date_keys = [
@@ -108,9 +107,26 @@ def format_timezone(iso_obj):
         .replace("+00:00", "Z")
     )
 
+def external_temporal_values(collection_temporal_override, premet_content, granule):
+    if collection_temporal_override:
+        return granule.collection.temporal_extent
 
-def external_temporal_values(collection_temporal_override, premet_filename):
-    return True
+    if premet_content:
+        return refine_temporal(temporal_from_premet(premet_content))
+
+    return []
+
+def refine_temporal(tvals: list):
+    """
+    Reformat a list of temporal values to match the format from UMM-C metadata
+    """
+    keys = ['BeginningDateTime', "EndingDateTime"]
+    if len(tvals) > 1:
+        return([dict(zip(keys, tvals))])
+
+    return tvals
+
+
 
 def external_spatial_values(collection_geometry_override, gsr, granule) -> list:
     """
