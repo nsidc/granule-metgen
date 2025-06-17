@@ -107,6 +107,7 @@ def format_timezone(iso_obj):
         .replace("+00:00", "Z")
     )
 
+
 def external_temporal_values(collection_temporal_override, premet_content, granule):
     if collection_temporal_override:
         return granule.collection.temporal_extent
@@ -116,16 +117,16 @@ def external_temporal_values(collection_temporal_override, premet_content, granu
 
     return []
 
+
 def refine_temporal(tvals: list):
     """
     Reformat a list of temporal values to match the format from UMM-C metadata
     """
-    keys = ['BeginningDateTime', "EndingDateTime"]
+    keys = ["BeginningDateTime", "EndingDateTime"]
     if len(tvals) > 1:
-        return([dict(zip(keys, tvals))])
+        return [dict(zip(keys, tvals))]
 
     return tvals
-
 
 
 def external_spatial_values(collection_geometry_override, gsr, granule) -> list:

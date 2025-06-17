@@ -1139,11 +1139,10 @@ def populate_temporal(datetime_values):
     """
     Return a string representation of a temporal range or single value, as appropriate.
     """
-    # note! possible to have only beginning time in a range. still need to use range template.
-    # look for None value and ignore
-    if len(datetime_values) > 1:
+    if isinstance(datetime_values[0], dict):
+        # range_parts = [': '.join([k, str(v)]) for k, v in datetime_values[0].items()]
         return ummg_temporal_range_template().safe_substitute(
-            {"begin_date_time": datetime_values[0], "end_date_time": datetime_values[1]}
+            {"date_time_range": json.dumps(datetime_values[0])}
         )
     else:
         return ummg_temporal_single_template().safe_substitute(

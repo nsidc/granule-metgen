@@ -8,7 +8,6 @@ import pandas as pd
 from funcy import lpluck
 
 from nsidc.metgen.config import Config
-from nsidc.metgen.readers import utilities
 
 
 def extract_metadata(

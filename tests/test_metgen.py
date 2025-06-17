@@ -418,7 +418,9 @@ def test_stage_files(m1, m2, m3, test_config):
 
 
 def test_returns_datetime_range():
-    result = metgen.populate_temporal([123, 456])
+    result = metgen.populate_temporal(
+        [{"BeginningDateTime": "123", "EndingDateTime": "456"}]
+    )
     assert "RangeDateTime" in result
     assert '"BeginningDateTime": "123"' in result
     assert '"EndingDateTime": "456"' in result
