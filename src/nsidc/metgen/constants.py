@@ -61,8 +61,8 @@ SPATIAL_EXTENT_PATH = [
     "BoundingRectangles",
 ]
 TEMPORAL_EXTENT_PATH = ["TemporalExtents"]
-TEMPORAL_RANGE_PATH = ["TemporalExtents", "RangeDateTimes"]
-TEMPORAL_SINGLE_PATH = ["TemporalExtents", "SingleDateTimes"]
+TEMPORAL_RANGE_PATH = ["RangeDateTimes"]
+TEMPORAL_SINGLE_PATH = ["SingleDateTimes"]
 
 # Templates
 CNM_BODY_TEMPLATE = ("nsidc.metgen.templates", "cnm_body_template.txt")

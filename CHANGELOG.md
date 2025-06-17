@@ -1,11 +1,14 @@
+## UNRELEASED
+
+* Add `.ini` option to use collection temporal extent information to describe each granule. (Issue-139)
+
 ## v1.7.0
 
 * Refactor logic for identifying granule spatial representation. (Issue-159)
 * End processing if UMM-C metadata can't be retrieved and/or do not contain a
   `GranuleSpatialRepresentation` element.
 * Add support for bounding rectangles. (Issue-157)
-* Add `.ini` options to apply the collection spatial and/or temporal extent
-  information to the UMM-G output for each granule. (Issue-139, Issue-140)
+* Add `.ini` option to use collection spatial extent information to describe each granule. (Issue-140)
 
 ## v1.6.1
 

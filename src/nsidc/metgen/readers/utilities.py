@@ -109,6 +109,9 @@ def format_timezone(iso_obj):
     )
 
 
+def external_temporal_values(collection_temporal_override, premet_filename):
+    return True
+
 def external_spatial_values(collection_geometry_override, gsr, granule) -> list:
     """
     Retrieve spatial information from a granule-specific spatial (or spo) file, or

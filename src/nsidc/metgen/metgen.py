@@ -239,10 +239,6 @@ def init_config(configuration_file):
 class Collection:
     """
     Collection metadata relevant to generating UMM-G content
-
-    spatial_extent and temporal_extent currently contain the relevant
-    JSON structure from the collection metadata (if it exists).
-    Additional work is still needed to parse out the relevant fields.
     """
 
     auth_id: str
@@ -492,7 +488,7 @@ def validate_cmr_response(umm: list):
     return ummc
 
 
-def ummc_content(ummc: dict, keys: list) -> str | dict:
+def ummc_content(ummc: dict, keys: list) -> str | list | dict:
     """
     Look for list of keys in a UMM-C record and log the status.
     """
@@ -571,10 +567,18 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
     )
 
 
-def temporal_from_collection(ummc) -> str | dict:
-    temporal = ummc_content(ummc, constants.TEMPORAL_RANGE_PATH)
+def temporal_from_collection(ummc: dict) -> str | dict:
+    # TemporalExtents points to an array, not a dict
+    temp = ummc_content(ummc, constants.TEMPORAL_EXTENT_PATH)
+    if len(temp) > 1:
+        raise Exception("too many temporal")
+
+    # save type as well either range or single
+    temporal = ummc_content(temp[0], constants.TEMPORAL_RANGE_PATH)
     if temporal is None:
-        return ummc_content(ummc, constants.TEMPORAL_SINGLE_PATH)
+        temporal = ummc_content(temp[0], constants.TEMPORAL_SINGLE_PATH)
+
+    print(f"temporal is {temporal}")
 
     return temporal
 
@@ -733,10 +737,32 @@ def validate_collection(configuration: config.Config, granule: Granule) -> Granu
     Confirm collection metadata meet requirements for our granule metadata generation.
     """
     errors = validate_collection_spatial(configuration, granule.collection)
-    if len(errors) == 0:
-        return granule
-    else:
+    errors.append(validate_collection_temporal(configuration, granule.collection))
+    if errors:
         raise config.ValidationError(errors)
+
+    return granule
+
+
+def validate_collection_temporal(configuration, collection):
+    """
+    Verify collection temporal extent information can be used if a collection
+    override is requested.
+    """
+    errors = []
+
+    # If collection temporal extent is to be applied to granules, there must be only
+    # one temporal extent object, which can be either a range or a single time value.
+    # A temporal range must include a BeginningDateTime, and may include an EndingDateTime.
+    if (
+        configuration.collection_temporal_override
+        and len(collection.temporal_extent) > 1
+    ):
+        errors.append(
+            "Collection metadata must only contain one temporal extent when collection_temporal_override is set."
+        )
+
+    return errors
 
 
 def validate_collection_spatial(configuration, collection):
@@ -753,7 +779,7 @@ def validate_collection_spatial(configuration, collection):
         )
 
     # If collection spatial extent is to be applied to granules, the spatial extent may
-    # only contain one bounding rectange, and the granule spatial representation must be cartesian
+    # only contain one bounding rectangle, and the granule spatial representation must be cartesian
     if configuration.collection_geometry_override:
         if not collection.spatial_extent:
             errors.append("Collection must include a spatial extent.")
@@ -812,7 +838,11 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     gsr = granule.collection.granule_spatial_representation
 
     # Get premet content if it exists.
-    premet_content = utilities.premet_values(granule.premet_filename)
+    # add something like external_temporal_values (the temporal equivalent to
+    # external_spatial_values). Need to allow additional attributes from premet, but temporal
+    # extent from collection?
+    premet_content = utilities.premet_values(configuration.collection_temporal_override, granule.premet_filename)
+    temporal_content = utilities.external_temporal_values(configuration.collection_temporal_override, premet_content)
 
     # Get spatial coverage from spatial file if it exists
     spatial_content = utilities.external_spatial_values(
@@ -1106,6 +1136,7 @@ def populate_temporal(datetime_values):
     """
     Return a string representation of a temporal range or single value, as appropriate.
     """
+    # note! possible to have only beginning time in a range. still need to use range template.
     if len(datetime_values) > 1:
         return ummg_temporal_range_template().safe_substitute(
             {"begin_date_time": datetime_values[0], "end_date_time": datetime_values[1]}
