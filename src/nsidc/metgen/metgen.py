@@ -353,7 +353,6 @@ def data_reader(
     try:
         return registry.lookup(auth_id, extension)
     except (KeyError, Exception):
-        # Use generic reader if registry doesn't have a specific reader
         return generic.extract_metadata
 
 

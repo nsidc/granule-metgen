@@ -33,18 +33,15 @@ def extract_metadata(
         if temporal:
             metadata["temporal"] = temporal
         else:
-            # Default to a single point in time using production date
             metadata["temporal"] = [configuration.date_modified]
     else:
-        # Default to a single point in time using production date
         metadata["temporal"] = [configuration.date_modified]
 
-    # Use the spatial content passed in (which comes from external_spatial_values)
     if spatial_content:
         metadata["geometry"] = spatial_content
     else:
         # If no spatial content provided, return empty geometry
-        # This will cause an error in UMM-G generation, which is appropriate
+        # This will cause an error in UMM-G generation
         metadata["geometry"] = []
 
     return metadata
