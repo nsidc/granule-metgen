@@ -1,5 +1,7 @@
-## UNRELEASED
+## v1.8.0rc0
 
+* Adds a generic reader used when `metgenc` processes granules with an unknown
+  file-type. It uses spatial metadata from `spatial` files or collection metadata.
 * Add `.ini` option to use collection temporal extent information to describe each granule. (Issue-139)
 
 ## v1.7.0
@@ -15,7 +17,7 @@
 * Fix oversight which made additional attributes required, not optional.
   (Issue-200)
 * Parse `AdditionalAttributes` from `.premet` file and include them in UMM-G
-  output. (Issue-162, Issue-186) 
+  output. (Issue-162, Issue-186)
 * Rename template files with `.txt` extension.
 
 ## v1.5.0
