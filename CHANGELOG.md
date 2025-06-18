@@ -3,7 +3,7 @@
 * Adds a generic reader used when `metgenc` processes granules with an unknown
   file-type. It uses spatial metadata from `spatial` files or collection metadata.
 
-## v1.8.0rc0
+## v1.7.0
 
 * Refactor logic for identifying granule spatial representation. (Issue-159)
 * End processing if UMM-C metadata can't be retrieved and/or do not contain a
