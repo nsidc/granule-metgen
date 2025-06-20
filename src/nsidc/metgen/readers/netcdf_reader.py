@@ -48,7 +48,7 @@ def extract_metadata(
         raise Exception(f"Could not open netCDF file {netcdf_path}")
 
     # Use temporal coverage from premet file if it exists
-    if premet_content is not None:
+    if premet_content:
         temporal = utilities.temporal_from_premet(premet_content)
     else:
         temporal = time_range(os.path.basename(netcdf_path), netcdf, configuration)

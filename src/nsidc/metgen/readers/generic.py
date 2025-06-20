@@ -3,8 +3,6 @@ Generic reader for handling data file types not supported by specific readers.
 Extracts metadata from spatial/spo files when available.
 """
 
-import os.path
-
 from nsidc.metgen.readers import utilities
 
 
@@ -22,20 +20,13 @@ def extract_metadata(
     It relies on spatial/spo files for geometry information and premet files
     for temporal information.
     """
-    metadata = {
-        "size_in_bytes": os.path.getsize(data_file),
-        "production_date_time": configuration.date_modified,
-    }
+    metadata = {}
 
     # Get temporal information from premet if available
     if premet_content:
-        temporal = utilities.temporal_from_premet(premet_content)
-        if temporal:
-            metadata["temporal"] = temporal
-        else:
-            metadata["temporal"] = [configuration.date_modified]
+        metadata["temporal"] = utilities.temporal_from_premet(premet_content)
     else:
-        metadata["temporal"] = [configuration.date_modified]
+        metadata["temporal"] = []
 
     if spatial_content:
         metadata["geometry"] = spatial_content
