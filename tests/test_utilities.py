@@ -123,11 +123,17 @@ def test_correctly_reads_date_time_strings(input, expected):
             ["2020-01-01T00:00:00.000Z"],
         ),
         (
+            {
+                "RangeBeginningDate": "20200101",
+            },
+            ["2020-01-01T00:00:00.000Z"],
+        ),
+        (
             {"Begin_date": "2000-01-01", "End_date": "2000-12-31"},
             ["2000-01-01T00:00:00.000Z", "2000-12-31T00:00:00.000Z"],
         ),
         (
-            {"Begin_date": "2000-01-01", "Begin_time": "01:00:30"},
+            {"Begin_date": "20000101", "Begin_time": "01:00:30"},
             ["2000-01-01T01:00:30.000Z"],
         ),
         (
