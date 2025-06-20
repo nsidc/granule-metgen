@@ -820,7 +820,9 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     for data_file in granule.data_filenames:
         metadata_details[data_file] = {
             "size_in_bytes": os.path.getsize(data_file),
-            "production_date_time": configuration.date_modified,
+            "production_date_time": utilities.ensure_iso_datetime(
+                configuration.date_modified
+            ),
         } | granule.data_reader(
             data_file,
             premet_content,

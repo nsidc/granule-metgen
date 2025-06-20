@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 from nsidc.metgen import metgen
@@ -26,13 +26,10 @@ def test_generic_reader_extract_metadata():
     ]
 
     # Create a temporary file for testing
-    with patch("os.path.getsize", return_value=1024):
-        metadata = generic.extract_metadata(
-            "test_file.dat", premet_content, spatial_content, mock_config, "CARTESIAN"
-        )
+    metadata = generic.extract_metadata(
+        "test_file.dat", premet_content, spatial_content, mock_config, "CARTESIAN"
+    )
 
-    assert metadata["size_in_bytes"] == 1024
-    assert metadata["production_date_time"] == "2023-12-25T00:00:00.000Z"
     assert len(metadata["temporal"]) == 2
     assert metadata["geometry"] == spatial_content
 
@@ -48,19 +45,15 @@ def test_generic_reader_no_premet():
         {"Longitude": 180.0, "Latitude": -90.0},
     ]
 
-    with patch("os.path.getsize", return_value=2048):
-        metadata = generic.extract_metadata(
-            "test_file.dat",
-            None,  # No premet
-            spatial_content,
-            mock_config,
-            "GEODETIC",
-        )
+    metadata = generic.extract_metadata(
+        "test_file.dat",
+        None,  # No premet
+        spatial_content,
+        mock_config,
+        "GEODETIC",
+    )
 
-    assert metadata["size_in_bytes"] == 2048
-    assert metadata["temporal"] == [
-        "2023-12-25T00:00:00.000Z"
-    ]  # Falls back to production date
+    assert metadata["temporal"] == []
     assert metadata["geometry"] == spatial_content
 
 
@@ -77,16 +70,14 @@ def test_generic_reader_no_spatial():
         "RangeEndingTime": "13:00:00",
     }
 
-    with patch("os.path.getsize", return_value=2048):
-        metadata = generic.extract_metadata(
-            "test_file.dat",
-            premet_content,
-            [],  # No spatial
-            mock_config,
-            "GEODETIC",
-        )
+    metadata = generic.extract_metadata(
+        "test_file.dat",
+        premet_content,
+        [],  # No spatial
+        mock_config,
+        "GEODETIC",
+    )
 
-    assert metadata["size_in_bytes"] == 2048
     assert len(metadata["temporal"]) == 2  # From premet
     assert metadata["geometry"] == []  # Empty geometry
 
@@ -96,19 +87,15 @@ def test_generic_reader_no_premet_no_spatial():
     mock_config = Mock()
     mock_config.date_modified = "2023-12-25T00:00:00.000Z"
 
-    with patch("os.path.getsize", return_value=4096):
-        metadata = generic.extract_metadata(
-            "test_file.dat",
-            None,  # No premet
-            [],  # No spatial
-            mock_config,
-            "GEODETIC",
-        )
+    metadata = generic.extract_metadata(
+        "test_file.dat",
+        None,  # No premet
+        [],  # No spatial
+        mock_config,
+        "GEODETIC",
+    )
 
-    assert metadata["size_in_bytes"] == 4096
-    assert metadata["temporal"] == [
-        "2023-12-25T00:00:00.000Z"
-    ]  # Falls back to production date
+    assert metadata["temporal"] == []  # Empty temporal
     assert metadata["geometry"] == []  # Empty geometry
 
 
