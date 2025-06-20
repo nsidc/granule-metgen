@@ -36,6 +36,7 @@ def expected_keys():
             "premet_dir",
             "spatial_dir",
             "collection_geometry_override",
+            "collection_temporal_override",
             "time_start_regex",
             "time_coverage_duration",
             "pixel_size",

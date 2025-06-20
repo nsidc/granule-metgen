@@ -12,13 +12,17 @@ from nsidc.metgen.readers import utilities
 
 
 def extract_metadata(
-    csv_path: str, premet_content: dict, spatial_content: list, configuration: Config, _
+    csv_path: str,
+    temporal_content: list,
+    spatial_content: list,
+    configuration: Config,
+    _,
 ) -> dict:
     with open(csv_path, newline="") as csvfile:
         csvreader = csv.reader(csvfile, delimiter=",")
 
         return {
-            "temporal": data_datetime(csvreader, premet_content),
+            "temporal": data_datetime(csvreader, temporal_content),
             "geometry": spatial_values(csvreader, spatial_content, configuration),
         }
 
@@ -26,10 +30,10 @@ def extract_metadata(
 # Add new data_datetime strategy that gets DATE and TIME columns and finds range
 
 
-def data_datetime(csvreader, premet_content: dict) -> list:
+def data_datetime(csvreader, temporal_content: list) -> list:
     """Get temporal extent from premet file if it exists, otherwise parse from CSV"""
-    if premet_content:
-        return utilities.temporal_from_premet(premet_content)
+    if temporal_content:
+        return temporal_content
 
     pattern = re.compile("^.*Date")
 
