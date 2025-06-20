@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.8.0rc0
 
 * Adds a generic reader used when `metgenc` processes granules with an unknown
   file-type. It uses spatial metadata from `spatial` files or collection metadata.
