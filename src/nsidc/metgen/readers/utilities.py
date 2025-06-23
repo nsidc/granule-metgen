@@ -106,6 +106,9 @@ def format_timezone(iso_obj):
 
 
 def external_temporal_values(collection_temporal_override, premet_content, granule):
+    """
+    Extract temporal information from collection metadata or premet files according to .ini file settings.
+    """
     if collection_temporal_override:
         return granule.collection.temporal_extent
 

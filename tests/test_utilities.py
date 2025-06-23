@@ -148,15 +148,11 @@ def test_datetime_from_premet(input, expected):
 
 
 def test_premet_temporal_formatting():
-    # external_temporal_values(false, premet_content, granule) should return array of dicts if
-    # two values, otherwise array of single value
-    # should return array of single value
     premet = {"Begin_date": "2000-01-01"}
     result = utilities.external_temporal_values(False, premet, "fake granule")
     assert len(result) == 1
     assert isinstance(result[0], str)
 
-    # should return array of dicts
     premet = {
         "RangeBeginningDate": "2020-01-01",
         "RangeBeginningTime": "00:00:00",
