@@ -285,28 +285,24 @@ Notes:
 1. `BR` = bounding rectangle
 2. `.spo` = `.spo` file associated with each granule data file.
 3. `.spatial` = `.spatial` file associated with each granule data file.
-4. The practice of NSIDC data curators is to always associate a
-  `GEODETIC` granule spatial representation with point data.
 
 | source | num points | GSR | error? | expected output | comments |
 | ------ | ------------ | ---- | ------ | ------- | --- |
-| .spo  |   any | cartesian | yes | | |
-| .spo   | <= 2 | geodetic | yes | | |
-| .spo  | > 2 | geodetic | no  | GPolygon as described by `.spo` file contents. | |
-| .spatial | 1 | cartesian | yes | | See note 4 above. |
-| .spatial | 1 | geodetic | no | point | |
-| .spatial | 2 | cartesian | no | BR | | |
-| .spatial | >= 2 | geodetic | no | GPolygon(s) calculated to enclose all points. | |
-| .spatial | > 2 | cartesian | yes | | |
-| data file | 1 | cartesian | yes | See note 4 above. |
-| data file | 1 | geodetic | no | point | |
-| data file (netCDF) | NA | cartesian | no | | BR; min/max lon/lat points for BR expected to be included in global attributes. |
-| data file (non-netCDF) | > 1 | cartesian | yes | | |
-| data file (netCDF, gridded data) | >= 3 | geodetic | no | GPolygon calculated from grid perimeter. |
-| data file (some collection of points) | >= 2 | geodetic | no | GPolygon(s) calculated to enclose all points. |
-| collection metadata with one BR | NA | cartesian | no | BR as described in collection metadata. |
-| collection metadata with two or more BR | NA | cartesian | yes |  |
-| collection metadata | NA | geodetic | yes | | |
+| .spo  |   any | cartesian | yes | | `.spo` content assumed to be GPolygon; GSR cannot be cartesian. |
+| .spo   | <= 2 | geodetic | yes | | At least three points are required to define a GPolygon. |
+| .spo  | > 2 | geodetic | no | GPolygon as described by `.spo` file contents. | |
+| .spatial | 1 | cartesian | yes | | NSIDC data curators always associate a `GEODETIC` granule spatial representation with point data. |
+| .spatial | 1 | geodetic | no | point as defined in spatial file. | |
+| .spatial | 2 | cartesian | no | BR as defined in spatial file. | |
+| .spatial | >= 2 | geodetic | no | GPolygon(s) calculated to enclose all points. | `.spatial` points are treated as a point cloud. |
+| .spatial | > 2 | cartesian | yes | | No cartesian-associated geometry for point cloud. |
+| data file (NSIDC/CF-compliant netCDF) | NA | cartesian | no | BR | min/max lon/lat points for BR expected to be included in global attributes. |
+| data file (NSIDC/CF-compliant) | 1 or > 2 | geodetic | no | | Error if only two points. GPolygon calculated from grid perimeter. |
+| data file, non-NSIDC/CF-compliant netCDF or other format | NA | either | | As per source specified in `.ini` file. | Configuration must include a `spatial_dir` value or `collection_geometry_override=True` entry; directory must include valid `.spatial` or `.spo` files or collection geometry must contain a single point or bounding rectangle. |
+| collection metadata with one BR | NA | cartesian | no | BR as described in collection metadata. | |
+| collection metadata with two or more BR | NA | cartesian | yes | | Two-part bounding rectangle is not a valid geometry. |
+| collection metadata | NA | geodetic | yes | | Collection-level spatial representation cannot be geodetic. |
+| collection metadata specifying one or more points | NA | NA | yes | | TODO: Determine whether point value is handled. |
 
 
 ## Running MetGenC: Its Commands In-depth
