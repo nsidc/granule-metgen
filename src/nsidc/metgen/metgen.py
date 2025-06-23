@@ -889,7 +889,6 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
             configuration,
             gsr,
         )
-        # need to check critical fields here
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)

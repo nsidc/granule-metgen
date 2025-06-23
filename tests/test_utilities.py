@@ -96,6 +96,7 @@ def test_parse_premet_ignores_whitespace(input, expected):
             "2001-01-01T18:59:00.000Z",
             id="Datetime and hours/minutes",
         ),
+        pytest.param(None, None, id="No value"),
     ],
 )
 def test_correctly_reads_date_time_strings(input, expected):

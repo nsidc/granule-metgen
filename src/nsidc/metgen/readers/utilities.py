@@ -90,8 +90,11 @@ def ensure_iso_datetime(datetime_str):
     """
     Parse ISO-standard datetime strings without a timezone identifier.
     """
-    iso_obj = parse(datetime_str)
-    return format_timezone(iso_obj)
+    if datetime_str:
+        iso_obj = parse(datetime_str)
+        return format_timezone(iso_obj)
+
+    return None
 
 
 def format_timezone(iso_obj):
