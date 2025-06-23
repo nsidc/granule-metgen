@@ -316,11 +316,14 @@ def date_modified(netcdf, configuration):
     if "date_modified" in netcdf.attrs.keys():
         datetime_str = netcdf.attrs["date_modified"]
     else:
+        # take out configuration access here? and handle in metgen.py
         datetime_str = configuration.date_modified
 
     if datetime_str:
         return utilities.ensure_iso_datetime(datetime_str)
     else:
+        # change this to debug, not an error
+        # if no config file value, raise error in create_ummg
         log_and_raise_error(
             "NetCDF file does not have `date_modified` global attribute. \
 Set `date_modified` in the configuration file."

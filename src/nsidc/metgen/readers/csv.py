@@ -8,6 +8,7 @@ import pandas as pd
 from funcy import lpluck
 
 from nsidc.metgen.config import Config
+from nsidc.metgen.readers import utilities
 
 
 def extract_metadata(
@@ -25,7 +26,7 @@ def extract_metadata(
     }
 
 
-def data_datetime(df, temporal_content: dict) -> list:
+def data_datetime(df, temporal_content: list) -> list:
     if temporal_content:
         return temporal_content
 
@@ -40,10 +41,12 @@ def data_datetime(df, temporal_content: dict) -> list:
     data_times = df["TIME"]
 
     if data_dates.size > 0 and data_times.size > 0:
-        return [
-            formatted(data_dates.iat[0], data_times.iat[0]),
-            formatted(data_dates.iat[-1], data_times.iat[-1]),
-        ]
+        return utilities.refine_temporal(
+            [
+                formatted(data_dates.iat[0], data_times.iat[0]),
+                formatted(data_dates.iat[-1], data_times.iat[-1]),
+            ]
+        )
     else:
         return None
 

@@ -475,6 +475,8 @@ Using configuration:
   + dry_run: False
   + premet_dir: None
   + spatial_dir: None
+  + collection_geometry_override: False
+  + collection_temporal_override: False
   + time_start_regex: None
   + time_coverage_duration: None
   + pixel_size: None
@@ -492,7 +494,7 @@ Using configuration:
 * checksum_type: is another config file entry that could be changed by the operator, but should be left as-is!
 * number: 1000000 is the default max granule count for ingest. This value is not found in the config file, thus it can only be changed by a DUCk developer if necessary.
 * dry_run: reflects the option included (or not) by the operator in the command line when `metgenc process` is run.
-* premet_dir:, spatial_dir:, time_start_regex:, time_coverage_duration:, pixel_size:, date_modified:, browse_regex:, and granule_regex: are all optional as they're data set dependent and should be set when necessary by operators within the config file.
+* premet_dir:, spatial_dir:, collection_geometry_override:, collection_temporal_override:, time_start_regex:, time_coverage_duration:, pixel_size:, date_modified:, browse_regex:, and granule_regex: are all optional as they're data set dependent and should be set when necessary by operators within the config file.
 ---
 
 ### process

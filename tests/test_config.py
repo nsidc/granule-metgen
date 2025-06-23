@@ -166,6 +166,11 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
             constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE,
         ),
         (
+            "Source",
+            "collection_temporal_override",
+            constants.DEFAULT_COLLECTION_TEMPORAL_OVERRIDE,
+        ),
+        (
             "Destination",
             "kinesis_stream_name",
             f"nsidc-cumulus-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-external_notification",
