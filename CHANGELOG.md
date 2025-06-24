@@ -1,7 +1,9 @@
 ## v1.8.0rc1
 
 * Adds a generic reader used when `metgenc` processes granules with an unknown
-  file-type. It uses spatial metadata from `spatial` files or collection metadata.
+  file-type. It uses spatial metadata from `spatial` files or collection metadata. (Issue-199)
+* Add `.ini` option to use collection temporal extent information to describe each granule. (Issue-139)
+* Refine README presentation of geometry logic. (Issue-157)
 
 ## v1.7.0
 
@@ -9,7 +11,7 @@
 * End processing if UMM-C metadata can't be retrieved and/or do not contain a
   `GranuleSpatialRepresentation` element.
 * Add support for bounding rectangles. (Issue-157)
-* Add `.ini` option to use collection spatial information to describe each granule. (Issue-140)
+* Add `.ini` option to use collection spatial extent information to describe each granule. (Issue-140)
 
 ## v1.6.1
 

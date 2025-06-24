@@ -96,6 +96,7 @@ def test_parse_premet_ignores_whitespace(input, expected):
             "2001-01-01T18:59:00.000Z",
             id="Datetime and hours/minutes",
         ),
+        pytest.param(None, None, id="No value"),
     ],
 )
 def test_correctly_reads_date_time_strings(input, expected):
@@ -144,6 +145,23 @@ def test_correctly_reads_date_time_strings(input, expected):
 )
 def test_datetime_from_premet(input, expected):
     assert utilities.temporal_from_premet(input) == expected
+
+
+def test_premet_temporal_formatting():
+    premet = {"Begin_date": "2000-01-01"}
+    result = utilities.external_temporal_values(False, premet, "fake granule")
+    assert len(result) == 1
+    assert isinstance(result[0], str)
+
+    premet = {
+        "RangeBeginningDate": "2020-01-01",
+        "RangeBeginningTime": "00:00:00",
+        "RangeEndingDate": "2020-12-31",
+        "RangeEndingTime": "23:59:59",
+    }
+    result = utilities.external_temporal_values(False, premet, "fake granule")
+    assert len(result) == 1
+    assert isinstance(result[0], dict)
 
 
 def test_one_additional_attribute():

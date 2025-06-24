@@ -90,8 +90,10 @@ def test_extract_snex_metadata(test_config, snowex_csv):
 def test_extract_generic_metadata(test_config, generic_csv_content, generic_csv):
     metadata = csv_reader.extract_metadata(generic_csv, None, None, test_config, None)
     assert metadata["temporal"] == [
-        "2012-03-16T23:00:00.000Z",
-        "2012-03-17T05:00:00.123Z",
+        {
+            "BeginningDateTime": "2012-03-16T23:00:00.000Z",
+            "EndingDateTime": "2012-03-17T05:00:00.123Z",
+        }
     ]
     assert len(metadata["geometry"]) == 5
     assert metadata["geometry"] == [

@@ -36,6 +36,7 @@ def expected_keys():
             "premet_dir",
             "spatial_dir",
             "collection_geometry_override",
+            "collection_temporal_override",
             "time_start_regex",
             "time_coverage_duration",
             "pixel_size",
@@ -163,6 +164,11 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
             "Source",
             "collection_geometry_override",
             constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE,
+        ),
+        (
+            "Source",
+            "collection_temporal_override",
+            constants.DEFAULT_COLLECTION_TEMPORAL_OVERRIDE,
         ),
         (
             "Destination",

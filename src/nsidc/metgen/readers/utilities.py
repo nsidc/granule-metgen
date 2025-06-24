@@ -2,7 +2,7 @@ import re
 from datetime import timezone
 
 from dateutil.parser import parse
-from funcy import first, keep, last
+from funcy import first, last, lkeep
 
 from nsidc.metgen import constants
 
@@ -11,7 +11,6 @@ def temporal_from_premet(pdict: dict) -> list:
     """
     Extract temporal information from premet file contents.
     """
-    # Show error if no date/time information is in file
     begin_date_keys = ["RangeBeginningDate", "Begin_date"]
     begin_time_keys = ["RangeBeginningTime", "Begin_time"]
     end_date_keys = [
@@ -20,26 +19,20 @@ def temporal_from_premet(pdict: dict) -> list:
     ]
     end_time_keys = ["RangeEndingTime", "End_time"]
 
-    begin = list(
-        keep(
-            [
-                find_key_aliases(begin_date_keys, pdict),
-                find_key_aliases(begin_time_keys, pdict),
-            ]
-        )
+    begin = lkeep(
+        [
+            find_key_aliases(begin_date_keys, pdict),
+            find_key_aliases(begin_time_keys, pdict),
+        ]
     )
-    end = list(
-        keep(
-            [
-                find_key_aliases(end_date_keys, pdict),
-                find_key_aliases(end_time_keys, pdict),
-            ]
-        )
+    end = lkeep(
+        [
+            find_key_aliases(end_date_keys, pdict),
+            find_key_aliases(end_time_keys, pdict),
+        ]
     )
 
-    return [
-        ensure_iso_datetime(td) for td in list(keep([" ".join(begin), " ".join(end)]))
-    ]
+    return [ensure_iso_datetime(td) for td in lkeep([" ".join(begin), " ".join(end)])]
 
 
 def find_key_aliases(aliases: list, datetime_parts: dict) -> str:
@@ -97,8 +90,11 @@ def ensure_iso_datetime(datetime_str):
     """
     Parse ISO-standard datetime strings without a timezone identifier.
     """
-    iso_obj = parse(datetime_str)
-    return format_timezone(iso_obj)
+    if datetime_str:
+        iso_obj = parse(datetime_str)
+        return format_timezone(iso_obj)
+
+    return None
 
 
 def format_timezone(iso_obj):
@@ -107,6 +103,30 @@ def format_timezone(iso_obj):
         .isoformat(timespec="milliseconds")
         .replace("+00:00", "Z")
     )
+
+
+def external_temporal_values(collection_temporal_override, premet_content, granule):
+    """
+    Extract temporal information from collection metadata or premet files according to .ini file settings.
+    """
+    if collection_temporal_override:
+        return granule.collection.temporal_extent
+
+    if premet_content:
+        return refine_temporal(temporal_from_premet(premet_content))
+
+    return []
+
+
+def refine_temporal(tvals: list):
+    """
+    Reformat a list of temporal values to match the format from UMM-C metadata
+    """
+    keys = ["BeginningDateTime", "EndingDateTime"]
+    if len(tvals) > 1:
+        return [dict(zip(keys, tvals))]
+
+    return tvals
 
 
 def external_spatial_values(collection_geometry_override, gsr, granule) -> list:

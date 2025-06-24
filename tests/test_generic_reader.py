@@ -12,12 +12,12 @@ def test_generic_reader_extract_metadata():
     mock_config.date_modified = "2023-12-25T00:00:00.000Z"
 
     # Mock premet content with temporal data
-    premet_content = {
-        "RangeBeginningDate": "2023-01-01",
-        "RangeBeginningTime": "12:00:00",
-        "RangeEndingDate": "2023-01-02",
-        "RangeEndingTime": "13:00:00",
-    }
+    premet_content = [
+        {
+            "BeginningDatetime": "2023-01-01T12:00:00",
+            "EndingDateTime": "2023-01-02T13:00:00",
+        }
+    ]
 
     # Mock spatial content
     spatial_content = [
@@ -30,7 +30,7 @@ def test_generic_reader_extract_metadata():
         "test_file.dat", premet_content, spatial_content, mock_config, "CARTESIAN"
     )
 
-    assert len(metadata["temporal"]) == 2
+    assert metadata["temporal"] == premet_content
     assert metadata["geometry"] == spatial_content
 
 
@@ -63,12 +63,12 @@ def test_generic_reader_no_spatial():
     mock_config.date_modified = "2023-12-25T00:00:00.000Z"
 
     # Mock premet content with temporal data
-    premet_content = {
-        "RangeBeginningDate": "2023-01-01",
-        "RangeBeginningTime": "12:00:00",
-        "RangeEndingDate": "2023-01-02",
-        "RangeEndingTime": "13:00:00",
-    }
+    premet_content = [
+        {
+            "BeginningDatetime": "2023-01-01T12:00:00",
+            "EndingDateTime": "2023-01-02T13:00:00",
+        }
+    ]
 
     metadata = generic.extract_metadata(
         "test_file.dat",
@@ -78,7 +78,7 @@ def test_generic_reader_no_spatial():
         "GEODETIC",
     )
 
-    assert len(metadata["temporal"]) == 2  # From premet
+    assert metadata["temporal"] == premet_content
     assert metadata["geometry"] == []  # Empty geometry
 
 
