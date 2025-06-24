@@ -246,6 +246,7 @@ class Collection:
     granule_spatial_representation: Optional[str] = None
     spatial_extent: Optional[list] = None
     temporal_extent: Optional[list] = None
+    temporal_extent_error: Optional[str] = None
 
 
 @dataclasses.dataclass
@@ -557,6 +558,8 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
 
     ummc = validate_cmr_response(cmr_response)
 
+    temporal_extent, temporal_extent_error = temporal_from_ummc(ummc)
+
     # FYI: data format (e.g. NetCDF) is available in the umm-c response in
     # ArchiveAndDistributionInformation should we decide to use it.
     return Collection(
@@ -566,8 +569,30 @@ def collection_from_cmr(environment: str, auth_id: str, version: int):
             ummc, constants.GRANULE_SPATIAL_REP_PATH
         ),
         spatial_extent=ummc_content(ummc, constants.SPATIAL_EXTENT_PATH),
-        temporal_extent=ummc_content(ummc, constants.TEMPORAL_EXTENT_PATH),
+        temporal_extent=temporal_extent,
+        temporal_extent_error=temporal_extent_error,
     )
+
+
+def temporal_from_ummc(ummc):
+    temporal_extent = ummc_content(ummc, constants.TEMPORAL_EXTENT_PATH)
+
+    if len(temporal_extent) > 1:
+        # No need to dig further -- collection temporal information can't be used for granule metadata.
+        return (
+            temporal_extent,
+            "Collection metadata must only contain one temporal extent when collection_temporal_override is set.",
+        )
+
+    # Look for range or single value in the first temporal_extent element
+    temporal_details = ummc_temporal_details(temporal_extent[0])
+    if len(temporal_details) > 1:
+        return (
+            temporal_details,
+            "Collection metadata must only contain one temporal range or a single temporal value when collection_temporal_override is set.",
+        )
+
+    return temporal_details, None
 
 
 def grouped_granule_files(configuration: config.Config) -> list[tuple]:
@@ -723,63 +748,37 @@ def validate_collection(configuration: config.Config, granule: Granule) -> Granu
     """
     Confirm collection metadata meet requirements for our granule metadata generation.
     """
-    errors = validate_collection_spatial(configuration, granule.collection)
-
-    collection, errors = validate_collection_temporal(configuration, granule.collection)
+    errors = validate_collection_spatial(
+        configuration, granule.collection
+    ) + validate_collection_temporal(configuration, granule.collection)
     if errors:
         raise config.ValidationError(errors)
-
-    return dataclasses.replace(granule, collection=collection)
 
 
 def validate_collection_temporal(configuration, collection):
     """
-    Verify collection temporal extent information can be used if a collection
+    Verify collection temporal extent information is usable if a collection
     temporal override is requested.
     """
-    errors = []
 
-    # If collection temporal extent is to be applied to granules, there must be only
-    # one temporal extent object, which can be either a range (represented in a dict)
-    # or a single time value (str).
     if not configuration.collection_temporal_override:
-        # return if we don't need to worry about the collection temporal extents
-        return (collection, errors)
+        # No need to worry about the collection temporal extent content!
+        return []
 
-    if len(collection.temporal_extent) > 1:
-        errors.append(
-            "Collection metadata must only contain one temporal extent when collection_temporal_override is set."
-        )
-    else:
-        # verify only one range or single value
-        temporal_details = ummc_temporal_details(collection.temporal_extent[0])
-        if len(temporal_details) > 1:
-            errors.append(
-                "Collection metadata must only contain one temporal range or single spatial value when collection_temporal_override is set."
-            )
+    # Show any errors generated when we extracted temporal information from UMM-C.
+    if collection.temporal_extent_error:
+        return [collection.temporal_extent_error]
 
-    if not errors:
-        return (
-            dataclasses.replace(collection, temporal_extent=temporal_details),
-            errors,
-        )
-
-    return (collection, errors)
+    return []
 
 
 def ummc_temporal_details(temporal_extent: dict) -> list:
     """
-    Get range or single spatial value details from the previously-extracted temporal extent object.
+    Get range or single temporal value details from the previously-extracted temporal extent object.
     """
-    # A single temporal value will be represented as a list containing one string
-    temporal = ummc_content(temporal_extent, constants.TEMPORAL_SINGLE_PATH)
-
-    if temporal is None:
-        # A temporal range is represented as a list containing one dict. Only begin
-        # is required.
-        temporal = ummc_content(temporal_extent, constants.TEMPORAL_RANGE_PATH)
-
-    return temporal
+    return ummc_content(
+        temporal_extent, constants.TEMPORAL_SINGLE_PATH
+    ) or ummc_content(temporal_extent, constants.TEMPORAL_RANGE_PATH)
 
 
 def validate_collection_spatial(configuration, collection):

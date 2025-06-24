@@ -82,6 +82,51 @@ def fake_ummc_response():
 
 
 @pytest.fixture
+def ummc_valid_temporal_extent():
+    return {
+        "TemporalExtents": [
+            {
+                "RangeDateTimes": [{"begin": 1, "end": 2}],
+            },
+        ]
+    }
+
+
+@pytest.fixture
+def ummc_multi_temporal_extent():
+    return {
+        "TemporalExtents": [
+            {
+                "RangeDateTimes": [{"begin": 1, "end": 2}],
+            },
+            {
+                "RangeDateTimes": [{"begin": 3, "end": 4}],
+            },
+        ]
+    }
+
+
+@pytest.fixture
+def ummc_multi_temporal_range():
+    return {
+        "TemporalExtents": [
+            {
+                "RangeDateTimes": [
+                    {
+                        "BeginningDateTime": "2021-11-01T00:00:00.000Z",
+                        "EndingDateTime": "2021-11-30T00:00:00.000Z",
+                    },
+                    {
+                        "BeginningDateTime": "2022-12-01T00:00:00.000Z",
+                        "EndingDateTime": "2022-12-31T00:00:00.000Z",
+                    },
+                ],
+            }
+        ]
+    }
+
+
+@pytest.fixture
 def file_list():
     file_list = [
         "aaa_gid1_bbb.nc",
@@ -626,76 +671,28 @@ def test_only_one_bounding_rectangle_allowed_in_spatial_extent(
 
 def test_collection_temporal_ignored_if_no_override(test_config, test_collection):
     test_config.collection_temporal_override = False
-    updated_collection, errors = metgen.validate_collection_temporal(
-        test_config, test_collection
-    )
+    test_collection.temporal_extent_error = "Very bad temporal error"
+    errors = metgen.validate_collection_temporal(test_config, test_collection)
     assert not errors
-    assert updated_collection == test_collection
 
 
-def test_only_one_collection_temporal_extent_allowed(test_config, test_collection):
+def test_collection_temporal_errors_returned(test_config, test_collection):
     test_config.collection_temporal_override = True
-    test_collection.temporal_extent = [
-        {
-            "RangeDateTimes": [{"begin": 1, "end": 2}],
-        },
-        {
-            "RangeDateTimes": [{"begin": 3, "end": 4}],
-        },
-    ]
-
-    updated_collection, errors = metgen.validate_collection_temporal(
-        test_config, test_collection
-    )
-    assert re.search("one temporal extent", " ".join(errors))
-    assert updated_collection == test_collection
+    test_collection.temporal_extent_error = "Very bad temporal error"
+    errors = metgen.validate_collection_temporal(test_config, test_collection)
+    assert errors[0] == "Very bad temporal error"
 
 
-def test_only_one_collection_temporal_details_allowed(test_config, test_collection):
-    test_config.collection_temporal_override = True
-    test_collection.temporal_extent = [
-        {
-            "RangeDateTimes": [
-                {
-                    "BeginningDateTime": "2021-11-01T00:00:00.000Z",
-                    "EndingDateTime": "2021-11-30T00:00:00.000Z",
-                },
-                {
-                    "BeginningDateTime": "2022-12-01T00:00:00.000Z",
-                    "EndingDateTime": "2022-12-31T00:00:00.000Z",
-                },
-            ],
-        }
-    ]
-    updated_collection, errors = metgen.validate_collection_temporal(
-        test_config, test_collection
-    )
-    assert re.search("one temporal range or single spatial", " ".join(errors))
-    assert updated_collection == test_collection
+def test_only_one_collection_temporal_extent_allowed(ummc_multi_temporal_extent):
+    temporal_details, error = metgen.temporal_from_ummc(ummc_multi_temporal_extent)
+    assert re.search("one temporal extent", error)
 
 
-def test_updates_collection_with_temporal_details(test_config, test_collection):
-    test_config.collection_temporal_override = True
-    test_collection.temporal_extent = [
-        {
-            "RangeDateTimes": [
-                {
-                    "BeginningDateTime": "2021-11-01T00:00:00.000Z",
-                    "EndingDateTime": "2021-11-30T00:00:00.000Z",
-                },
-            ],
-        }
-    ]
-    updated_collection, errors = metgen.validate_collection_temporal(
-        test_config, test_collection
-    )
-    assert not errors
-    assert updated_collection != test_collection
-    assert updated_collection.temporal_extent == [
-        {
-            "BeginningDateTime": "2021-11-01T00:00:00.000Z",
-            "EndingDateTime": "2021-11-30T00:00:00.000Z",
-        }
-    ]
-    # test single spatial value as well?
-    # change to parametrized values test?
+def test_only_one_collection_temporal_details_allowed(ummc_multi_temporal_range):
+    temporal_details, error = metgen.temporal_from_ummc(ummc_multi_temporal_range)
+    assert re.search("one temporal range or a single temporal", error)
+
+
+def test_valid_collection_temporal(ummc_valid_temporal_extent):
+    temporal_details, error = metgen.temporal_from_ummc(ummc_valid_temporal_extent)
+    assert not error
