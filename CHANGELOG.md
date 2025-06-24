@@ -3,6 +3,7 @@
 * Adds a generic reader used when `metgenc` processes granules with an unknown
   file-type. It uses spatial metadata from `spatial` files or collection metadata. (Issue-199)
 * Add `.ini` option to use collection temporal extent information to describe each granule. (Issue-139)
+* Refine README presentation of geometry logic. (Issue-157)
 
 ## v1.7.0
 
