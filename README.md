@@ -49,9 +49,9 @@ On a Mac, open Terminal and run:
 On a Windows machine, open a command prompt, navigate to the desired project directory in which you wish to create your venv, then run:
 
     > python -m venv metgenc (i.e., in this case, a venv named "metgenc" is created within the current directory)
-    > .\<path to venv>\Scripts\activate (i.e., activates your newly created metgenc venv) 
+    > .\<path to venv>\Scripts\activate (i.e., activates your newly created metgenc venv)
 
-cd into the venv directory (e.g., `$ cd metgenc`) 
+cd into the venv directory (e.g., `$ cd metgenc`)
 
 Now install MetGenC into the virtual environment using `pip` (this command _should_ be OS-agnostic):
 
@@ -112,7 +112,7 @@ and files with your values.
 
 MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials
 to retrieve collection metadata. If authentication fails,
-collection metadata will not be available to compensate for metadata elements 
+collection metadata will not be available to compensate for metadata elements
 missing from `ini` files or the data files themselves.
 
 Export the following variables to your environment before you run `metgenc process`
@@ -195,7 +195,7 @@ secret_key     ****************cJ+5              env
 * If you find you'd like to view a ummg or cnm json file in your shell, but don't want
   to wade through unformatted json chaos, use `cat <ummg or cnm file name> | jq "."` to
   pretty-print json file content to your screen, e.g.:
-   
+
         $ cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "."
 
 ### Assumptions for netCDF files for MetGenC
@@ -263,7 +263,7 @@ See [Optional Configuration Elements](#optional-configuration-elements)
 7. The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding box, etc.
-   
+
 | Attributes not currently used | ACDD | CF Conventions | NSIDC Guidelines |
 | ----------------------------- | ---- | -------------- | ---------------- |
 | Conventions (global)          | R+   | Required       | R                |
@@ -285,28 +285,24 @@ Notes:
 1. `BR` = bounding rectangle
 2. `.spo` = `.spo` file associated with each granule data file.
 3. `.spatial` = `.spatial` file associated with each granule data file.
-4. The practice of NSIDC data curators is to always associate a
-  `GEODETIC` granule spatial representation with point data.
 
 | source | num points | GSR | error? | expected output | comments |
 | ------ | ------------ | ---- | ------ | ------- | --- |
-| .spo  |   any | cartesian | yes | | |
-| .spo   | <= 2 | geodetic | yes | | |
-| .spo  | > 2 | geodetic | no  | GPolygon as described by `.spo` file contents. | |
-| .spatial | 1 | cartesian | yes | | See note 4 above. |
-| .spatial | 1 | geodetic | no | point | |
-| .spatial | 2 | cartesian | no | BR | | |
-| .spatial | >= 2 | geodetic | no | GPolygon(s) calculated to enclose all points. | |
-| .spatial | > 2 | cartesian | yes | | |
-| data file | 1 | cartesian | yes | See note 4 above. |
-| data file | 1 | geodetic | no | point | |
-| data file (netCDF) | NA | cartesian | no | | BR; min/max lon/lat points for BR expected to be included in global attributes. |
-| data file (non-netCDF) | > 1 | cartesian | yes | | |
-| data file (netCDF, gridded data) | >= 3 | geodetic | no | GPolygon calculated from grid perimeter. |
-| data file (some collection of points) | >= 2 | geodetic | no | GPolygon(s) calculated to enclose all points. |
-| collection metadata with one BR | NA | cartesian | no | BR as described in collection metadata. |
-| collection metadata with two or more BR | NA | cartesian | yes |  |
-| collection metadata | NA | geodetic | yes | | |
+| .spo  |   any | cartesian | yes | | `.spo` content assumed to be GPolygon; GSR cannot be cartesian. |
+| .spo   | <= 2 | geodetic | yes | | At least three points are required to define a GPolygon. |
+| .spo  | > 2 | geodetic | no | GPolygon as described by `.spo` file contents. | |
+| .spatial | 1 | cartesian | yes | | NSIDC data curators always associate a `GEODETIC` granule spatial representation with point data. |
+| .spatial | 1 | geodetic | no | point as defined in spatial file. | |
+| .spatial | 2 | cartesian | no | BR as defined in spatial file. | |
+| .spatial | >= 2 | geodetic | no | GPolygon(s) calculated to enclose all points. | `.spatial` points are treated as a point cloud. |
+| .spatial | > 2 | cartesian | yes | | No cartesian-associated geometry for point cloud. |
+| data file (NSIDC/CF-compliant netCDF) | NA | cartesian | no | BR | min/max lon/lat points for BR expected to be included in global attributes. |
+| data file (NSIDC/CF-compliant) | 1 or > 2 | geodetic | no | | Error if only two points. GPolygon calculated from grid perimeter. |
+| data file, non-NSIDC/CF-compliant netCDF or other format | NA | either | | As per source specified in `.ini` file. | Configuration must include a `spatial_dir` value or `collection_geometry_override=True` entry; directory must include valid `.spatial` or `.spo` files or collection geometry must contain a single point or bounding rectangle. |
+| collection metadata with one BR | NA | cartesian | no | BR as described in collection metadata. | |
+| collection metadata with two or more BR | NA | cartesian | yes | | Two-part bounding rectangle is not a valid geometry. |
+| collection metadata | NA | geodetic | yes | | Collection-level spatial representation cannot be geodetic. |
+| collection metadata specifying one or more points | NA | NA | yes | | TODO: Determine whether point value is handled. |
 
 
 ## Running MetGenC: Its Commands In-depth
@@ -314,7 +310,7 @@ Notes:
 ### init
 
 The **init** command can be used to generate a metgenc configuration (i.e., `.ini`) file for
-your data set, or edit an existing .ini file. 
+your data set, or edit an existing .ini file.
 * You can skip this step if you've already made an .ini file and prefer editing it
   manually (any text editor will work).
 * An existing configuration file can also be copied and renamed to be used for a different
@@ -374,7 +370,7 @@ single granule (or browse file(s) associated with a granule).
  using the named group `(?P<granuleid>)`. This value must be added manually; it
  is **not** included in the `metgenc init` prompts.
 
-Paths to the directories containing `premet` and `spatial` files are also 
+Paths to the directories containing `premet` and `spatial` files are also
 included in the `ini` file. The user will be prompted for these values when running
 `metgenc init`.
 
@@ -389,9 +385,15 @@ representing each granule's spatial extents to be set to those of the collection
 The user will be prompted for the `collection_geometry_override`
 value when running `metgenc init`; the default is `False`.
 
+An analogous `ini` flag exists to indicate that the collection temporal extents
+should be used to populate the granule metadata temporal content.
+The user will be prompted for the `collection_temporal_override`
+value when running `metgenc init`; the default is `False`.
+
 | `ini` section | `ini` element                |
 | ------------- | ---------------------------- |
 | Source        | collection_geometry_override |
+| Source        | collection_temporal_override |
 
 
 ##### Example `granule_regex` application
@@ -469,6 +471,8 @@ Using configuration:
   + dry_run: False
   + premet_dir: None
   + spatial_dir: None
+  + collection_geometry_override: False
+  + collection_temporal_override: False
   + time_start_regex: None
   + time_coverage_duration: None
   + pixel_size: None
@@ -486,7 +490,7 @@ Using configuration:
 * checksum_type: is another config file entry that could be changed by the operator, but should be left as-is!
 * number: 1000000 is the default max granule count for ingest. This value is not found in the config file, thus it can only be changed by a DUCk developer if necessary.
 * dry_run: reflects the option included (or not) by the operator in the command line when `metgenc process` is run.
-* premet_dir:, spatial_dir:, time_start_regex:, time_coverage_duration:, pixel_size:, date_modified:, browse_regex:, and granule_regex: are all optional as they're data set dependent and should be set when necessary by operators within the config file. 
+* premet_dir:, spatial_dir:, collection_geometry_override:, collection_temporal_override:, time_start_regex:, time_coverage_duration:, pixel_size:, date_modified:, browse_regex:, and granule_regex: are all optional as they're data set dependent and should be set when necessary by operators within the config file.
 ---
 
 ### process
@@ -509,7 +513,7 @@ Options:
 The **process** command can be run either with or without specifying the `-d` / `--dry-run` option.
 * When the dry run option is specified _and_ the `-wc` / `--write-cnm` option is invoked, or your config
 file contains `write_cnm_file = true` (instead of `= false`), CNM files will be written locally to the output/cnm
-directory. This allows you to validate and visually QC their content before letting them guide ingest to CUAT. 
+directory. This allows you to validate and visually QC their content before letting them guide ingest to CUAT.
 * When run without the dry run option, metgenc will transfer cnm messages to AWS, kicking off end-to-end ingest of
 data and ummg files to CUAT.
 
@@ -530,7 +534,7 @@ Notes: Before running **process** to ingest granules to CUAT (i.e., not run in d
 * You'll need to have sourced (or source now), your AWS profile by running `source metgenc-env.sh cumulus-uat`
   where `cumulus-uat` reflects the profile name specified in your AWS credential and config files.
   If you can't remember whether you've sourced your AWS profile, run `aws configure list` at the prompt.
-  
+
 ---
 
 ### validate

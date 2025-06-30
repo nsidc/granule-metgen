@@ -82,6 +82,51 @@ def fake_ummc_response():
 
 
 @pytest.fixture
+def ummc_valid_temporal_extent():
+    return {
+        "TemporalExtents": [
+            {
+                "RangeDateTimes": [{"begin": 1, "end": 2}],
+            },
+        ]
+    }
+
+
+@pytest.fixture
+def ummc_multi_temporal_extent():
+    return {
+        "TemporalExtents": [
+            {
+                "RangeDateTimes": [{"begin": 1, "end": 2}],
+            },
+            {
+                "RangeDateTimes": [{"begin": 3, "end": 4}],
+            },
+        ]
+    }
+
+
+@pytest.fixture
+def ummc_multi_temporal_range():
+    return {
+        "TemporalExtents": [
+            {
+                "RangeDateTimes": [
+                    {
+                        "BeginningDateTime": "2021-11-01T00:00:00.000Z",
+                        "EndingDateTime": "2021-11-30T00:00:00.000Z",
+                    },
+                    {
+                        "BeginningDateTime": "2022-12-01T00:00:00.000Z",
+                        "EndingDateTime": "2022-12-31T00:00:00.000Z",
+                    },
+                ],
+            }
+        ]
+    }
+
+
+@pytest.fixture
 def file_list():
     file_list = [
         "aaa_gid1_bbb.nc",
@@ -418,7 +463,9 @@ def test_stage_files(m1, m2, m3, test_config):
 
 
 def test_returns_datetime_range():
-    result = metgen.populate_temporal([123, 456])
+    result = metgen.populate_temporal(
+        [{"BeginningDateTime": "123", "EndingDateTime": "456"}]
+    )
     assert "RangeDateTime" in result
     assert '"BeginningDateTime": "123"' in result
     assert '"EndingDateTime": "456"' in result
@@ -620,3 +667,32 @@ def test_only_one_bounding_rectangle_allowed_in_spatial_extent(
     test_collection.spatial_extent = ["extent one", "extent two"]
     errors = metgen.validate_collection_spatial(test_config, test_collection)
     assert re.search("spatial extent must only contain one", " ".join(errors))
+
+
+def test_collection_temporal_ignored_if_no_override(test_config, test_collection):
+    test_config.collection_temporal_override = False
+    test_collection.temporal_extent_error = "Very bad temporal error"
+    errors = metgen.validate_collection_temporal(test_config, test_collection)
+    assert not errors
+
+
+def test_collection_temporal_errors_returned(test_config, test_collection):
+    test_config.collection_temporal_override = True
+    test_collection.temporal_extent_error = "Very bad temporal error"
+    errors = metgen.validate_collection_temporal(test_config, test_collection)
+    assert errors[0] == "Very bad temporal error"
+
+
+def test_only_one_collection_temporal_extent_allowed(ummc_multi_temporal_extent):
+    temporal_details, error = metgen.temporal_from_ummc(ummc_multi_temporal_extent)
+    assert re.search("one temporal extent", error)
+
+
+def test_only_one_collection_temporal_details_allowed(ummc_multi_temporal_range):
+    temporal_details, error = metgen.temporal_from_ummc(ummc_multi_temporal_range)
+    assert re.search("one temporal range or a single temporal", error)
+
+
+def test_valid_collection_temporal(ummc_valid_temporal_extent):
+    temporal_details, error = metgen.temporal_from_ummc(ummc_valid_temporal_extent)
+    assert not error
