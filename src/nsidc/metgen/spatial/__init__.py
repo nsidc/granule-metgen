@@ -10,10 +10,10 @@ from .polygon_generator import PolygonGenerator
 from .simplification import iterative_simplify_polygon
 
 __all__ = [
-    'PolygonGenerator',
-    'CMRClient',
-    'UMMGParser', 
-    'PolygonComparator',
-    'sanitize_granule_ur',
-    'iterative_simplify_polygon'
+    "PolygonGenerator",
+    "CMRClient",
+    "UMMGParser",
+    "PolygonComparator",
+    "sanitize_granule_ur",
+    "iterative_simplify_polygon",
 ]

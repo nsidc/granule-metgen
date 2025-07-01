@@ -5,7 +5,6 @@ This module provides polygon generation using buffer-based methods
 (buffer, beam, and adaptive_beam) with iterative simplification.
 """
 
-
 import numpy as np
 import pyproj
 from shapely.geometry import MultiPolygon, Point, Polygon
