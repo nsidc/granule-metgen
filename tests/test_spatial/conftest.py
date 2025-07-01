@@ -2,11 +2,10 @@
 Pytest configuration and fixtures for spatial module tests.
 """
 
-import pytest
-import numpy as np
 from pathlib import Path
-import tempfile
-import json
+
+import numpy as np
+import pytest
 
 
 @pytest.fixture(scope="session")
@@ -81,7 +80,7 @@ def cmr_polygon_examples():
 @pytest.fixture
 def mock_cmr_client(monkeypatch):
     """Create a mock CMR client that doesn't make real API calls."""
-    from unittest.mock import Mock, MagicMock
+    from unittest.mock import MagicMock, Mock
     
     mock_client = Mock()
     mock_client.session = MagicMock()

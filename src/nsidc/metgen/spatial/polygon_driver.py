@@ -6,23 +6,22 @@ This module automatically compares generated polygons with CMR polygons
 for randomly selected granules from a collection.
 """
 
-import os
-import sys
-import json
 import argparse
-import random
-import requests
-import numpy as np
-import matplotlib.pyplot as plt
-from pathlib import Path
+import json
 from datetime import datetime
+from pathlib import Path
+
 import geopandas as gpd
-from shapely.geometry import shape, Point, Polygon
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import requests
+from shapely.geometry import Point
+
+from .cmr_client import CMRClient, PolygonComparator, UMMGParser, sanitize_granule_ur
 
 # Import our modules
 from .polygon_generator import PolygonGenerator
-from .cmr_client import CMRClient, UMMGParser, PolygonComparator, sanitize_granule_ur
 
 
 class PolygonComparisonDriver:
@@ -328,7 +327,7 @@ class PolygonComparisonDriver:
             
             # Try authenticated download first
             if self.token and ('earthdata.nasa.gov' in url or 'nsidc.org' in url):
-                print(f"  Attempting authenticated download...")
+                print("  Attempting authenticated download...")
                 
                 headers = {"Authorization": f"Bearer {self.token}"}
                 response = requests.get(url, stream=True, headers=headers)
@@ -341,7 +340,7 @@ class PolygonComparisonDriver:
                     return output_path
                 else:
                     print(f"  Download failed with status {response.status_code}")
-                    print(f"  Creating dummy data file for demonstration...")
+                    print("  Creating dummy data file for demonstration...")
                     self._create_dummy_data_file(output_path)
                     return output_path
             
@@ -361,7 +360,7 @@ class PolygonComparisonDriver:
         except Exception as e:
             print(f"  Error downloading file: {e}")
             if '401' in str(e) or 'Unauthorized' in str(e):
-                print(f"  Creating dummy data file for demonstration...")
+                print("  Creating dummy data file for demonstration...")
                 self._create_dummy_data_file(output_path)
                 return output_path
             return None
@@ -483,7 +482,7 @@ class PolygonComparisonDriver:
                     
                     # If header was in a comment, need to parse manually
                     if header_idx < len(first_lines) and first_lines[header_idx].strip().startswith('#'):
-                        print(f"    Header is in comment line, parsing manually")
+                        print("    Header is in comment line, parsing manually")
                         # Parse the header to get column names
                         if has_comma:
                             # Split by comma and clean up
@@ -528,7 +527,7 @@ class PolygonComparisonDriver:
                 # Not a lon/lat format we recognize
                 else:
                     # Skip this file - not a recognized format
-                    print(f"    File does not match expected CSV formats")
+                    print("    File does not match expected CSV formats")
                     # Fall through to LVIS format check
                     data = None
                 
@@ -573,7 +572,7 @@ class PolygonComparisonDriver:
                         if valid_count > 0:
                             return lon[mask], lat[mask]
                         else:
-                            print(f"    No valid coordinates found after filtering")
+                            print("    No valid coordinates found after filtering")
                             return None, None
                     else:
                         print(f"    Could not find lon/lat columns. Available: {list(data.columns)}")

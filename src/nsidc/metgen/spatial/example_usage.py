@@ -3,14 +3,16 @@
 Example usage of the spatial polygon generation module.
 """
 
-import numpy as np
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import numpy as np
 
 # Add parent directories to path if running standalone
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from nsidc.metgen.spatial import PolygonGenerator, CMRClient, PolygonComparator
+from nsidc.metgen.spatial import CMRClient, PolygonComparator, PolygonGenerator
+
 
 def example_polygon_generation():
     """Example of generating a polygon from point data."""

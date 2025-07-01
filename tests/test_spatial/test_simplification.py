@@ -2,10 +2,10 @@
 Tests for the polygon simplification algorithm.
 """
 
-import pytest
 import numpy as np
-from shapely.geometry import Polygon, Point
+import pytest
 from nsidc.metgen.spatial import iterative_simplify_polygon
+from shapely.geometry import Point, Polygon
 
 
 class TestSimplification:

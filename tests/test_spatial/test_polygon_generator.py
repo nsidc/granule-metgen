@@ -2,10 +2,10 @@
 Tests for the PolygonGenerator class.
 """
 
-import pytest
 import numpy as np
-from shapely.geometry import Polygon, Point
+import pytest
 from nsidc.metgen.spatial import PolygonGenerator
+from shapely.geometry import Point, Polygon
 
 
 class TestPolygonGenerator:

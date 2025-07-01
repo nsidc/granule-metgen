@@ -2,14 +2,16 @@
 Tests for the CMR client and related classes.
 """
 
-import pytest
-import json
-from unittest.mock import Mock, patch, MagicMock
-from shapely.geometry import Polygon, box
-import geopandas as gpd
-import numpy as np
+from unittest.mock import Mock, patch
 
-from nsidc.metgen.spatial import CMRClient, UMMGParser, PolygonComparator, sanitize_granule_ur
+import numpy as np
+import pytest
+from nsidc.metgen.spatial import (
+    CMRClient,
+    PolygonComparator,
+    UMMGParser,
+    sanitize_granule_ur,
+)
 
 
 class TestCMRClient:
