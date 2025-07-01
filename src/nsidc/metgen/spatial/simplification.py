@@ -1,317 +1,441 @@
 #!/usr/bin/env python3
 """
-Iterative polygon simplification algorithm optimized for CMR polygon replacement.
-
-Goals:
-1. 100% data coverage
-2. Vertices <= CMR polygon vertices
-3. Minimize non-data area
-4. Area <= CMR polygon area
+Iterative polygon simplification algorithm that halves vertices while monitoring fit quality.
 """
 
 import numpy as np
-from shapely.geometry import Polygon, Point
-from shapely.ops import unary_union
-import geopandas as gpd
+from shapely.geometry import Point, Polygon
 
 
-def calculate_polygon_metrics_v2(polygon, data_points=None, cmr_polygon=None):
+def calculate_polygon_fit_metrics(
+    original_polygon, simplified_polygon, data_points=None
+):
     """
-    Calculate metrics focused on our optimization goals.
-    
+    Calculate metrics to evaluate how well a simplified polygon fits the original.
+
     Args:
-        polygon: Polygon to evaluate
-        data_points: Array of (lon, lat) data points
-        cmr_polygon: CMR polygon for comparison (optional)
-        
+        original_polygon: Original (complex) polygon
+        simplified_polygon: Simplified polygon
+        data_points: Optional array of original data points to check coverage
+
     Returns:
-        Dictionary of metrics
+        Dictionary of fit metrics
     """
-    metrics = {}
-    
-    # Basic polygon properties
-    metrics['area'] = polygon.area
-    metrics['vertices'] = len(polygon.exterior.coords) - 1 if hasattr(polygon, 'exterior') else 0
-    
-    # Data coverage metrics
+    # Area-based metrics
+    orig_area = original_polygon.area
+    simp_area = simplified_polygon.area
+    area_ratio = simp_area / orig_area if orig_area > 0 else 0
+
+    # Intersection over Union (IoU)
+    intersection = original_polygon.intersection(simplified_polygon)
+    union = original_polygon.union(simplified_polygon)
+    iou = intersection.area / union.area if union.area > 0 else 0
+
+    # Hausdorff distance (maximum distance between boundaries)
+    try:
+        hausdorff_dist = original_polygon.hausdorff_distance(simplified_polygon)
+    except Exception:
+        hausdorff_dist = float("inf")
+
+    # Coverage of original data points (if provided)
+    data_coverage = 1.0
     if data_points is not None and len(data_points) > 0:
-        # Sample if too many points
-        if len(data_points) > 10000:
-            indices = np.random.choice(len(data_points), 10000, replace=False)
+        # Sample points if too many
+        if len(data_points) > 1000:
+            indices = np.random.choice(len(data_points), 1000, replace=False)
             sample_points = data_points[indices]
         else:
             sample_points = data_points
-        
-        # Count points inside polygon
-        points_inside = 0
+
+        # Check how many points are still inside simplified polygon
+        # First check if any points were inside the original polygon
+        original_inside = 0
         for point in sample_points:
-            if polygon.contains(Point(point[0], point[1])):
-                points_inside += 1
-        
-        metrics['data_coverage'] = points_inside / len(sample_points)
-        metrics['points_covered'] = points_inside
-        metrics['total_points'] = len(sample_points)
-        
-        # Estimate non-data area (area efficiency)
-        # This is a rough estimate based on point density
-        if points_inside > 0:
-            # Estimate area covered by data points
-            # Assuming uniform distribution within polygon
-            data_density = points_inside / polygon.area if polygon.area > 0 else 0
-            # Non-data area is inversely related to density
-            metrics['non_data_area_ratio'] = max(0, 1 - min(1, data_density / 1000))
+            if original_polygon.contains(Point(point)):
+                original_inside += 1
+
+        if original_inside > 0:
+            # Check how many of those are still inside simplified polygon
+            points_inside = 0
+            for point in sample_points:
+                if original_polygon.contains(
+                    Point(point)
+                ) and simplified_polygon.contains(Point(point)):
+                    points_inside += 1
+            data_coverage = points_inside / original_inside
         else:
-            metrics['non_data_area_ratio'] = 1.0
-    else:
-        metrics['data_coverage'] = 0
-        metrics['non_data_area_ratio'] = 1.0
-    
-    # CMR comparison metrics
-    if cmr_polygon is not None:
-        metrics['cmr_area'] = cmr_polygon.area
-        metrics['cmr_vertices'] = len(cmr_polygon.exterior.coords) - 1 if hasattr(cmr_polygon, 'exterior') else 0
-        metrics['area_vs_cmr'] = metrics['area'] / metrics['cmr_area'] if metrics['cmr_area'] > 0 else float('inf')
-        metrics['vertices_vs_cmr'] = metrics['vertices'] / metrics['cmr_vertices'] if metrics['cmr_vertices'] > 0 else float('inf')
-        
-        # IoU with CMR
-        intersection = polygon.intersection(cmr_polygon)
-        union = polygon.union(cmr_polygon)
-        metrics['iou_with_cmr'] = intersection.area / union.area if union.area > 0 else 0
-    
-    return metrics
+            # If no points were inside original, use area-based coverage
+            data_coverage = (
+                min(1.0, simplified_polygon.area / original_polygon.area)
+                if original_polygon.area > 0
+                else 1.0
+            )
+
+    # Vertex counts
+    orig_vertices = (
+        len(original_polygon.exterior.coords) - 1
+        if hasattr(original_polygon, "exterior")
+        else 0
+    )
+    simp_vertices = (
+        len(simplified_polygon.exterior.coords) - 1
+        if hasattr(simplified_polygon, "exterior")
+        else 0
+    )
+
+    return {
+        "area_ratio": area_ratio,
+        "iou": iou,
+        "hausdorff_distance": hausdorff_dist,
+        "data_coverage": data_coverage,
+        "original_vertices": orig_vertices,
+        "simplified_vertices": simp_vertices,
+        "vertex_reduction": 1 - (simp_vertices / orig_vertices)
+        if orig_vertices > 0
+        else 0,
+    }
 
 
-def iterative_simplify_v2(polygon, data_points, cmr_polygon=None, 
-                         cmr_vertices=None, cmr_area=None,
-                         require_full_coverage=True,
-                         max_iterations=20):
+def iterative_simplify_polygon(
+    polygon,
+    data_points=None,
+    target_vertices=None,
+    min_iou=0.85,
+    min_coverage=0.90,
+    max_iterations=15,
+):
     """
-    Iteratively simplify polygon with strict optimization goals.
-    
+    Iteratively simplify a polygon by halving vertices, stopping when quality degrades.
+
     Args:
         polygon: Input polygon to simplify
-        data_points: Array of (lon, lat) data points
-        cmr_polygon: CMR polygon for constraints (optional)
-        cmr_vertices: Max vertices allowed (from CMR)
-        cmr_area: Max area allowed (from CMR)
-        require_full_coverage: If True, maintain 100% data coverage
-        max_iterations: Maximum iterations
-        
+        data_points: Original data points (for coverage checking)
+        target_vertices: Optional target vertex count
+        min_iou: Minimum IoU to maintain (default: 0.85)
+        min_coverage: Minimum data coverage to maintain (default: 0.90)
+        max_iterations: Maximum iterations (default: 10)
+
     Returns:
-        Tuple of (best_polygon, history)
+        Tuple of (best_polygon, simplification_history)
     """
-    # Extract CMR constraints if polygon provided
-    if cmr_polygon is not None:
-        if cmr_vertices is None:
-            cmr_vertices = len(cmr_polygon.exterior.coords) - 1 if hasattr(cmr_polygon, 'exterior') else None
-        if cmr_area is None:
-            cmr_area = cmr_polygon.area
-    
+    if not hasattr(polygon, "exterior"):
+        return polygon, []
+
     current_polygon = polygon
+    current_vertices = len(polygon.exterior.coords) - 1
     history = []
-    
-    # Calculate initial metrics
-    initial_metrics = calculate_polygon_metrics_v2(polygon, data_points, cmr_polygon)
-    initial_metrics['iteration'] = 0
-    initial_metrics['tolerance'] = 0
-    initial_metrics['method'] = 'original'
+
+    # Initial metrics
+    initial_metrics = calculate_polygon_fit_metrics(polygon, polygon, data_points)
+    initial_metrics["iteration"] = 0
+    initial_metrics["tolerance"] = 0
+    initial_metrics["vertices"] = current_vertices  # Add vertices key for compatibility
     history.append(initial_metrics)
-    
-    print(f"\nOptimized Iterative Simplification")
-    print(f"Initial: {initial_metrics['vertices']} vertices, {initial_metrics['area']:.6f}° area")
-    print(f"Data coverage: {initial_metrics.get('data_coverage', 0):.1%}")
-    if cmr_vertices:
-        print(f"Target: <= {cmr_vertices} vertices")
-    if cmr_area:
-        print(f"Target: <= {cmr_area:.6f}° area")
-    
-    # Check if we already meet vertex constraint
-    if cmr_vertices and initial_metrics['vertices'] <= cmr_vertices:
-        print("Already meets vertex constraint!")
-        return polygon, history
-    
-    best_polygon = polygon
-    best_score = float('inf')  # Lower is better
-    
-    # Tolerance progression
-    base_tolerance = 0.00001
-    
-    for iteration in range(1, max_iterations + 1):
-        current_vertices = len(current_polygon.exterior.coords) - 1
-        
-        # Target vertices for this iteration
-        if cmr_vertices and current_vertices > cmr_vertices:
-            # Aim to get closer to CMR vertices
-            target = max(cmr_vertices, current_vertices // 2)
-        else:
-            # Just halve vertices
-            target = current_vertices // 2
-        
-        if target < 4:
-            print(f"  Cannot reduce below 4 vertices")
-            break
-        
-        print(f"\n  Iteration {iteration}: {current_vertices} → {target} vertices")
-        
-        # Try different tolerances
-        found_valid = False
-        tolerances = [base_tolerance * (2 ** i) for i in range(20)]
-        
-        for tolerance in tolerances:
-            try:
-                simplified = current_polygon.simplify(tolerance, preserve_topology=True)
-                
-                if not simplified.is_valid:
-                    continue
-                
-                vertices = len(simplified.exterior.coords) - 1
-                
-                # Skip if didn't reduce vertices enough
-                if vertices > target:
-                    continue
-                
-                # Calculate metrics
-                metrics = calculate_polygon_metrics_v2(simplified, data_points, cmr_polygon)
-                metrics['iteration'] = iteration
-                metrics['tolerance'] = tolerance
-                metrics['method'] = 'simplify'
-                
-                # Check constraints
-                constraints_met = True
-                
-                # 1. Data coverage constraint
-                if require_full_coverage and metrics['data_coverage'] < 1.0:
-                    constraints_met = False
-                
-                # 2. Vertex constraint
-                if cmr_vertices and metrics['vertices'] > cmr_vertices:
-                    constraints_met = False
-                
-                # 3. Area constraint
-                if cmr_area and metrics['area'] > cmr_area:
-                    constraints_met = False
-                
-                if constraints_met:
-                    # Calculate optimization score (lower is better)
-                    # Prioritize: fewer vertices, less non-data area
-                    score = (
-                        metrics['vertices'] * 0.3 +  # Fewer vertices is better
-                        metrics['non_data_area_ratio'] * 100 * 0.7  # Less non-data area is better
-                    )
-                    
-                    print(f"    Tolerance {tolerance:.6f}: {vertices} vertices, "
-                          f"coverage={metrics['data_coverage']:.1%}, "
-                          f"area={metrics['area']:.6f}°, score={score:.2f}")
-                    
-                    history.append(metrics)
-                    
-                    if score < best_score:
-                        best_score = score
-                        best_polygon = simplified
-                    
-                    current_polygon = simplified
-                    found_valid = True
-                    break
-                    
-            except Exception as e:
-                continue
-        
-        if not found_valid:
-            print(f"    No valid simplification found at this level")
-            break
-    
-    # Final check - if we still don't meet constraints, try more aggressive simplification
-    final_metrics = calculate_polygon_metrics_v2(best_polygon, data_points, cmr_polygon)
-    
-    if cmr_vertices and final_metrics['vertices'] > cmr_vertices:
-        print(f"\nTrying aggressive simplification to reach {cmr_vertices} vertices...")
-        
-        # Use convex hull as last resort
-        points = np.array(best_polygon.exterior.coords[:-1])
-        if len(points) > cmr_vertices:
-            # Sample points to create simpler polygon
-            indices = np.linspace(0, len(points)-1, cmr_vertices, dtype=int)
-            sampled_points = points[indices]
-            
-            try:
-                simple_polygon = Polygon(sampled_points)
-                if simple_polygon.is_valid:
-                    metrics = calculate_polygon_metrics_v2(simple_polygon, data_points, cmr_polygon)
-                    metrics['iteration'] = len(history)
-                    metrics['method'] = 'aggressive_sample'
-                    
-                    # Only use if it maintains full coverage
-                    if not require_full_coverage or metrics['data_coverage'] >= 1.0:
-                        history.append(metrics)
-                        best_polygon = simple_polygon
-                        print(f"  Achieved {metrics['vertices']} vertices with aggressive sampling")
-            except:
-                pass
-    
-    return best_polygon, history
 
-
-def optimize_polygon_for_cmr(polygon, data_points, cmr_polygon):
-    """
-    Optimize a polygon to replace CMR polygon while meeting all constraints.
-    
-    This is the main entry point for polygon optimization.
-    
-    Args:
-        polygon: Generated polygon to optimize
-        data_points: Array of (lon, lat) data points
-        cmr_polygon: Current CMR polygon to replace
-        
-    Returns:
-        Tuple of (optimized_polygon, metrics)
-    """
-    # Get CMR constraints
-    cmr_vertices = len(cmr_polygon.exterior.coords) - 1 if hasattr(cmr_polygon, 'exterior') else None
-    cmr_area = cmr_polygon.area
-    
-    print(f"\nOptimizing polygon to replace CMR polygon")
-    print(f"CMR: {cmr_vertices} vertices, {cmr_area:.6f}° area")
-    
-    # First ensure we have full data coverage
-    initial_metrics = calculate_polygon_metrics_v2(polygon, data_points, cmr_polygon)
-    
-    if initial_metrics['data_coverage'] < 1.0:
-        print(f"Warning: Initial polygon only covers {initial_metrics['data_coverage']:.1%} of data!")
-        print("Consider using a larger buffer or different generation method.")
-    
-    # Run optimization
-    optimized, history = iterative_simplify_v2(
-        polygon, 
-        data_points,
-        cmr_polygon=cmr_polygon,
-        cmr_vertices=cmr_vertices,
-        cmr_area=cmr_area,
-        require_full_coverage=True
+    print(f"\nIterative simplification starting with {current_vertices} vertices")
+    print(
+        f"Target: {'halve vertices each iteration' if target_vertices is None else f'{target_vertices} vertices'}"
     )
-    
-    # Get final metrics
-    final_metrics = history[-1] if history else initial_metrics
-    
-    print(f"\nOptimization complete:")
-    print(f"  Vertices: {initial_metrics['vertices']} → {final_metrics['vertices']}")
-    print(f"  Area: {initial_metrics['area']:.6f}° → {final_metrics['area']:.6f}°")
-    print(f"  Data coverage: {final_metrics['data_coverage']:.1%}")
-    print(f"  Non-data area ratio: {final_metrics['non_data_area_ratio']:.1%}")
-    
-    # Validation
-    if final_metrics['vertices'] <= cmr_vertices:
-        print(f"  ✓ Meets vertex constraint (<= {cmr_vertices})")
-    else:
-        print(f"  ✗ Exceeds vertex constraint ({final_metrics['vertices']} > {cmr_vertices})")
-    
-    if final_metrics['area'] <= cmr_area:
-        print(f"  ✓ Meets area constraint (<= {cmr_area:.6f}°)")
-    else:
-        print(f"  ✗ Exceeds area constraint ({final_metrics['area']:.6f}° > {cmr_area:.6f}°)")
-    
-    if final_metrics['data_coverage'] >= 1.0:
-        print(f"  ✓ Full data coverage")
-    else:
-        print(f"  ✗ Incomplete data coverage ({final_metrics['data_coverage']:.1%})")
-    
-    return optimized, final_metrics
+    print(f"Constraints: IoU >= {min_iou:.2f}, Coverage >= {min_coverage:.2f}")
+
+    # Tolerance progression - start small and increase
+    base_tolerance = 0.00001
+
+    # Cache to avoid retrying same tolerance values
+    tolerance_cache = {}
+
+    for iteration in range(1, max_iterations + 1):
+        # More aggressive reduction strategy
+        if target_vertices:
+            # If we have a specific target, try to reach it more aggressively
+            if current_vertices > target_vertices * 2:
+                target = current_vertices // 2  # Halve if far from target
+            else:
+                target = target_vertices  # Go directly to target
+        else:
+            # Default: halve vertices
+            target = current_vertices // 2
+
+        # Stop if we're already at or below minimum viable vertices
+        if target < 4:
+            print(f"  Iteration {iteration}: Cannot reduce below 4 vertices")
+            break
+
+        print(f"\n  Iteration {iteration}: {current_vertices} → {target} vertices")
+
+        # Try different tolerances to achieve target
+        best_polygon = current_polygon
+        best_metrics = None
+
+        # Exponentially increase tolerance search range - more aggressive
+        tolerances = [base_tolerance * (2**i) for i in range(20)]
+
+        for tol in tolerances:
+            # Skip if we've already tried this tolerance
+            tol_key = f"{current_vertices}_{tol:.10f}"
+            if tol_key in tolerance_cache:
+                continue
+
+            try:
+                simplified = current_polygon.simplify(tol, preserve_topology=True)
+                tolerance_cache[tol_key] = simplified
+
+                if not hasattr(simplified, "exterior"):
+                    continue
+
+                vertices = len(simplified.exterior.coords) - 1
+
+                # More flexible vertex count checking
+                if vertices <= target or (
+                    target_vertices and vertices <= target_vertices
+                ):
+                    metrics = calculate_polygon_fit_metrics(
+                        polygon, simplified, data_points
+                    )
+                    metrics["iteration"] = iteration
+                    metrics["tolerance"] = tol
+                    metrics["vertices"] = vertices  # Add vertices key for compatibility
+
+                    # Check quality constraints
+                    if (
+                        metrics["iou"] >= min_iou
+                        and metrics["data_coverage"] >= min_coverage
+                    ):
+                        # Accept this simplification
+                        if best_metrics is None or vertices < best_metrics["vertices"]:
+                            best_polygon = simplified
+                            best_metrics = metrics
+
+                        # Continue searching for better simplification
+                        if vertices == target or (
+                            target_vertices and vertices <= target_vertices
+                        ):
+                            continue  # Keep searching for exact target
+                    else:
+                        # Quality dropped too much
+                        if best_metrics is None and vertices <= target:
+                            print(
+                                f"    Tolerance {tol:.6f}: {vertices} vertices - "
+                                f"REJECTED (IoU={metrics['iou']:.3f}, Coverage={metrics['data_coverage']:.3f})"
+                            )
+
+            except Exception:
+                continue
+
+        # Check if we found a valid simplification
+        if best_metrics is None:
+            print("    No valid simplification found - stopping")
+            break
+
+        # Update current polygon and report
+        current_polygon = best_polygon
+        current_vertices = best_metrics["simplified_vertices"]
+        history.append(best_metrics)
+
+        print(
+            f"    Success: {best_metrics['original_vertices']} → {current_vertices} vertices"
+        )
+        print(
+            f"    Quality: IoU={best_metrics['iou']:.3f}, Coverage={best_metrics['data_coverage']:.3f}, "
+            f"Area ratio={best_metrics['area_ratio']:.3f}"
+        )
+
+        # Check if we've reached our target
+        if target_vertices and current_vertices <= target_vertices:
+            print(f"  Reached target of {target_vertices} vertices")
+            break
+
+        # Update base tolerance for next iteration - be more aggressive
+        base_tolerance = best_metrics["tolerance"] * 1.5
+
+    # Find best result from history
+    # Prefer: high IoU, high coverage, but also significant simplification
+    best_score = -1
+    best_result = polygon
+    best_iteration = 0
+
+    for i, metrics in enumerate(history[1:], 1):  # Skip initial
+        # Weighted score: balance quality and simplification
+        score = (
+            metrics["iou"] * 0.4
+            + metrics["data_coverage"] * 0.3
+            + metrics["vertex_reduction"] * 0.3
+        )
+
+        if score > best_score:
+            best_score = score
+            best_iteration = i
+
+    # Get the polygon from the best iteration
+    if best_iteration > 0:
+        # Recreate the best polygon
+        tol = history[best_iteration]["tolerance"]
+        best_result = polygon.simplify(tol, preserve_topology=True)
+
+    print(
+        f"\nBest result: Iteration {best_iteration} with {history[best_iteration]['simplified_vertices']} vertices"
+    )
+
+    return best_result, history
+
+
+def simplify_to_match_cmr(polygon, cmr_polygon, data_points=None, cmr_weight=0.5):
+    """
+    Simplify polygon to best match a CMR reference polygon.
+
+    Args:
+        polygon: Polygon to simplify
+        cmr_polygon: Target CMR polygon to match
+        data_points: Original data points
+        cmr_weight: Weight for CMR matching vs data coverage (0-1)
+
+    Returns:
+        Simplified polygon that best matches CMR
+    """
+    # Get CMR characteristics
+    cmr_vertices = (
+        len(cmr_polygon.exterior.coords) - 1 if hasattr(cmr_polygon, "exterior") else 10
+    )
+
+    print(f"\nSimplifying to match CMR polygon ({cmr_vertices} vertices)")
+
+    # Run iterative simplification targeting CMR vertex count
+    simplified, history = iterative_simplify_polygon(
+        polygon,
+        data_points=data_points,
+        target_vertices=cmr_vertices,
+        min_iou=0.7,  # Lower threshold when matching CMR
+        min_coverage=0.85,
+    )
+
+    # Calculate match with CMR
+    cmr_iou = (
+        (cmr_polygon.intersection(simplified).area / cmr_polygon.union(simplified).area)
+        if cmr_polygon.area > 0
+        else 0
+    )
+
+    print(f"Final CMR match: IoU={cmr_iou:.3f}")
+
+    return simplified
+
+
+# Integration with visualize_flightline.py
+def add_iterative_simplification_to_polygon_creation(original_function):
+    """
+    Decorator to add iterative simplification to polygon creation.
+    """
+
+    def wrapper(
+        lon,
+        lat,
+        method="convex",
+        alpha=2.0,
+        buffer_m=1500,
+        concave_ratio=0.3,
+        iterative_simplify=False,
+        target_vertices=None,
+        min_iou=0.85,
+    ):
+        # Create initial polygon
+        polygon = original_function(lon, lat, method, alpha, buffer_m, concave_ratio)
+
+        # Apply iterative simplification if requested
+        if iterative_simplify and hasattr(polygon, "exterior"):
+            print("\nApplying iterative simplification...")
+
+            # Prepare data points
+            mask = ~(np.isnan(lon) | np.isnan(lat))
+            data_points = np.column_stack([lon[mask], lat[mask]])
+
+            # Simplify
+            polygon, history = iterative_simplify_polygon(
+                polygon,
+                data_points=data_points,
+                target_vertices=target_vertices,
+                min_iou=min_iou,
+            )
+
+            # Print summary
+            if history:
+                print("\nSimplification summary:")
+                print(f"  Original: {history[0]['original_vertices']} vertices")
+                print(f"  Final: {history[-1]['simplified_vertices']} vertices")
+                print(f"  Reduction: {history[-1]['vertex_reduction']:.1%}")
+                print(f"  Final IoU: {history[-1]['iou']:.3f}")
+
+        return polygon
+
+    return wrapper
+
+
+if __name__ == "__main__":
+    # Test the algorithm
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Polygon as MplPolygon
+
+    # Create a test polygon with many vertices
+    theta = np.linspace(0, 2 * np.pi, 1000)
+    r = 1 + 0.3 * np.sin(5 * theta) + 0.1 * np.sin(15 * theta)
+    x = r * np.cos(theta)
+    y = r * np.sin(theta)
+
+    # Create polygon
+    coords = list(zip(x, y))
+    original_polygon = Polygon(coords)
+
+    # Generate some data points inside
+    data_points = []
+    for _ in range(500):
+        angle = np.random.uniform(0, 2 * np.pi)
+        radius = np.random.uniform(0, 0.9)
+        px = radius * np.cos(angle)
+        py = radius * np.sin(angle)
+        data_points.append([px, py])
+    data_points = np.array(data_points)
+
+    # Run iterative simplification
+    simplified, history = iterative_simplify_polygon(
+        original_polygon, data_points=data_points, target_vertices=20
+    )
+
+    # Plot results
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Original
+    ax1.add_patch(
+        MplPolygon(
+            original_polygon.exterior.coords, fill=False, edgecolor="blue", linewidth=2
+        )
+    )
+    ax1.scatter(data_points[:, 0], data_points[:, 1], c="red", s=5, alpha=0.5)
+    ax1.set_title(f"Original ({len(original_polygon.exterior.coords)-1} vertices)")
+    ax1.set_aspect("equal")
+    ax1.grid(True, alpha=0.3)
+
+    # Simplified
+    ax2.add_patch(
+        MplPolygon(
+            simplified.exterior.coords, fill=False, edgecolor="green", linewidth=2
+        )
+    )
+    ax2.scatter(data_points[:, 0], data_points[:, 1], c="red", s=5, alpha=0.5)
+    ax2.set_title(f"Simplified ({len(simplified.exterior.coords)-1} vertices)")
+    ax2.set_aspect("equal")
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig("iterative_simplification_test.png", dpi=150)
+    print("\nTest plot saved to: iterative_simplification_test.png")
+
+    # Print history
+    print("\nSimplification history:")
+    print(
+        f"{'Iter':<5} {'Vertices':<10} {'IoU':<8} {'Coverage':<10} {'Area Ratio':<12}"
+    )
+    print("-" * 50)
+    for h in history:
+        print(
+            f"{h['iteration']:<5} {h['simplified_vertices']:<10} "
+            f"{h['iou']:<8.3f} {h['data_coverage']:<10.3f} {h['area_ratio']:<12.3f}"
+        )

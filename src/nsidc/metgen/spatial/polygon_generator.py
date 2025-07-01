@@ -1,55 +1,60 @@
 """
 Polygon Generation Module for LVIS Flightline Processing
 
-This module consolidates all polygon generation, adaptive buffer sizing,
-and iterative simplification functionality.
+This module provides polygon generation using buffer-based methods
+(buffer, beam, and adaptive_beam) with iterative simplification.
 """
 
+
 import numpy as np
-import warnings
-from scipy.spatial import Delaunay
-from scipy.interpolate import UnivariateSpline
-from shapely.geometry import Polygon, MultiPolygon, Point, LineString
-from shapely.ops import unary_union
 import pyproj
+from shapely.geometry import MultiPolygon, Point, Polygon
+from shapely.ops import unary_union
 from shapely.validation import make_valid
-from shapely.algorithms.polylabel import polylabel
-from scipy.spatial.distance import cdist
-from .simplification import optimize_polygon_for_cmr
+
+from .simplification import iterative_simplify_polygon
 
 
 class PolygonGenerator:
-    """Main class for polygon generation with various methods."""
-    
+    """Main class for polygon generation with buffer-based methods."""
+
     def __init__(self):
         """Initialize the polygon generator."""
         self.default_buffer = 300  # meters
         self.min_buffer = 200
         self.max_buffer = 1000
-        
-    def create_flightline_polygon(self, lon, lat, method='adaptive_beam', 
-                                 buffer_distance=None, alpha=0.5, 
-                                 concave_ratio=0.2, max_points=None,
-                                 iterative_simplify=False, target_vertices=None,
-                                 min_iou=0.85, min_coverage=0.90):
+
+    def create_flightline_polygon(
+        self,
+        lon,
+        lat,
+        method="adaptive_beam",
+        buffer_distance=None,
+        sample_size=None,
+        connect_regions=True,
+        connection_buffer_multiplier=3.0,
+        iterative_simplify=False,
+        target_vertices=None,
+        min_iou=0.85,
+        min_coverage=0.90,
+    ):
         """
         Create a polygon representing the flightline coverage.
-        
+
         Parameters:
         -----------
         lon, lat : array-like
             Longitude and latitude coordinates
         method : str
-            Method to use: 'convex', 'concave', 'alpha', 'buffer', 
-            'centerline', 'beam', 'adaptive_beam'
+            Method to use: 'buffer', 'beam', 'adaptive_beam'
         buffer_distance : float
-            Buffer distance in meters (if None, uses adaptive sizing)
-        alpha : float
-            Alpha parameter for alpha shapes
-        concave_ratio : float
-            Ratio for concave hull (0-1, lower = more concave)
-        max_points : int
-            Maximum vertices in final polygon
+            Buffer distance in meters (if None, uses adaptive sizing for adaptive_beam)
+        sample_size : int
+            Number of points to sample for beam methods
+        connect_regions : bool
+            Whether to connect disconnected regions
+        connection_buffer_multiplier : float
+            Multiplier for connection buffer size
         iterative_simplify : bool
             Whether to use iterative simplification
         target_vertices : int
@@ -58,10 +63,10 @@ class PolygonGenerator:
             Minimum IoU for iterative simplification
         min_coverage : float
             Minimum data coverage for iterative simplification
-            
+
         Returns:
         --------
-        polygon : shapely.geometry.Polygon
+        polygon : shapely.geometry.Polygon or None
             The generated polygon
         metadata : dict
             Metadata about the generation process
@@ -70,646 +75,413 @@ class PolygonGenerator:
         mask = np.isfinite(lon) & np.isfinite(lat)
         lon = np.array(lon)[mask]
         lat = np.array(lat)[mask]
-        
-        if len(lon) < 3:
-            raise ValueError("Insufficient valid coordinates")
-        
+
         metadata = {
-            'method': method,
-            'points': len(lon),
-            'original_buffer': buffer_distance
+            "method": method,
+            "points": len(lon),
+            "original_buffer": buffer_distance,
         }
-        
-        # Create points
+
+        # Handle empty or insufficient data
+        if len(lon) == 0:
+            print("No valid coordinates found")
+            metadata["vertices"] = 0
+            return None, metadata
+
+        if len(lon) == 1:
+            # Single point - create a buffer around it
+            if buffer_distance is None:
+                buffer_distance = self.default_buffer
+            point = Point(lon[0], lat[0])
+            polygon = self._buffer_in_meters(point, buffer_distance, lat[0])
+            metadata["buffer_m"] = buffer_distance
+            metadata["vertices"] = len(polygon.exterior.coords) - 1
+            return polygon, metadata
+
+        if len(lon) < 3:
+            print(f"Only {len(lon)} valid coordinates, creating buffered line")
+            # Create line and buffer it
+            if buffer_distance is None:
+                buffer_distance = self.default_buffer
+            from shapely.geometry import LineString
+
+            line = LineString(zip(lon, lat))
+            polygon = self._buffer_in_meters(line, buffer_distance, np.mean(lat))
+            metadata["buffer_m"] = buffer_distance
+            metadata["vertices"] = len(polygon.exterior.coords) - 1
+            return polygon, metadata
+
+        # Create points array
         points = np.column_stack((lon, lat))
-        
+
         # Handle different methods
-        if method == 'convex':
-            polygon = self._create_convex_hull(points)
-            
-        elif method == 'concave':
-            polygon = self.create_concave_hull(points, concave_ratio)
-            
-        elif method == 'alpha':
-            polygon = self.create_alpha_shape(points, alpha)
-            
-        elif method == 'buffer':
+        if method == "buffer":
             if buffer_distance is None:
                 buffer_distance = self.default_buffer
             polygon = self._create_buffer_polygon(points, buffer_distance)
-            
-        elif method == 'centerline':
-            if buffer_distance is None:
-                buffer_distance = self.default_buffer
-            polygon = self._create_centerline_polygon(points, buffer_distance)
-            
-        elif method in ['beam', 'adaptive_beam']:
-            if method == 'adaptive_beam' and buffer_distance is None:
+            metadata["buffer_m"] = buffer_distance
+
+        elif method in ["beam", "adaptive_beam"]:
+            if method == "adaptive_beam" and buffer_distance is None:
                 # Use adaptive buffer sizing
                 buffer_distance = self.estimate_optimal_buffer(lon, lat)
-                metadata['adaptive_buffer'] = buffer_distance
+                metadata["adaptive_buffer"] = buffer_distance
                 print(f"  Calculated adaptive buffer: {buffer_distance:.0f}m")
             elif buffer_distance is None:
                 buffer_distance = self.default_buffer
-                
-            polygon = self._create_beam_polygon(points, buffer_distance)
-            
+
+            polygon, beam_metadata = self._create_beam_polygon(
+                points,
+                buffer_distance,
+                sample_size,
+                connect_regions,
+                connection_buffer_multiplier,
+            )
+            metadata["buffer_m"] = buffer_distance
+            metadata.update(beam_metadata)  # Include sample_size and other metadata
+
         else:
-            raise ValueError(f"Unknown method: {method}")
-        
+            raise ValueError(
+                f"Unknown method: {method}. Supported methods: buffer, beam, adaptive_beam"
+            )
+
         # Apply iterative simplification if requested
         if iterative_simplify and polygon is not None:
             # Use all data points for better coverage calculation
             data_points = points
-            
-            simplified, history = optimize_polygon_for_cmr(
+
+            simplified, history = iterative_simplify_polygon(
                 polygon,
                 data_points=data_points,
                 target_vertices=target_vertices,
                 min_iou=min_iou,
-                min_coverage=min_coverage
+                min_coverage=min_coverage,
             )
-            
+
             polygon = simplified
-            metadata['simplification_history'] = history
-            metadata['final_vertices'] = polygon.exterior.coords[:-1].__len__()
-        
-        # Apply vertex limit if specified
-        elif max_points and polygon is not None:
-            polygon = self.simplify_polygon_with_constraints(
-                polygon, max_points, min_distance_m=50
-            )
-        
-        metadata['vertices'] = len(polygon.exterior.coords) - 1 if polygon else 0
-        
+            metadata["simplification_history"] = history
+
+            if history:
+                print(
+                    f"  Simplified from {history[0]['vertices']} to {history[-1]['vertices']} vertices"
+                )
+
+        # Add final vertex count
+        if polygon is not None:
+            if hasattr(polygon, "exterior"):
+                metadata["vertices"] = len(polygon.exterior.coords) - 1
+            else:
+                metadata["vertices"] = 0
+        else:
+            metadata["vertices"] = 0
+
         return polygon, metadata
-    
-    def create_alpha_shape(self, points, alpha):
+
+    def _buffer_in_meters(self, geom, buffer_distance, center_lat):
         """
-        Create an alpha shape (concave hull) from points.
-        
+        Buffer a geometry by a distance in meters.
+
         Parameters:
         -----------
-        points : np.ndarray
-            Array of (x, y) coordinates
-        alpha : float
-            Alpha parameter (larger = tighter fit)
-            
+        geom : shapely geometry
+            Geometry to buffer
+        buffer_distance : float
+            Buffer distance in meters
+        center_lat : float
+            Latitude for UTM zone selection
+
         Returns:
         --------
-        polygon : shapely.geometry.Polygon or None
+        buffered : shapely geometry
+            Buffered geometry in original CRS
         """
-        if len(points) < 4:
-            # Fall back to convex hull for too few points
-            return Polygon(points).convex_hull
-        
-        # Create Delaunay triangulation
-        tri = Delaunay(points)
-        
-        # Get triangles as point indices
-        triangles = points[tri.simplices]
-        
-        # Calculate circumradius for each triangle
-        a = ((triangles[:, 0, 0] - triangles[:, 1, 0]) ** 2 + 
-             (triangles[:, 0, 1] - triangles[:, 1, 1]) ** 2) ** 0.5
-        b = ((triangles[:, 1, 0] - triangles[:, 2, 0]) ** 2 + 
-             (triangles[:, 1, 1] - triangles[:, 2, 1]) ** 2) ** 0.5
-        c = ((triangles[:, 2, 0] - triangles[:, 0, 0]) ** 2 + 
-             (triangles[:, 2, 1] - triangles[:, 0, 1]) ** 2) ** 0.5
-        
-        s = (a + b + c) / 2.0
-        areas = (s * (s - a) * (s - b) * (s - c)) ** 0.5
-        
-        # Avoid division by zero
-        areas = np.maximum(areas, 1e-10)
-        circum_r = a * b * c / (4.0 * areas)
-        
-        # Filter triangles by alpha criterion
-        filtered = triangles[circum_r < 1.0 / alpha]
-        
-        if len(filtered) == 0:
-            # If no triangles pass, return convex hull
-            return Polygon(points).convex_hull
-        
-        # Extract edges from filtered triangles
-        edges = set()
-        for tri in filtered:
-            for i in range(3):
-                edge = tuple(sorted([tuple(tri[i]), tuple(tri[(i + 1) % 3])]))
-                edges.add(edge)
-        
-        # Build polygon from edges
-        try:
-            # Convert edges to LineString and union them
-            lines = [LineString(edge) for edge in edges]
-            merged = unary_union(lines)
-            
-            # Extract the outer boundary
-            if hasattr(merged, 'convex_hull'):
-                return merged.convex_hull
-            else:
-                return None
-        except:
-            # Fall back to convex hull on any error
-            return Polygon(points).convex_hull
-    
-    def create_concave_hull(self, points, ratio=0.2):
+        # Get center longitude for UTM zone
+        if hasattr(geom, "centroid"):
+            center_lon = geom.centroid.x
+        else:
+            center_lon = geom.x if hasattr(geom, "x") else 0
+
+        # Determine UTM zone
+        utm_zone = int((center_lon + 180) / 6) + 1
+
+        # Create projection
+        if center_lat >= 0:
+            proj_string = f"+proj=utm +zone={utm_zone} +north +datum=WGS84"
+        else:
+            proj_string = f"+proj=utm +zone={utm_zone} +south +datum=WGS84"
+
+        # Create transformers
+        to_utm = pyproj.Transformer.from_crs("EPSG:4326", proj_string, always_xy=True)
+        to_wgs = pyproj.Transformer.from_crs(proj_string, "EPSG:4326", always_xy=True)
+
+        # Transform to UTM, buffer, transform back
+        from shapely.ops import transform
+
+        geom_utm = transform(to_utm.transform, geom)
+        buffered_utm = geom_utm.buffer(buffer_distance)
+        buffered = transform(to_wgs.transform, buffered_utm)
+
+        return buffered
+
+    def _create_buffer_polygon(self, points, buffer_distance):
         """
-        Create a concave hull from points.
-        
+        Create polygon by buffering all points.
+
         Parameters:
         -----------
-        points : np.ndarray
-            Array of (x, y) coordinates
-        ratio : float
-            Concavity ratio (0-1, lower = more concave)
-            
+        points : array-like
+            Nx2 array of lon/lat coordinates
+        buffer_distance : float
+            Buffer distance in meters
+
         Returns:
         --------
         polygon : shapely.geometry.Polygon
+            Buffered polygon
         """
-        # Subsample if too many points
         if len(points) > 10000:
-            indices = np.random.choice(len(points), 10000, replace=False)
-            points = points[indices]
-        
-        # Try shapely's concave hull if available
-        try:
+            # For very large datasets, use convex hull as base
+            from scipy.spatial import ConvexHull
+
+            hull = ConvexHull(points)
+            hull_points = points[hull.vertices]
+            base_polygon = Polygon(hull_points)
+            polygon = self._buffer_in_meters(
+                base_polygon, buffer_distance, np.mean(points[:, 1])
+            )
+        else:
+            # Buffer each point and union
             from shapely.geometry import MultiPoint
-            mp = MultiPoint(points)
-            return mp.concave_hull(ratio)
-        except (ImportError, AttributeError):
-            # Fall back to alpha shape
-            alpha = 1.0 / (ratio + 0.01)  # Convert ratio to alpha
-            return self.create_alpha_shape(points, alpha)
-    
-    def estimate_optimal_buffer(self, lon, lat, target_cmr_area=None):
+
+            multipoint = MultiPoint(points)
+            polygon = self._buffer_in_meters(
+                multipoint, buffer_distance, np.mean(points[:, 1])
+            )
+
+        # Ensure we return a single Polygon, not MultiPolygon
+        polygon = make_valid(polygon)
+        if isinstance(polygon, MultiPolygon):
+            # Take the largest polygon
+            polygon = max(polygon.geoms, key=lambda p: p.area)
+
+        return polygon
+
+    def _create_beam_polygon(
+        self,
+        points,
+        buffer_distance,
+        sample_size=None,
+        connect_regions=True,
+        connection_buffer_multiplier=3.0,
+    ):
+        """
+        Create polygon using beam method (sample points along path).
+
+        Parameters:
+        -----------
+        points : array-like
+            Nx2 array of lon/lat coordinates
+        buffer_distance : float
+            Buffer distance in meters
+        sample_size : int
+            Number of points to sample
+        connect_regions : bool
+            Whether to connect disconnected regions
+        connection_buffer_multiplier : float
+            Multiplier for connection buffer size
+
+        Returns:
+        --------
+        polygon : shapely.geometry.Polygon
+            Beam polygon
+        metadata : dict
+            Metadata about the process
+        """
+        metadata = {}
+
+        # Determine sample size based on total points
+        if sample_size is None:
+            if len(points) < 100:
+                sample_size = len(points)  # Use all points
+            elif len(points) < 1000:
+                sample_size = max(50, len(points) // 10)
+            elif len(points) < 10000:
+                sample_size = max(100, len(points) // 50)
+            else:
+                sample_size = max(200, len(points) // 100)
+
+        metadata["sample_size"] = sample_size
+
+        # Sample points
+        if sample_size >= len(points):
+            sampled_points = points
+        else:
+            # Sample evenly along the path
+            indices = np.round(np.linspace(0, len(points) - 1, sample_size)).astype(int)
+            sampled_points = points[indices]
+
+        # Buffer sampled points
+        polygons = []
+        mean_lat = np.mean(points[:, 1])
+
+        for point in sampled_points:
+            p = Point(point)
+            buffered = self._buffer_in_meters(p, buffer_distance, mean_lat)
+            polygons.append(buffered)
+
+        # Union all buffers
+        union = unary_union(polygons)
+
+        # Handle multi-polygon result
+        if isinstance(union, MultiPolygon):
+            if connect_regions and len(union.geoms) > 1:
+                # Connect regions
+                union = self._connect_multipolygon(
+                    union, buffer_distance * connection_buffer_multiplier, mean_lat
+                )
+            else:
+                # Just take the largest polygon
+                union = max(union.geoms, key=lambda p: p.area)
+
+        polygon = make_valid(union)
+        metadata["projection"] = f"UTM (center lat: {mean_lat:.2f})"
+
+        return polygon, metadata
+
+    def _connect_multipolygon(self, multipoly, connection_buffer, center_lat):
+        """
+        Connect disconnected regions of a MultiPolygon.
+
+        Parameters:
+        -----------
+        multipoly : shapely.geometry.MultiPolygon
+            MultiPolygon to connect
+        connection_buffer : float
+            Buffer distance for connections in meters
+        center_lat : float
+            Latitude for projection
+
+        Returns:
+        --------
+        polygon : shapely.geometry.Polygon
+            Connected polygon
+        """
+        if len(multipoly.geoms) == 1:
+            return multipoly.geoms[0]
+
+        # Get centroids of each polygon
+        centroids = [p.centroid for p in multipoly.geoms]
+
+        # Create minimum spanning tree of centroids
+        from scipy.spatial.distance import cdist
+        from shapely.geometry import LineString
+
+        # Calculate distances between all centroids
+        centroid_coords = np.array([[c.x, c.y] for c in centroids])
+        distances = cdist(centroid_coords, centroid_coords)
+
+        # Simple MST using nearest neighbor
+        connected = set([0])
+        edges = []
+
+        while len(connected) < len(centroids):
+            min_dist = float("inf")
+            min_edge = None
+
+            for i in connected:
+                for j in range(len(centroids)):
+                    if j not in connected and distances[i, j] < min_dist:
+                        min_dist = distances[i, j]
+                        min_edge = (i, j)
+
+            if min_edge:
+                edges.append(min_edge)
+                connected.add(min_edge[1])
+
+        # Create lines between connected centroids
+        connection_lines = []
+        for i, j in edges:
+            line = LineString([centroids[i], centroids[j]])
+            connection_lines.append(line)
+
+        # Buffer the lines
+        buffered_connections = []
+        for line in connection_lines:
+            buffered = self._buffer_in_meters(line, connection_buffer, center_lat)
+            buffered_connections.append(buffered)
+
+        # Union everything
+        all_geoms = list(multipoly.geoms) + buffered_connections
+        result = unary_union(all_geoms)
+
+        # Return largest polygon if still multi
+        if isinstance(result, MultiPolygon):
+            result = max(result.geoms, key=lambda p: p.area)
+
+        return make_valid(result)
+
+    def estimate_optimal_buffer(self, lon, lat):
         """
         Estimate optimal buffer size based on data characteristics.
-        
+
         Parameters:
         -----------
         lon, lat : array-like
-            Longitude and latitude coordinates
-        target_cmr_area : float, optional
-            Target area from CMR polygon for refinement
-            
+            Coordinates
+
         Returns:
         --------
         buffer_m : float
             Optimal buffer size in meters
         """
-        # Calculate data extent
-        lon_range = np.max(lon) - np.min(lon)
-        lat_range = np.max(lat) - np.min(lat)
-        
-        # Characteristic length (diagonal of bounding box)
-        char_length_deg = np.sqrt(lon_range**2 + lat_range**2)
-        
-        # Convert to meters (approximate)
-        center_lat = np.mean(lat)
-        char_length_m = char_length_deg * 111000 * np.cos(np.radians(center_lat))
-        
-        # Base buffer as percentage of characteristic length
-        base_buffer = char_length_m * 0.05  # 5% of extent
-        
-        # Adjust based on point density
-        area_deg2 = lon_range * lat_range
-        points_per_deg2 = len(lon) / max(area_deg2, 0.0001)
-        
-        # High density needs smaller buffer, low density needs larger
-        if points_per_deg2 > 1000000:  # Very dense
-            density_factor = 0.5
-        elif points_per_deg2 > 100000:  # Dense
-            density_factor = 0.7
-        elif points_per_deg2 < 10000:  # Sparse
-            density_factor = 1.5
-        else:  # Normal
-            density_factor = 1.0
-        
-        # Apply density adjustment
-        buffer_m = base_buffer * density_factor
-        
-        # Optional: Refine based on target CMR area
-        if target_cmr_area is not None:
-            # This would require iterative refinement
-            # For now, just use as a scaling hint
-            pass
-        
-        # Clamp to reasonable range
-        buffer_m = np.clip(buffer_m, self.min_buffer, self.max_buffer)
-        
-        return buffer_m
-    
-    def _create_convex_hull(self, points):
-        """Create convex hull from points."""
-        return Polygon(points).convex_hull
-    
-    def _create_buffer_polygon(self, points, buffer_distance):
-        """Create polygon by buffering all points."""
-        # Project to UTM for accurate buffering
-        center_lon = np.mean(points[:, 0])
-        center_lat = np.mean(points[:, 1])
-        
-        # Determine UTM zone
-        utm_zone = int((center_lon + 180) / 6) + 1
-        utm_crs = f"+proj=utm +zone={utm_zone} +datum=WGS84"
-        
-        # Create transformer
-        transformer = pyproj.Transformer.from_crs("EPSG:4326", utm_crs, always_xy=True)
-        
-        # Transform points to UTM
-        utm_points = np.array([transformer.transform(p[0], p[1]) for p in points])
-        
-        # Create buffer around each point and union
-        buffers = [Point(p).buffer(buffer_distance) for p in utm_points]
-        utm_polygon = unary_union(buffers)
-        
-        # Transform back to lat/lon
-        transformer_back = pyproj.Transformer.from_crs(utm_crs, "EPSG:4326", always_xy=True)
-        
-        if hasattr(utm_polygon, 'exterior'):
-            coords = list(utm_polygon.exterior.coords)
-            lonlat_coords = [transformer_back.transform(x, y) for x, y in coords]
-            return Polygon(lonlat_coords)
-        
-        return None
-    
-    def _create_centerline_polygon(self, points, buffer_distance):
-        """Create polygon by buffering flight centerline."""
-        # Find centerline
-        centerline_coords = self.find_centerline(points)
-        
-        if centerline_coords is None:
-            return None
-        
-        # Create LineString and buffer it
-        center_lon = np.mean(centerline_coords[:, 0])
-        center_lat = np.mean(centerline_coords[:, 1])
-        
-        # Project to UTM
-        utm_zone = int((center_lon + 180) / 6) + 1
-        utm_crs = f"+proj=utm +zone={utm_zone} +datum=WGS84"
-        
-        transformer = pyproj.Transformer.from_crs("EPSG:4326", utm_crs, always_xy=True)
-        utm_coords = np.array([transformer.transform(p[0], p[1]) 
-                              for p in centerline_coords])
-        
-        # Create buffered line
-        line = LineString(utm_coords)
-        utm_polygon = line.buffer(buffer_distance, cap_style=2)  # Round caps
-        
-        # Transform back
-        transformer_back = pyproj.Transformer.from_crs(utm_crs, "EPSG:4326", always_xy=True)
-        coords = list(utm_polygon.exterior.coords)
-        lonlat_coords = [transformer_back.transform(x, y) for x, y in coords]
-        
-        return Polygon(lonlat_coords)
-    
-    def _create_beam_polygon(self, points, buffer_distance):
-        """Create polygon using beam method (buffer with connections) - OPTIMIZED."""
-        import time
-        print(f"    Creating beam polygon with {len(points)} points...")
-        
-        # For very large datasets, use convex hull with buffer as fallback
-        if len(points) > 5000:
-            print(f"    Using fast convex hull method for {len(points)} points")
-            start = time.time()
-            
-            # Create convex hull
-            hull = Polygon(points).convex_hull
-            
-            # Project to UTM for buffering
-            center_lon = np.mean(points[:, 0])
-            center_lat = np.mean(points[:, 1])
-            utm_zone = int((center_lon + 180) / 6) + 1
-            utm_crs = f"+proj=utm +zone={utm_zone} +datum=WGS84"
-            
-            transformer_to = pyproj.Transformer.from_crs("EPSG:4326", utm_crs, always_xy=True)
-            transformer_from = pyproj.Transformer.from_crs(utm_crs, "EPSG:4326", always_xy=True)
-            
-            # Transform hull to UTM
-            hull_coords = np.array(hull.exterior.coords)
-            utm_coords = np.array([transformer_to.transform(x, y) for x, y in hull_coords])
-            utm_hull = Polygon(utm_coords)
-            
-            # Buffer in UTM
-            buffered = utm_hull.buffer(buffer_distance * 1.5)  # Slightly larger buffer
-            
-            # Transform back
-            buffered_coords = np.array(buffered.exterior.coords)
-            wgs_coords = np.array([transformer_from.transform(x, y) for x, y in buffered_coords])
-            
-            print(f"    Fast convex hull method took {time.time() - start:.2f}s")
-            return Polygon(wgs_coords)
-        
-        # Original method for smaller datasets
-        print(f"    Using standard beam method")
-        
-        # Subsample if still too many
-        if len(points) > 5000:
-            indices = np.random.choice(len(points), 5000, replace=False)
-            points = points[indices]
-            print(f"    Subsampled to {len(points)} points")
-        
-        # Project to UTM
-        center_lon = np.mean(points[:, 0])
-        center_lat = np.mean(points[:, 1])
-        utm_zone = int((center_lon + 180) / 6) + 1
-        utm_crs = f"+proj=utm +zone={utm_zone} +datum=WGS84"
-        
-        transformer = pyproj.Transformer.from_crs("EPSG:4326", utm_crs, always_xy=True)
-        utm_points = np.array([transformer.transform(p[0], p[1]) for p in points])
-        
-        # Create buffered points - but limit the number
-        start = time.time()
-        if len(utm_points) > 1000:
-            # For many points, create a multipoint and buffer once
-            multipoint = unary_union([Point(p) for p in utm_points])
-            merged = multipoint.buffer(buffer_distance)
-            print(f"    Multipoint buffer took {time.time() - start:.2f}s")
-        else:
-            # Original method for fewer points
-            buffered_points = [Point(p).buffer(buffer_distance) for p in utm_points]
-            merged = unary_union(buffered_points)
-            print(f"    Individual buffers took {time.time() - start:.2f}s")
-        
-        # If result is MultiPolygon, connect the parts
-        if isinstance(merged, MultiPolygon):
-            polygons = list(merged.geoms)
-            
-            while len(polygons) > 1:
-                # Find two closest polygons
-                min_dist = float('inf')
-                merge_idx = (0, 1)
-                
-                for i in range(len(polygons)):
-                    for j in range(i + 1, len(polygons)):
-                        dist = polygons[i].distance(polygons[j])
-                        if dist < min_dist:
-                            min_dist = dist
-                            merge_idx = (i, j)
-                
-                # Connect them
-                poly1 = polygons[merge_idx[0]]
-                poly2 = polygons[merge_idx[1]]
-                
-                # Find closest points
-                coords1 = np.array(poly1.exterior.coords)
-                coords2 = np.array(poly2.exterior.coords)
-                
-                distances = cdist(coords1, coords2)
-                min_idx = np.unravel_index(distances.argmin(), distances.shape)
-                
-                # Create connecting corridor
-                p1 = Point(coords1[min_idx[0]])
-                p2 = Point(coords2[min_idx[1]])
-                connector = LineString([p1, p2]).buffer(buffer_distance)
-                
-                # Merge polygons
-                merged_poly = unary_union([poly1, poly2, connector])
-                
-                # Update polygon list
-                polygons = [p for i, p in enumerate(polygons) 
-                           if i not in merge_idx]
-                if hasattr(merged_poly, 'geoms'):
-                    polygons.extend(merged_poly.geoms)
-                else:
-                    polygons.append(merged_poly)
-            
-            merged = polygons[0] if polygons else merged
-        
-        # Transform back to lat/lon
-        transformer_back = pyproj.Transformer.from_crs(utm_crs, "EPSG:4326", always_xy=True)
-        
-        if hasattr(merged, 'exterior'):
-            coords = list(merged.exterior.coords)
-            lonlat_coords = [transformer_back.transform(x, y) for x, y in coords]
-            return Polygon(lonlat_coords)
-        
-        return None
-    
-    def find_centerline(self, coords, subsample_size=1000):
-        """
-        Find smoothed centerline through points.
-        
-        Parameters:
-        -----------
-        coords : np.ndarray
-            Array of (x, y) coordinates
-        subsample_size : int
-            Number of points to subsample to
-            
-        Returns:
-        --------
-        centerline : np.ndarray or None
-            Smoothed centerline coordinates
-        """
-        if len(coords) < 4:
-            return None
-        
-        # Subsample if needed
-        if len(coords) > subsample_size:
-            indices = np.linspace(0, len(coords) - 1, subsample_size, dtype=int)
-            coords = coords[indices]
-        
-        # Calculate cumulative distance along path
-        distances = np.zeros(len(coords))
-        for i in range(1, len(coords)):
-            distances[i] = distances[i-1] + np.linalg.norm(
-                coords[i] - coords[i-1]
-            )
-        
-        # Fit splines to smooth the path
-        try:
-            spline_x = UnivariateSpline(distances, coords[:, 0], s=0.01)
-            spline_y = UnivariateSpline(distances, coords[:, 1], s=0.01)
-            
-            # Generate smooth centerline
-            smooth_distances = np.linspace(0, distances[-1], len(coords))
-            smooth_x = spline_x(smooth_distances)
-            smooth_y = spline_y(smooth_distances)
-            
-            return np.column_stack((smooth_x, smooth_y))
-        except:
-            return coords
-    
-    def simplify_polygon_with_constraints(self, polygon, max_points, min_distance_m=50):
-        """
-        Simplify polygon to meet vertex count constraints.
-        
-        Parameters:
-        -----------
-        polygon : shapely.geometry.Polygon
-            Input polygon
-        max_points : int
-            Maximum number of vertices
-        min_distance_m : float
-            Minimum distance between vertices in meters
-            
-        Returns:
-        --------
-        simplified : shapely.geometry.Polygon
-            Simplified polygon
-        """
-        if polygon is None or polygon.is_empty:
-            return polygon
-        
-        current_points = len(polygon.exterior.coords) - 1
-        
-        if current_points <= max_points:
-            return polygon
-        
-        # For very low vertex counts, use aggressive simplification
-        if max_points < 20:
-            # Use increasingly aggressive tolerance
-            for tolerance_factor in [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05]:
-                simplified = polygon.simplify(tolerance_factor, preserve_topology=True)
-                if len(simplified.exterior.coords) - 1 <= max_points:
-                    return simplified
-        
-        # Standard simplification for moderate vertex counts
-        tolerance = 0.00001
-        while current_points > max_points and tolerance < 1.0:
-            simplified = polygon.simplify(tolerance, preserve_topology=True)
-            current_points = len(simplified.exterior.coords) - 1
-            
-            if current_points <= max_points:
-                return simplified
-            
-            tolerance *= 2
-        
-        return simplified
-    
-    def calculate_polygon_fit_metrics(self, polygon, original_polygon, data_points=None):
-        """
-        Calculate quality metrics for polygon fit.
-        
-        Parameters:
-        -----------
-        polygon : shapely.geometry.Polygon
-            Simplified polygon
-        original_polygon : shapely.geometry.Polygon
-            Original polygon
-        data_points : np.ndarray, optional
-            Data points to check coverage
-            
-        Returns:
-        --------
-        metrics : dict
-            Dictionary of quality metrics
-        """
-        metrics = {}
-        
-        # IoU (Intersection over Union)
-        intersection = polygon.intersection(original_polygon).area
-        union = polygon.union(original_polygon).area
-        metrics['iou'] = intersection / union if union > 0 else 0
-        
-        # Area ratio
-        metrics['area_ratio'] = polygon.area / original_polygon.area if original_polygon.area > 0 else 0
-        
-        # Hausdorff distance (shape similarity)
-        try:
-            from shapely.ops import nearest_points
-            coords1 = np.array(polygon.exterior.coords)
-            coords2 = np.array(original_polygon.exterior.coords)
-            
-            # Sample points if too many
-            if len(coords1) > 100:
-                indices = np.linspace(0, len(coords1)-1, 100, dtype=int)
-                coords1 = coords1[indices]
-            if len(coords2) > 100:
-                indices = np.linspace(0, len(coords2)-1, 100, dtype=int)
-                coords2 = coords2[indices]
-            
-            distances1 = [Point(c).distance(original_polygon.exterior) for c in coords1]
-            distances2 = [Point(c).distance(polygon.exterior) for c in coords2]
-            
-            metrics['hausdorff_distance'] = max(max(distances1), max(distances2))
-        except:
-            metrics['hausdorff_distance'] = 0
-        
-        # Data coverage (if data points provided)
-        if data_points is not None and len(data_points) > 0:
-            # First check how many points were in original
-            original_inside = sum(1 for p in data_points if original_polygon.contains(Point(p)))
-            
-            if original_inside > 0:
-                # Check how many are in simplified
-                simplified_inside = sum(1 for p in data_points if polygon.contains(Point(p)))
-                metrics['data_coverage'] = simplified_inside / original_inside
-            else:
-                metrics['data_coverage'] = 1.0
-        else:
-            metrics['data_coverage'] = 1.0
-        
-        # Vertex count
-        metrics['vertices'] = len(polygon.exterior.coords) - 1
-        
-        return metrics
-    
-    def create_cmr_optimized_polygon(self, lon, lat, cmr_polygon, method='adaptive_beam'):
-        """
-        Create a polygon optimized to replace a CMR polygon.
-        
-        This method ensures:
-        1. 100% data coverage
-        2. Vertices <= CMR vertices
-        3. Minimal non-data area
-        4. Area <= CMR area
-        
-        Parameters:
-        -----------
-        lon, lat : array-like
-            Data point coordinates
-        cmr_polygon : shapely.geometry.Polygon
-            Current CMR polygon to replace
-        method : str
-            Initial generation method
-            
-        Returns:
-        --------
-        polygon : shapely.geometry.Polygon
-            Optimized polygon
-        metadata : dict
-            Generation and optimization metadata
-        """
-        # First generate initial polygon with good coverage
-        # Use slightly larger buffer to ensure full coverage
-        initial_polygon, initial_metadata = self.create_flightline_polygon(
-            lon, lat, 
-            method=method,
-            buffer_distance=None,  # Use adaptive
-            iterative_simplify=False  # We'll do custom optimization
-        )
-        
-        # Prepare data points for optimization
-        data_points = np.column_stack((lon, lat))
-        
-        # Run CMR-focused optimization
-        optimized_polygon, final_metrics = optimize_polygon_for_cmr(
-            initial_polygon, 
-            data_points, 
-            cmr_polygon
-        )
-        
-        # Combine metadata
-        metadata = initial_metadata.copy()
-        metadata.update({
-            'cmr_optimized': True,
-            'final_vertices': final_metrics['vertices'],
-            'final_area': final_metrics['area'],
-            'data_coverage': final_metrics['data_coverage'],
-            'meets_constraints': (
-                final_metrics['data_coverage'] >= 1.0 and
-                final_metrics['vertices'] <= final_metrics.get('cmr_vertices', float('inf')) and
-                final_metrics['area'] <= final_metrics.get('cmr_area', float('inf'))
-            )
-        })
-        
-        return optimized_polygon, metadata
+        # Calculate basic statistics
+        if len(lon) < 2:
+            return self.default_buffer
 
+        # Get point spacing
+        coords = np.column_stack((lon, lat))
 
-# Create a default instance for convenience
-default_generator = PolygonGenerator()
+        # Calculate distances between consecutive points
+        if len(coords) > 1:
+            diffs = np.diff(coords, axis=0)
+            distances = np.sqrt(diffs[:, 0] ** 2 + diffs[:, 1] ** 2)
+
+            # Convert to meters (approximate)
+            mean_lat = np.mean(lat)
+            lat_factor = 111000  # meters per degree latitude
+            lon_factor = 111000 * np.cos(
+                np.radians(mean_lat)
+            )  # meters per degree longitude
+
+            distances_m = (
+                distances
+                * np.sqrt(
+                    (lon_factor * diffs[:, 0]) ** 2 + (lat_factor * diffs[:, 1]) ** 2
+                )
+                / distances
+            )
+
+            # Remove outliers
+            distances_m = distances_m[np.isfinite(distances_m)]
+            if len(distances_m) > 0:
+                percentile_95 = np.percentile(distances_m, 95)
+
+                # Buffer should be large enough to connect points
+                # but not so large it oversimplifies
+                buffer_size = min(
+                    max(percentile_95 * 2, self.min_buffer), self.max_buffer
+                )
+
+                # Adjust based on total extent
+                lon_range = np.ptp(lon)
+                lat_range = np.ptp(lat)
+                extent_km = max(lon_range * lon_factor, lat_range * lat_factor) / 1000
+
+                if extent_km > 100:  # Large extent
+                    buffer_size = min(buffer_size * 1.5, self.max_buffer)
+                elif extent_km < 10:  # Small extent
+                    buffer_size = max(buffer_size * 0.7, self.min_buffer)
+
+                return int(buffer_size)
+
+        return self.default_buffer
