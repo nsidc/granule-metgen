@@ -394,7 +394,7 @@ class PolygonComparisonDriver:
         
         # Get CMR polygon
         cmr_gdf = gpd.GeoDataFrame.from_features(cmr_geojson['features'])
-        cmr_geom = cmr_gdf.unary_union
+        cmr_geom = cmr_gdf.union_all()
         
         # Sample points if too many
         if len(lon) > 10000:
