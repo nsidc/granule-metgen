@@ -1,3 +1,7 @@
+## Unreleased
+
+* Fix UMM-G `RangeDateTimes` template error.
+
 ## v1.8.0
 
 * Adds a generic reader used when `metgenc` processes granules with an unknown
