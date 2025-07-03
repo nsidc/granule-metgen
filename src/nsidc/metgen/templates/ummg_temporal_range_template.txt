@@ -1,5 +1,3 @@
 {
-    "RangeDateTime": {
-      $date_time_range
-    }
+    "RangeDateTime": $date_time_range
 }
