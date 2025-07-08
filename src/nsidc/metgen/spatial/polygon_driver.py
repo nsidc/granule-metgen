@@ -45,7 +45,7 @@ class PolygonComparisonDriver:
         self.output_dir.mkdir(exist_ok=True)
 
         self.cmr_client = CMRClient(token=token)
-        print(f"[PolygonDriver] Using optimized polygon generation (concave hull + smart buffering)")
+        print("[PolygonDriver] Using optimized polygon generation (concave hull + smart buffering)")
             
         self.token = token
 
@@ -298,7 +298,7 @@ class PolygonComparisonDriver:
                 return None
 
             # Load data points
-            print(f"\n[PolygonDriver] Stage 1: Load Data")
+            print("\n[PolygonDriver] Stage 1: Load Data")
             print(f"  File: {data_file.name}")
             lon, lat = self.load_data_points(data_file)
             if lon is None or len(lon) == 0:
@@ -308,7 +308,7 @@ class PolygonComparisonDriver:
             print(f"  Points loaded: {len(lon)}")
 
             # Calculate CMR data coverage to compare against
-            print(f"\n[PolygonDriver] Stage 2: Analyze CMR Polygon")
+            print("\n[PolygonDriver] Stage 2: Analyze CMR Polygon")
             cmr_coverage = self._calculate_cmr_data_coverage(cmr_geojson, lon, lat)
             print(f"  CMR data coverage: {cmr_coverage:.1%}")
             
@@ -327,14 +327,14 @@ class PolygonComparisonDriver:
             metadata["cmr_data_coverage"] = cmr_coverage
 
             # Save generated polygon
-            print(f"\n[PolygonDriver] Stage 4: Save Results")
+            print("\n[PolygonDriver] Stage 4: Save Results")
             generated_geojson = self.create_geojson(polygon, metadata, granule_ur)
             generated_polygon_file = granule_dir / "generated_polygon.geojson"
             with open(generated_polygon_file, "w") as f:
                 json.dump(generated_geojson, f, indent=2)
 
             # Compare polygons with data coverage
-            print(f"\n[PolygonDriver] Stage 5: Compare Polygons")
+            print("\n[PolygonDriver] Stage 5: Compare Polygons")
             metrics = PolygonComparator.compare(
                 cmr_geojson, generated_geojson, data_points=np.column_stack((lon, lat))
             )
@@ -356,7 +356,7 @@ class PolygonComparisonDriver:
                 metadata,
             )
 
-            print(f"\n[PolygonDriver] Results:")
+            print("\n[PolygonDriver] Results:")
             print(f"  Generated data coverage: {metrics.get('generated_data_coverage', 0):.1%}")
             print(f"  Generated vertices: {metrics['generated_vertices']}")
             print(f"  Area ratio (generated/CMR): {metrics.get('area_ratio', 0):.3f}")

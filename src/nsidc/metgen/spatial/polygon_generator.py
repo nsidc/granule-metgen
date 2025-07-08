@@ -9,9 +9,10 @@ Includes backward-compatible PolygonGenerator class wrapper.
 """
 
 import time
+
 import numpy as np
 from concave_hull import concave_hull
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Point, Polygon
 from shapely.validation import make_valid
 
 
@@ -56,7 +57,7 @@ def create_flightline_polygon(lon, lat):
     if len(lon) < 3:
         print("  Insufficient points for polygon, creating simple buffer")
         # Create a simple line buffer for very few points
-        from shapely.geometry import Point, LineString
+        from shapely.geometry import LineString, Point
 
         if len(lon) == 1:
             polygon = Point(lon[0], lat[0]).buffer(0.01)
@@ -100,7 +101,7 @@ def create_flightline_polygon(lon, lat):
         metadata["original_point_count"] = original_point_count
         metadata["subsampled_point_count"] = len(points)
 
-    print(f"  Generating concave hull...")
+    print("  Generating concave hull...")
 
     try:
         # Calculate appropriate length threshold based on data spread
@@ -211,7 +212,7 @@ def create_flightline_polygon(lon, lat):
                     
                     # Emergency fallback: if original coverage is really bad, accept any reasonable improvement
                     if coverage < 0.85 and buffered_coverage > coverage + 0.15:
-                        print(f"    Emergency fallback: accepting due to very low initial coverage")
+                        print("    Emergency fallback: accepting due to very low initial coverage")
                         polygon = buffered_polygon
                         coverage = buffered_coverage
                         metadata["coverage_enhanced"] = True
