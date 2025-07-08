@@ -6,7 +6,7 @@ This module provides optimized spatial coverage polygon generation from point da
 
 - `polygon_generator.py` - Single optimized polygon generation algorithm
 - `cmr_client.py` - CMR API integration and polygon comparison
-- `polygon_driver.py` - Automated comparison workflow
+- `polygon_driver.py` - Automated comparison workflow with parallel processing
 
 ## Algorithm Overview
 
@@ -50,6 +50,9 @@ python -m nsidc.metgen.spatial.polygon_driver LVISF2 -n 10 --token-file ~/.edl/t
 
 # With parallel processing
 python -m nsidc.metgen.spatial.polygon_driver ILVIS2 -n 5 -w 2 -p NSIDC_CPRD
+
+# Process specific granule
+python -m nsidc.metgen.spatial.polygon_driver LVISF2 --granule "LVISF2_ABoVE2019_0716_R2003_060685.TXT" -p NSIDC_CPRD
 ```
 
 ## Key Features
@@ -59,39 +62,44 @@ python -m nsidc.metgen.spatial.polygon_driver ILVIS2 -n 5 -w 2 -p NSIDC_CPRD
 - **Minimal Vertices** - Typically 30-70 vertices (vs 39 average previously)
 - **Antimeridian Support** - Handles global datasets crossing the dateline
 - **Intelligent Subsampling** - Processes large datasets (350k+ points) efficiently
+- **Parallel Processing** - Process multiple granules concurrently
 - **CMR Validation** - Compare results with existing CMR polygons
-- **Parallel Processing** - Batch process multiple granules efficiently
+- **Comprehensive Metrics** - Detailed comparison and quality assessment
 
 ## Performance Characteristics
 
 Based on testing with LVIS collections:
 
-| Collection | Avg Coverage | Avg Vertices | Avg Area Ratio |
-|------------|--------------|--------------|----------------|
-| LVISF2     | 98.6%        | 52           | 1.2x           |
-| IPFLT1B    | 98.1%        | 46           | 2.9x           |
+| Collection | Avg Coverage | Avg Vertices | Avg Area Ratio | Avg Gen Time |
+|------------|--------------|--------------|----------------|--------------|
+| LVISF2     | 98.6%        | 52           | 1.2x           | 0.15s        |
+| IPFLT1B    | 98.1%        | 46           | 2.9x           | 0.12s        |
 
 ## Algorithm Details
 
 ### 1. Data Preprocessing
 - Handles datasets up to 350k points
-- Applies boundary-preserving subsampling for large datasets
-- Detects and handles antimeridian crossings
+- Applies boundary-preserving subsampling for large datasets (>8000 points)
+- Detects and handles antimeridian crossings automatically
+- Uses conservative parameters for small datasets (<100 points)
 
 ### 2. Concave Hull Generation
-- Uses adaptive length threshold: `avg_range * 0.015`
+- Uses adaptive length threshold: `avg_range * 0.015` (1.5% of data spread)
+- Small datasets use: `avg_range * 0.025` (2.5% for more conservative results)
 - Fallback to convex hull if concave hull fails
-- Applies basic simplification to reduce vertex count
+- Ensures degenerate cases (lines/points) are buffered to create valid polygons
 
 ### 3. Coverage Enhancement
-- Calculates data coverage using point-in-polygon tests
+- Calculates initial data coverage using point-in-polygon tests
 - Applies strategic buffering if coverage < 98%
 - Uses area ratio constraints to prevent over-buffering
-- Smooths buffered polygons to reduce vertex count
+- Accepts buffering based on coverage improvement and vertex count
+- Emergency fallback for very low initial coverage (<85%)
 
-### 4. Validation
-- Ensures polygon validity using Shapely
-- Normalizes coordinates to [-180, 180] range
+### 4. Validation and Cleanup
+- Ensures polygon validity using Shapely's `make_valid()`
+- Normalizes coordinates to [-180, 180] longitude range
+- Applies simplification to reduce vertex count when needed
 - Returns comprehensive metadata for analysis
 
 ## Integration with MetGenC
@@ -115,6 +123,8 @@ def get_spatial_extent(self, filename):
 
 ## Testing
 
+The module includes comprehensive tests covering:
+
 ```python
 import numpy as np
 from nsidc.metgen.spatial import create_flightline_polygon
@@ -130,14 +140,42 @@ assert metadata['vertices'] >= 3
 assert metadata['final_data_coverage'] >= 0.90
 ```
 
+Test coverage includes:
+- Basic polygon generation
+- Large dataset subsampling
+- Antimeridian crossing
+- Coverage enhancement
+- Edge cases (empty data, single point, etc.)
+- Metadata completeness
+- Performance timing
+- Reproducibility
+
 ## Dependencies
 
 - `shapely` - Polygon operations and validation
-- `numpy` - Numerical operations
+- `numpy` - Numerical operations  
 - `concave-hull` - Concave hull algorithm
 - `geopandas` - GeoDataFrame operations (driver only)
 - `matplotlib` - Visualization (driver only)
 - `requests` - CMR API calls (driver only)
+
+## Output Formats
+
+The polygon driver generates:
+- **GeoJSON files** - CMR and generated polygons
+- **Comparison metrics** - Detailed JSON with all comparison statistics
+- **Summary visualizations** - Multi-panel plots showing coverage and comparisons
+- **Collection summaries** - Markdown reports with aggregate statistics
+
+## Quality Metrics
+
+The module tracks comprehensive quality metrics:
+- **Data Coverage** - Percentage of input points covered by polygon
+- **Area Ratio** - Generated area / CMR area
+- **Vertex Count** - Number of polygon vertices
+- **IoU** - Intersection over Union with CMR polygon
+- **Non-data Coverage** - Estimated coverage of non-data areas
+- **Generation Time** - Algorithm performance metrics
 
 ## Key Simplifications Made
 
