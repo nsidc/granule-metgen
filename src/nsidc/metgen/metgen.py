@@ -833,7 +833,9 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
 
     # Collapse information about (possibly) multiple files into a granule summary.
     summary = metadata_summary(metadata_details)
-    summary["spatial_extent"] = populate_spatial(gsr, summary["geometry"], configuration, spatial_content)
+    summary["spatial_extent"] = populate_spatial(
+        gsr, summary["geometry"], configuration, spatial_content
+    )
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
     summary["additional_attributes"] = populate_additional_attributes(premet_content)
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
@@ -1041,49 +1043,59 @@ def checksum(file):
     return sha256.hexdigest()
 
 
-def populate_spatial(spatial_representation: str, spatial_values: list, configuration: config.Config = None, spatial_content: list = None) -> str:
+def populate_spatial(
+    spatial_representation: str,
+    spatial_values: list,
+    configuration: config.Config = None,
+    spatial_content: list = None,
+) -> str:
     """
     Return a string representation of a geometry (point, bounding box, gpolygon)
     Optionally generates optimized polygons when spatial files are present.
     """
     # Check if we should generate polygons for spatial file data
-    if (configuration is not None and 
-        configuration.spatial_polygon_enabled and 
-        spatial_content is not None and 
-        spatial_representation == constants.GEODETIC and
-        len(spatial_values) >= 3):
-        
+    if (
+        configuration is not None
+        and configuration.spatial_polygon_enabled
+        and spatial_content is not None
+        and spatial_representation == constants.GEODETIC
+        and len(spatial_values) >= 3
+    ):
         try:
             # Import the spatial module for polygon generation
-            from nsidc.metgen.spatial import create_flightline_polygon
             import json
-            
+
+            from nsidc.metgen.spatial import create_flightline_polygon
+
             # Extract lon/lat arrays from spatial_values
             lons = [point["Longitude"] for point in spatial_values]
             lats = [point["Latitude"] for point in spatial_values]
-            
+
             # Generate polygon using our spatial module
             polygon, metadata = create_flightline_polygon(lons, lats)
-            
+
             if polygon is not None:
                 # Convert shapely polygon to UMM-G format
                 coords = list(polygon.exterior.coords)
                 polygon_points = [
-                    {"Longitude": float(lon), "Latitude": float(lat)} 
+                    {"Longitude": float(lon), "Latitude": float(lat)}
                     for lon, lat in coords
                 ]
-                
+
                 # Use the existing template system
                 return ummg_spatial_gpolygon_template().safe_substitute(
                     {"points": json.dumps(polygon_points)}
                 )
-                
+
         except Exception as e:
             # If polygon generation fails, fall back to original behavior
             import logging
+
             logger = logging.getLogger(constants.ROOT_LOGGER)
-            logger.warning(f"Polygon generation failed, using original spatial processing: {e}")
-    
+            logger.warning(
+                f"Polygon generation failed, using original spatial processing: {e}"
+            )
+
     # Original behavior for all other cases
     match spatial_representation:
         case constants.CARTESIAN:

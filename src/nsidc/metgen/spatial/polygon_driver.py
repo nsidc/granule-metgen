@@ -115,7 +115,6 @@ class PolygonComparisonDriver:
                 results.append(result)
         return results
 
-
     def process_specific_granule(
         self,
         short_name,
@@ -1381,5 +1380,3 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         plt.close()
 
         print(f"[PolygonDriver] Metrics visualization saved to: {metrics_file}")
-
-
