@@ -30,76 +30,63 @@ target_coverage = 0.98
 max_vertices = 100
 ```
 
-## 2. Reader Integration
+## 2. Spatial Processor Integration
 
-Modify readers to generate spatial polygons:
+The recommended approach is to integrate polygon generation at the UMM-G creation stage using a `SpatialProcessor`, not at the reader level. This provides better separation of concerns and follows project rules.
 
-### In `src/nsidc/metgen/readers/NetCDFReader.py`:
+### Create `src/nsidc/metgen/spatial_processor.py`:
+
+The `SpatialProcessor` class handles spatial polygon generation during UMM-G metadata creation, applying the rules defined in the project README:
+
+- `.spatial` files with >= 2 geodetic points → GPolygon(s) calculated to enclose all points
+- Data files with >= 2 geodetic points → GPolygon(s) calculated to enclose all points  
+- NetCDF gridded data with >= 3 geodetic points → GPolygon calculated from grid perimeter
+- Collections like LVISF2, IPFLT1B, ILVIS2 → Apply polygon generation automatically
+
+### In `src/nsidc/metgen/metgen.py`:
+
+Replace the `populate_spatial` function call with the spatial processor:
 
 ```python
-from nsidc.metgen.spatial import create_flightline_polygon
+from nsidc.metgen.spatial_processor import process_spatial_extent_with_polygon_generation
 
-class NetCDFReader(Reader):
-    def get_spatial_extent(self, filename):
-        """Get spatial extent using optimized polygon generation."""
-        
-        if self.config.get('spatial', {}).get('enabled', False):
-            # Extract coordinates from NetCDF
-            lon = self.dataset.variables['longitude'][:]
-            lat = self.dataset.variables['latitude'][:]
-            
-            # Generate optimized polygon
-            polygon, metadata = create_flightline_polygon(lon, lat)
-            
-            # Log generation details
-            print(f"Generated polygon: {metadata['vertices']} vertices, "
-                  f"{metadata['final_data_coverage']:.1%} coverage, "
-                  f"{metadata['generation_time_seconds']:.3f}s")
-            
-            # Convert to GeoJSON for UMM-G
-            return {
-                "HorizontalSpatialDomain": {
-                    "Geometry": {
-                        "GPolygons": [{
-                            "Boundary": {
-                                "Points": [
-                                    {"Longitude": coord[0], "Latitude": coord[1]}
-                                    for coord in polygon.exterior.coords[:-1]  # Exclude duplicate last point
-                                ]
-                            }
-                        }]
-                    }
-                }
-            }
-        else:
-            # Fall back to existing bounding box method
-            return super().get_spatial_extent(filename)
+# In the granule processing function, replace:
+# summary["spatial_extent"] = populate_spatial(gsr, summary["geometry"])
+
+# With:
+summary["spatial_extent"] = process_spatial_extent_with_polygon_generation(
+    config=config,
+    spatial_representation=gsr,
+    spatial_values=summary["geometry"],
+    collection_name=config.get('global', {}).get('auth_id', ''),
+    data_file_path=granule_file,
+    coordinate_data=coordinate_data  # If available from reader
+)
 ```
 
-### In `src/nsidc/metgen/readers/CSVReader.py`:
+### Reader Modifications (Optional Enhancement):
+
+Readers can optionally provide full coordinate data for better polygon generation:
 
 ```python
-from nsidc.metgen.spatial import create_flightline_polygon
-
-class CSVReader(Reader):
-    def get_spatial_extent(self, filename):
-        """Get spatial extent using optimized polygon generation."""
-        
-        if self.config.get('spatial', {}).get('enabled', False):
-            # Extract coordinates from CSV
-            lon_col = self.config.get('spatial', {}).get('longitude_column', 'longitude')
-            lat_col = self.config.get('spatial', {}).get('latitude_column', 'latitude')
-            
-            lon = self.dataframe[lon_col].values
-            lat = self.dataframe[lat_col].values
-            
-            # Generate optimized polygon
-            polygon, metadata = create_flightline_polygon(lon, lat)
-            
-            # Convert to UMM-G format
-            return convert_polygon_to_ummg(polygon)
-        else:
-            return super().get_spatial_extent(filename)
+# In NetCDFReader or CSVReader
+def get_coordinate_data(self):
+    """Provide full coordinate arrays for spatial processing."""
+    try:
+        if hasattr(self, 'dataset'):
+            # NetCDF case
+            return {
+                'longitude': self.dataset.variables['longitude'][:],
+                'latitude': self.dataset.variables['latitude'][:]
+            }
+        elif hasattr(self, 'dataframe'):
+            # CSV case  
+            return {
+                'longitude': self.dataframe['longitude'].values,
+                'latitude': self.dataframe['latitude'].values
+            }
+    except Exception:
+        return None
 ```
 
 ## 3. CLI Integration
@@ -295,41 +282,87 @@ numpy = "^1.24"
 
 ## Complete Integration Example
 
-Here's how a complete integration might look in a MetGenC workflow:
+Here's how the complete integration looks in the MetGenC workflow:
 
 ```python
-# In metgen.py process_granule function
+# In metgen.py
+from nsidc.metgen.spatial_processor import SpatialProcessor
+
 def process_granule(config, granule_file):
-    """Process a single granule with optional polygon generation."""
+    """Process a single granule with automatic spatial polygon generation."""
     
     # Existing processing...
     reader = get_reader(config, granule_file)
-    metadata = reader.extract_metadata()
+    summary = extract_granule_metadata(reader, granule_file, config)
     
-    # Add spatial polygon if enabled
-    if config.get('spatial', {}).get('enabled', False):
-        from nsidc.metgen.spatial import create_flightline_polygon
-        
-        # Get coordinates from reader
-        coords = reader.get_coordinates()
-        
-        if coords and len(coords['longitude']) > 0:
-            # Generate polygon
-            polygon, poly_metadata = create_flightline_polygon(
-                coords['longitude'],
-                coords['latitude']
-            )
-            
-            # Update metadata with polygon
-            metadata['SpatialExtent'] = convert_polygon_to_ummg(polygon)
-            metadata['ProcessingInformation']['PolygonGeneration'] = poly_metadata
-            
-            # Log results
-            print(f"Generated polygon: {poly_metadata['vertices']} vertices, "
-                  f"{poly_metadata['final_data_coverage']:.1%} coverage")
+    # Get spatial representation and geometry from existing logic
+    gsr = determine_granule_spatial_representation(reader, config)
+    geometry = extract_spatial_geometry(reader, config)
     
-    # Continue with existing workflow...
-    return metadata
+    # NEW: Use SpatialProcessor for spatial extent generation
+    processor = SpatialProcessor(config)
+    
+    # Get coordinate data from reader if available for enhanced polygon generation
+    coordinate_data = None
+    if hasattr(reader, 'get_coordinate_data'):
+        coordinate_data = reader.get_coordinate_data()
+    
+    # Process spatial extent with automatic polygon generation when appropriate
+    summary["spatial_extent"] = processor.process_spatial_extent(
+        spatial_representation=gsr,
+        spatial_values=geometry,
+        collection_name=config.get('global', {}).get('auth_id', ''),
+        data_file_path=granule_file,
+        coordinate_data=coordinate_data
+    )
+    
+    # Continue with existing UMM-G generation...
+    return generate_ummg_metadata(summary, config)
+
+# Alternative: Simple drop-in replacement
+def process_granule_simple(config, granule_file):
+    """Simple integration using convenience function."""
+    
+    # Existing processing...
+    summary = extract_granule_metadata_existing_way()
+    
+    # Replace this line:
+    # summary["spatial_extent"] = populate_spatial(gsr, summary["geometry"])
+    
+    # With this:
+    from nsidc.metgen.spatial_processor import process_spatial_extent_with_polygon_generation
+    
+    summary["spatial_extent"] = process_spatial_extent_with_polygon_generation(
+        config=config,
+        spatial_representation=gsr, 
+        spatial_values=summary["geometry"],
+        collection_name=config.get('global', {}).get('auth_id', ''),
+        data_file_path=granule_file
+    )
+    
+    return summary
+```
+
+### Rules-Based Processing
+
+The SpatialProcessor automatically applies project rules:
+
+```python
+# Example rule evaluation for different scenarios:
+
+# LVISF2 collection with 1000 geodetic points → Polygon generated
+# MODIS collection with 4 cartesian points → Bounding rectangle (no polygon)  
+# Generic collection with 50 geodetic points → Polygon generated
+# Collection with 1 geodetic point → Point geometry (no polygon)
+# .spatial file with 5 geodetic points → Polygon generated
+
+# Configuration controls overall enable/disable:
+config = {
+    'spatial': {
+        'enabled': True,        # Master switch
+        'target_coverage': 0.98 # Coverage goal for generated polygons
+    }
+}
 ```
 
 ## Error Handling
