@@ -98,9 +98,9 @@ def _get_configuration_value(
     # Check overrides first
     if overrides.get(name) is not None:
         return overrides.get(name)
-    
+
     vars = {"environment": environment}
-    
+
     # Helper function to get typed value from a section
     def get_typed_value(section_name):
         if value_type is bool:
@@ -111,7 +111,7 @@ def _get_configuration_value(
             return config_parser.getfloat(section_name, name)
         else:
             return config_parser.get(section_name, name, vars=vars)
-    
+
     # Try to get from specified section first
     try:
         return get_typed_value(section)
