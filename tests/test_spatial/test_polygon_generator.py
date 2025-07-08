@@ -74,7 +74,7 @@ class TestPolygonGenerator:
         assert polygon.is_valid
         assert metadata["vertices"] >= 3
         assert metadata["final_data_coverage"] >= 0.90
-        
+
         # Should handle the complexity without excessive vertices
         assert metadata["vertices"] <= 150
 
@@ -88,7 +88,7 @@ class TestPolygonGenerator:
         assert polygon.is_valid
         assert metadata["data_points"] == len(lon)
         assert metadata["final_data_coverage"] >= 0.90
-        
+
         # Sparse data should still produce reasonable polygon
         assert metadata["vertices"] >= 3
 
@@ -101,7 +101,7 @@ class TestPolygonGenerator:
         assert isinstance(polygon, Polygon)
         assert polygon.is_valid
         assert metadata["data_points"] == len(lon)
-        assert metadata.get("subsampling_used", False) == True
+        assert metadata.get("subsampling_used", False) is True
         assert metadata.get("subsampled_point_count", 0) < len(lon)
         assert metadata["final_data_coverage"] >= 0.90
 
@@ -115,14 +115,14 @@ class TestPolygonGenerator:
         assert polygon.is_valid
         assert metadata["vertices"] >= 3
         assert metadata["final_data_coverage"] >= 0.90
-        
+
         # Should handle antimeridian crossing without issues
         assert metadata["data_points"] == len(lon)
 
     def test_coverage_enhancement(self, simple_flightline):
         """Test that coverage enhancement works when initial coverage is low."""
         lon, lat = simple_flightline
-        
+
         # Use a subset to potentially trigger coverage enhancement
         subset_indices = np.arange(0, len(lon), 10)  # Every 10th point
         lon_subset = lon[subset_indices]
@@ -133,10 +133,10 @@ class TestPolygonGenerator:
         assert isinstance(polygon, Polygon)
         assert polygon.is_valid
         assert metadata["final_data_coverage"] >= 0.90
-        
+
         # Should apply buffering if needed
         if metadata["initial_data_coverage"] < 0.98:
-            assert metadata.get("coverage_enhanced", False) == True
+            assert metadata.get("coverage_enhanced", False) is False
 
     def test_data_coverage_calculation(self, simple_flightline):
         """Test that data coverage is calculated correctly."""
@@ -152,7 +152,7 @@ class TestPolygonGenerator:
 
         manual_coverage = points_inside / len(lon)
         reported_coverage = metadata["final_data_coverage"]
-        
+
         # Should be close (allowing for sampling differences)
         assert abs(manual_coverage - reported_coverage) < 0.05
 
@@ -161,7 +161,7 @@ class TestPolygonGenerator:
         # Empty data
         lon = np.array([])
         lat = np.array([])
-        
+
         polygon, metadata = create_flightline_polygon(lon, lat)
         assert polygon is None or polygon.is_empty
         assert metadata["data_points"] == 0
@@ -169,7 +169,7 @@ class TestPolygonGenerator:
         # Single point
         lon = np.array([-120])
         lat = np.array([35])
-        
+
         polygon, metadata = create_flightline_polygon(lon, lat)
         assert isinstance(polygon, Polygon)
         assert polygon.is_valid
@@ -179,7 +179,7 @@ class TestPolygonGenerator:
         # Two points
         lon = np.array([-120, -119])
         lat = np.array([35, 35.5])
-        
+
         polygon, metadata = create_flightline_polygon(lon, lat)
         assert isinstance(polygon, Polygon)
         assert polygon.is_valid
@@ -191,25 +191,25 @@ class TestPolygonGenerator:
         # Create small dataset (< 100 points)
         lon = np.linspace(-120, -119, 50)
         lat = np.linspace(35, 35.5, 50)
-        
+
         polygon, metadata = create_flightline_polygon(lon, lat)
-        
+
         assert isinstance(polygon, Polygon)
         assert polygon.is_valid
         assert metadata["data_points"] == 50
         assert metadata["final_data_coverage"] >= 0.90
-        
+
         # Should not use subsampling for small datasets
-        assert metadata.get("subsampling_used", False) == False
+        assert metadata.get("subsampling_used", False) is False
 
     def test_convex_hull_fallback(self):
         """Test fallback to convex hull when concave hull fails."""
         # Create degenerate data that might cause concave hull to fail
         lon = np.array([-120, -120, -120])  # All same longitude
         lat = np.array([35, 35.1, 35.2])
-        
+
         polygon, metadata = create_flightline_polygon(lon, lat)
-        
+
         # Should still produce a valid polygon
         assert isinstance(polygon, Polygon)
         assert polygon.is_valid
@@ -218,22 +218,22 @@ class TestPolygonGenerator:
     def test_metadata_completeness(self, simple_flightline):
         """Test that metadata contains all expected fields."""
         lon, lat = simple_flightline
-        
+
         polygon, metadata = create_flightline_polygon(lon, lat)
-        
+
         # Required metadata fields
         required_fields = [
             "method",
-            "data_points", 
+            "data_points",
             "vertices",
             "generation_time_seconds",
             "final_data_coverage",
             "polygon_area"
         ]
-        
+
         for field in required_fields:
             assert field in metadata, f"Missing required field: {field}"
-            
+
         # Verify types
         assert isinstance(metadata["method"], str)
         assert isinstance(metadata["data_points"], int)
@@ -245,9 +245,9 @@ class TestPolygonGenerator:
     def test_performance_timing(self, simple_flightline):
         """Test that generation completes in reasonable time."""
         lon, lat = simple_flightline
-        
+
         polygon, metadata = create_flightline_polygon(lon, lat)
-        
+
         # Should complete quickly for test data
         assert metadata["generation_time_seconds"] < 5.0
         assert metadata["generation_time_seconds"] > 0
@@ -255,42 +255,42 @@ class TestPolygonGenerator:
     def test_polygon_validity(self, complex_flightline):
         """Test that generated polygons are always valid."""
         lon, lat = complex_flightline
-        
+
         polygon, metadata = create_flightline_polygon(lon, lat)
-        
+
         assert polygon.is_valid
         assert not polygon.is_empty
         assert polygon.geom_type == "Polygon"
-        
+
         # Should have reasonable area
         assert polygon.area > 0
 
     def test_vertex_count_reasonable(self, simple_flightline):
         """Test that vertex counts are reasonable."""
         lon, lat = simple_flightline
-        
+
         polygon, metadata = create_flightline_polygon(lon, lat)
-        
+
         # Should have reasonable vertex count
         vertices = metadata["vertices"]
         assert vertices >= 3  # Minimum for polygon
         assert vertices <= 200  # Maximum reasonable limit
-        
+
         # For simple flightline, should be quite manageable
         assert vertices <= 100
 
     def test_coverage_quality_tradeoff(self, complex_flightline):
         """Test that algorithm balances coverage and vertex count."""
         lon, lat = complex_flightline
-        
+
         polygon, metadata = create_flightline_polygon(lon, lat)
-        
+
         # Should achieve reasonable coverage (relaxed threshold for complex curves)
         assert metadata["final_data_coverage"] >= 0.90
-        
+
         # While maintaining reasonable vertex count
         assert metadata["vertices"] <= 150
-        
+
         # Area should be reasonable (not massively overblown)
         if metadata.get("area_increase_ratio"):
             assert metadata["area_increase_ratio"] <= 5.0
@@ -298,11 +298,11 @@ class TestPolygonGenerator:
     def test_reproducibility(self, simple_flightline):
         """Test that results are reproducible."""
         lon, lat = simple_flightline
-        
+
         # Generate polygon twice
         polygon1, metadata1 = create_flightline_polygon(lon, lat)
         polygon2, metadata2 = create_flightline_polygon(lon, lat)
-        
+
         # Results should be identical (or very close)
         assert metadata1["vertices"] == metadata2["vertices"]
         assert abs(metadata1["final_data_coverage"] - metadata2["final_data_coverage"]) < 0.01
