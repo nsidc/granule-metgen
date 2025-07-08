@@ -45,6 +45,9 @@ class Config:
     date_modified: Optional[str] = None
     browse_regex: Optional[str] = None
     granule_regex: Optional[str] = None
+    spatial_polygon_enabled: Optional[bool] = False
+    spatial_polygon_target_coverage: Optional[float] = None
+    spatial_polygon_max_vertices: Optional[int] = None
 
     def show(self):
         # TODO: add section headings in the right spot
@@ -92,19 +95,32 @@ def _get_configuration_value(
     Returns a value from the provided config parser; any value for the key that
     is provided in the 'overrides' dictionary will take precedence.
     """
+    # Check overrides first
+    if overrides.get(name) is not None:
+        return overrides.get(name)
+    
     vars = {"environment": environment}
-    if overrides.get(name) is None:
+    
+    # Helper function to get typed value from a section
+    def get_typed_value(section_name):
+        if value_type is bool:
+            return config_parser.getboolean(section_name, name)
+        elif value_type is int:
+            return config_parser.getint(section_name, name)
+        elif value_type is float:
+            return config_parser.getfloat(section_name, name)
+        else:
+            return config_parser.get(section_name, name, vars=vars)
+    
+    # Try to get from specified section first
+    try:
+        return get_typed_value(section)
+    except Exception:
+        # If we can't get the value (missing section or option), try DEFAULT
         try:
-            if value_type is bool:
-                return config_parser.getboolean(section, name)
-            elif value_type is int:
-                return config_parser.getint(section, name)
-            else:
-                return config_parser.get(section, name, vars=vars)
+            return get_typed_value("DEFAULT")
         except Exception:
             return None
-    else:
-        return overrides.get(name)
 
 
 def configuration(
@@ -125,6 +141,9 @@ def configuration(
         "dry_run": constants.DEFAULT_DRY_RUN,
         "browse_regex": constants.DEFAULT_BROWSE_REGEX,
         "collection_geometry_override": constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE,
+        "spatial_polygon_enabled": constants.DEFAULT_SPATIAL_POLYGON_ENABLED,
+        "spatial_polygon_target_coverage": constants.DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE,
+        "spatial_polygon_max_vertices": constants.DEFAULT_SPATIAL_POLYGON_MAX_VERTICES,
     }
     try:
         return Config(
@@ -255,6 +274,30 @@ def configuration(
                 config_parser,
                 overrides,
             ),
+            _get_configuration_value(
+                environment,
+                "Spatial",
+                "spatial_polygon_enabled",
+                bool,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Spatial",
+                "spatial_polygon_target_coverage",
+                float,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Spatial",
+                "spatial_polygon_max_vertices",
+                int,
+                config_parser,
+                overrides,
+            ),
         )
     except Exception as e:
         raise Exception("Unable to read the configuration file", e)
@@ -272,12 +315,12 @@ def validate(configuration):
         ],
         [
             "premet_dir",
-            lambda dir: os.path.exists(dir) if dir else lambda _: True,
+            lambda dir: os.path.exists(dir) if dir else True,
             "The premet_dir does not exist.",
         ],
         [
             "spatial_dir",
-            lambda dir: os.path.exists(dir) if dir else lambda _: True,
+            lambda dir: os.path.exists(dir) if dir else True,
             "The spatial_dir does not exist.",
         ],
         [
@@ -309,6 +352,16 @@ def validate(configuration):
             "number",
             lambda number: 0 < number,
             "The number of granules to process must be positive.",
+        ],
+        [
+            "spatial_polygon_target_coverage",
+            lambda coverage: 0.80 <= coverage <= 1.0,
+            "The spatial polygon target coverage must be between 0.80 and 1.0.",
+        ],
+        [
+            "spatial_polygon_max_vertices",
+            lambda vertices: 10 <= vertices <= 1000,
+            "The spatial polygon max vertices must be between 10 and 1000.",
         ],
     ]
     errors = [

@@ -43,6 +43,9 @@ def expected_keys():
             "date_modified",
             "browse_regex",
             "granule_regex",
+            "spatial_polygon_enabled",
+            "spatial_polygon_target_coverage",
+            "spatial_polygon_max_vertices",
         ]
     )
 
@@ -219,7 +222,10 @@ def test_validate_with_invalid_checks(m1, m2, m3, cfg_parser):
         ("spatial_dir", "fake_spatial_dir"),
     ],
 )
-def test_validates_optional_dirs_with_values(cfg_parser, dir_type, dir_path):
+@patch("nsidc.metgen.metgen.os.path.exists", side_effect=lambda path: path not in ["fake_premet_dir", "fake_spatial_dir"])
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_validates_optional_dirs_with_values(m1, m2, m3, cfg_parser, dir_type, dir_path):
     cfg_parser.set("Source", dir_type, dir_path)
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
@@ -234,12 +240,15 @@ def test_validates_optional_dirs_with_values(cfg_parser, dir_type, dir_path):
         ("spatial_dir", ""),
     ],
 )
-def test_validates_optional_dirs_without_values(cfg_parser, dir_type, dir_path):
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_validates_optional_dirs_without_values(m1, m2, m3, cfg_parser, dir_type, dir_path):
     cfg_parser.set("Source", dir_type, dir_path)
     cfg = config.configuration(cfg_parser, {})
-    with pytest.raises(config.ValidationError) as exc_info:
-        config.validate(cfg)
-    assert f"The {dir_type} does not exist." not in exc_info.value.errors
+    # When optional dirs are empty strings, validation should pass
+    valid = config.validate(cfg)
+    assert valid is True
 
 
 @patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
@@ -250,3 +259,105 @@ def test_prevents_geometry_clash(cfg_parser):
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate_spatial_source(cfg)
     assert re.search("Cannot declare both", exc_info.value.errors[0])
+
+
+def test_spatial_polygon_configuration_defaults(cfg_parser):
+    """Test that spatial polygon configuration has correct defaults."""
+    cfg = config.configuration(cfg_parser, {})
+    assert cfg.spatial_polygon_enabled is True
+    assert cfg.spatial_polygon_target_coverage == 0.98
+    assert cfg.spatial_polygon_max_vertices == 100
+
+
+def test_spatial_polygon_configuration_from_ini(cfg_parser):
+    """Test reading spatial polygon configuration from ini file."""
+    cfg_parser["Spatial"] = {
+        "spatial_polygon_enabled": "False",
+        "spatial_polygon_target_coverage": "0.95",
+        "spatial_polygon_max_vertices": "150",
+    }
+    cfg = config.configuration(cfg_parser, {})
+    assert cfg.spatial_polygon_enabled is False
+    assert cfg.spatial_polygon_target_coverage == 0.95
+    assert cfg.spatial_polygon_max_vertices == 150
+
+
+def test_spatial_polygon_configuration_overrides(cfg_parser):
+    """Test that overrides work for spatial polygon configuration."""
+    overrides = {
+        "spatial_polygon_enabled": True,
+        "spatial_polygon_target_coverage": 0.90,
+        "spatial_polygon_max_vertices": 200,
+    }
+    cfg = config.configuration(cfg_parser, overrides)
+    assert cfg.spatial_polygon_enabled is True
+    assert cfg.spatial_polygon_target_coverage == 0.90
+    assert cfg.spatial_polygon_max_vertices == 200
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_spatial_polygon_target_coverage_validation_valid(m1, m2, m3, cfg_parser):
+    """Test validation of valid spatial polygon target coverage values."""
+    cfg_parser["Spatial"] = {"spatial_polygon_target_coverage": "0.85"}
+    cfg = config.configuration(cfg_parser, {})
+    assert config.validate(cfg) is True
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_spatial_polygon_target_coverage_validation_too_low(m1, m2, m3, cfg_parser):
+    """Test validation rejects spatial polygon target coverage below 0.80."""
+    cfg_parser["Spatial"] = {"spatial_polygon_target_coverage": "0.75"}
+    cfg = config.configuration(cfg_parser, {})
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+    assert "The spatial polygon target coverage must be between 0.80 and 1.0." in exc_info.value.errors
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_spatial_polygon_target_coverage_validation_too_high(m1, m2, m3, cfg_parser):
+    """Test validation rejects spatial polygon target coverage above 1.0."""
+    cfg_parser["Spatial"] = {"spatial_polygon_target_coverage": "1.1"}
+    cfg = config.configuration(cfg_parser, {})
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+    assert "The spatial polygon target coverage must be between 0.80 and 1.0." in exc_info.value.errors
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_spatial_polygon_max_vertices_validation_valid(m1, m2, m3, cfg_parser):
+    """Test validation of valid spatial polygon max vertices values."""
+    cfg_parser["Spatial"] = {"spatial_polygon_max_vertices": "500"}
+    cfg = config.configuration(cfg_parser, {})
+    assert config.validate(cfg) is True
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_spatial_polygon_max_vertices_validation_too_low(m1, m2, m3, cfg_parser):
+    """Test validation rejects spatial polygon max vertices below 10."""
+    cfg_parser["Spatial"] = {"spatial_polygon_max_vertices": "5"}
+    cfg = config.configuration(cfg_parser, {})
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+    assert "The spatial polygon max vertices must be between 10 and 1000." in exc_info.value.errors
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_spatial_polygon_max_vertices_validation_too_high(m1, m2, m3, cfg_parser):
+    """Test validation rejects spatial polygon max vertices above 1000."""
+    cfg_parser["Spatial"] = {"spatial_polygon_max_vertices": "1500"}
+    cfg = config.configuration(cfg_parser, {})
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+    assert "The spatial polygon max vertices must be between 10 and 1000." in exc_info.value.errors
