@@ -6,29 +6,41 @@ This guide explains how to integrate the spatial polygon generation module into 
 
 The spatial module has been simplified to use a single, optimized polygon generation approach that combines concave hull generation with intelligent buffering to achieve 98%+ data coverage with minimal vertices.
 
-## 1. Configuration Integration
+## 1. Configuration Integration ✅ COMPLETED
 
 Add spatial polygon options to MetGenC's configuration schema:
 
-### In `src/nsidc/metgen/config.py`:
+### Configuration Changes Implemented:
 
+1. **Added to `src/nsidc/metgen/constants.py`:**
 ```python
-# Add to configuration schema
-SPATIAL_SCHEMA = {
-    'enabled': {'type': 'boolean', 'default': False},
-    'target_coverage': {'type': 'float', 'default': 0.98, 'min': 0.80, 'max': 1.0},
-    'max_vertices': {'type': 'integer', 'default': 100, 'min': 10, 'max': 200}
-}
+# Spatial polygon defaults
+DEFAULT_SPATIAL_POLYGON_ENABLED = True
+DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE = 0.98
+DEFAULT_SPATIAL_POLYGON_MAX_VERTICES = 100
 ```
+
+2. **Added to `src/nsidc/metgen/config.py` Config dataclass:**
+```python
+spatial_polygon_enabled: Optional[bool] = False
+spatial_polygon_target_coverage: Optional[float] = None
+spatial_polygon_max_vertices: Optional[int] = None
+```
+
+3. **Added validation rules in `config.py`:**
+- `spatial_polygon_target_coverage` must be between 0.80 and 1.0
+- `spatial_polygon_max_vertices` must be between 10 and 1000
 
 ### In configuration `.ini` files:
 
 ```ini
-[spatial]
-enabled = true
-target_coverage = 0.98
-max_vertices = 100
+[Spatial]
+spatial_polygon_enabled = true
+spatial_polygon_target_coverage = 0.98
+spatial_polygon_max_vertices = 100
 ```
+
+Note: The section name is capitalized as `[Spatial]` to maintain consistency with other configuration sections like `[Source]`, `[Collection]`, etc. The default for `spatial_polygon_enabled` is `True`.
 
 ## 2. Spatial Processor Integration
 
@@ -250,9 +262,10 @@ LIDAR flightline data (LVIS, ILVIS2).
 ### Usage
 Enable in your configuration:
 ```ini
-[spatial]
-enabled = true
-target_coverage = 0.98
+[Spatial]
+spatial_polygon_enabled = true
+spatial_polygon_target_coverage = 0.98
+spatial_polygon_max_vertices = 100
 ```
 
 Compare with CMR:
@@ -389,34 +402,32 @@ def safe_polygon_generation(lon, lat):
         return None, None
 ```
 
-## Configuration Schema Integration
+## Configuration Schema Integration ✅ COMPLETED
+
+The spatial configuration has been fully integrated into MetGenC's configuration system:
 
 ```python
-# Complete spatial configuration schema
-SPATIAL_CONFIG_SCHEMA = {
-    'type': 'object',
-    'properties': {
-        'enabled': {'type': 'boolean', 'default': False},
-        'target_coverage': {
-            'type': 'number',
-            'minimum': 0.8,
-            'maximum': 1.0,
-            'default': 0.98
-        },
-        'max_vertices': {
-            'type': 'integer', 
-            'minimum': 10,
-            'maximum': 200,
-            'default': 100
-        },
-        'longitude_column': {'type': 'string', 'default': 'longitude'},
-        'latitude_column': {'type': 'string', 'default': 'latitude'},
-        'enable_parallel': {'type': 'boolean', 'default': True},
-        'max_workers': {'type': 'integer', 'minimum': 1, 'maximum': 8, 'default': 4}
-    },
-    'additionalProperties': False
-}
+# Configuration fields in Config dataclass:
+spatial_polygon_enabled: Optional[bool] = False  # Default handled via constants
+spatial_polygon_target_coverage: Optional[float] = None  # Default: 0.98
+spatial_polygon_max_vertices: Optional[int] = None  # Default: 100
+
+# Constants defined in constants.py:
+DEFAULT_SPATIAL_POLYGON_ENABLED = True
+DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE = 0.98
+DEFAULT_SPATIAL_POLYGON_MAX_VERTICES = 100
+
+# Validation rules:
+- spatial_polygon_target_coverage: 0.80 <= value <= 1.0
+- spatial_polygon_max_vertices: 10 <= value <= 1000
 ```
+
+The configuration follows MetGenC's existing patterns:
+- Uses capitalized section name `[Spatial]`
+- Defaults are defined in constants.py
+- Config dataclass uses None/False for optional fields
+- Validation is performed in the validate() function
+- Full test coverage for all configuration scenarios
 
 ## Key Simplifications Made
 
