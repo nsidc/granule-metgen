@@ -127,6 +127,12 @@ def create_flightline_polygon(lon, lat):
 
             multipoint = MultiPoint(points)
             polygon = multipoint.convex_hull
+            
+            # Ensure we have a polygon, not a line/point
+            if polygon.geom_type != "Polygon":
+                polygon = polygon.buffer(0.01)  # Small buffer to create polygon
+                metadata["buffered_degenerate"] = True
+                
             metadata["method"] = "convex_hull_fallback"
         else:
             # Create polygon from hull points
@@ -149,6 +155,12 @@ def create_flightline_polygon(lon, lat):
 
         multipoint = MultiPoint(points)
         polygon = multipoint.convex_hull
+        
+        # Ensure we have a polygon, not a line/point
+        if polygon.geom_type != "Polygon":
+            polygon = polygon.buffer(0.01)  # Small buffer to create polygon
+            metadata["buffered_degenerate"] = True
+            
         metadata["method"] = "convex_hull_fallback"
         metadata["error"] = str(e)
 
