@@ -228,7 +228,7 @@ class TestPolygonGenerator:
             "vertices",
             "generation_time_seconds",
             "final_data_coverage",
-            "polygon_area"
+            "polygon_area",
         ]
 
         for field in required_fields:
@@ -305,5 +305,8 @@ class TestPolygonGenerator:
 
         # Results should be identical (or very close)
         assert metadata1["vertices"] == metadata2["vertices"]
-        assert abs(metadata1["final_data_coverage"] - metadata2["final_data_coverage"]) < 0.01
+        assert (
+            abs(metadata1["final_data_coverage"] - metadata2["final_data_coverage"])
+            < 0.01
+        )
         assert abs(metadata1["polygon_area"] - metadata2["polygon_area"]) < 1e-10

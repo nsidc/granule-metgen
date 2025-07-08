@@ -47,11 +47,13 @@ def create_flightline_polygon(lon, lat):
     }
 
     print(f"\n[StandardPolygonGenerator] Processing {len(lon)} points")
-    
+
     # For very small datasets, use more conservative parameters
     is_small_dataset = len(lon) < 100
     if is_small_dataset:
-        print(f"  Small dataset detected ({len(lon)} points) - using conservative parameters")
+        print(
+            f"  Small dataset detected ({len(lon)} points) - using conservative parameters"
+        )
 
     # Handle edge cases
     if len(lon) < 3:
@@ -72,10 +74,10 @@ def create_flightline_polygon(lon, lat):
     # Preserve original coordinates for coverage calculations
     original_lon = np.array(lon)
     original_lat = np.array(lat)
-    
+
     # Handle antimeridian crossing before creating points array
     lon = _handle_antimeridian_crossing(lon)
-    
+
     # Create points array
     points = np.column_stack((lon, lat))
 
@@ -84,18 +86,22 @@ def create_flightline_polygon(lon, lat):
     if len(points) > 8000:
         # More conservative subsampling, preserving more boundary points
         step = len(points) // 5000  # Target around 5000 points (increased from 3000)
-        
+
         # Combine main sampling with boundary preservation
-        
+
         # Combine and remove duplicates
         combined_indices = set()
         combined_indices.update(range(0, len(points), step))  # Main sampling
-        combined_indices.update(range(min(100, len(points)//10)))  # Start boundary
-        combined_indices.update(range(len(points) - min(100, len(points)//10), len(points)))  # End boundary
-        
+        combined_indices.update(range(min(100, len(points) // 10)))  # Start boundary
+        combined_indices.update(
+            range(len(points) - min(100, len(points) // 10), len(points))
+        )  # End boundary
+
         points = points[sorted(list(combined_indices))]
-        
-        print(f"  Smart subsampled from {original_point_count} to {len(points)} points (preserving boundaries)")
+
+        print(
+            f"  Smart subsampled from {original_point_count} to {len(points)} points (preserving boundaries)"
+        )
         metadata["subsampling_used"] = True
         metadata["subsampling_method"] = "boundary_preserving"
         metadata["original_point_count"] = original_point_count
@@ -128,24 +134,28 @@ def create_flightline_polygon(lon, lat):
 
             multipoint = MultiPoint(points)
             polygon = multipoint.convex_hull
-            
+
             # Ensure we have a polygon, not a line/point
             if polygon.geom_type != "Polygon":
                 polygon = polygon.buffer(0.01)  # Small buffer to create polygon
                 metadata["buffered_degenerate"] = True
-                
+
             metadata["method"] = "convex_hull_fallback"
         else:
             # Create polygon from hull points
             polygon = Polygon(hull_points)
             metadata["hull_points"] = len(hull_points)
-            
+
             # Simple vertex reduction to keep polygons manageable
             if hasattr(polygon, "exterior") and len(polygon.exterior.coords) > 100:
                 # Use basic simplification to reduce vertex count without obsessing over coverage
                 tolerance = length_threshold * 0.5  # Conservative simplification
                 simplified = polygon.simplify(tolerance, preserve_topology=True)
-                if simplified and not simplified.is_empty and hasattr(simplified, "exterior"):
+                if (
+                    simplified
+                    and not simplified.is_empty
+                    and hasattr(simplified, "exterior")
+                ):
                     polygon = simplified
                     metadata["simplified"] = True
                     metadata["simplify_tolerance"] = tolerance
@@ -156,50 +166,78 @@ def create_flightline_polygon(lon, lat):
 
         multipoint = MultiPoint(points)
         polygon = multipoint.convex_hull
-        
+
         # Ensure we have a polygon, not a line/point
         if polygon.geom_type != "Polygon":
             polygon = polygon.buffer(0.01)  # Small buffer to create polygon
             metadata["buffered_degenerate"] = True
-            
+
         metadata["method"] = "convex_hull_fallback"
         metadata["error"] = str(e)
 
     # Ensure valid polygon and validate coverage
     if polygon is not None:
         polygon = make_valid(polygon)
-        
+
         # Normalize longitude coordinates back to [-180, 180] range if needed
         polygon = _normalize_polygon_coordinates(polygon)
-        
+
         # Calculate coverage with original points for validation
         original_points = np.column_stack((original_lon, original_lat))
         coverage = _calculate_data_coverage(polygon, original_points)
         metadata["initial_data_coverage"] = coverage
-        
+
         # Apply buffering if coverage is below target (restored to be less restrictive)
         if coverage < 0.98:  # Back to 98% threshold
-            print(f"  Initial coverage {coverage:.1%} < 98%, applying buffer enhancement...")
-            buffered_polygon = _buffer_enhance_coverage(polygon, original_points, target_coverage=0.98)
+            print(
+                f"  Initial coverage {coverage:.1%} < 98%, applying buffer enhancement..."
+            )
+            buffered_polygon = _buffer_enhance_coverage(
+                polygon, original_points, target_coverage=0.98
+            )
             if buffered_polygon:
-                buffered_coverage = _calculate_data_coverage(buffered_polygon, original_points)
-                buffered_vertices = len(buffered_polygon.exterior.coords) - 1 if hasattr(buffered_polygon, "exterior") else 0
-                
+                buffered_coverage = _calculate_data_coverage(
+                    buffered_polygon, original_points
+                )
+                buffered_vertices = (
+                    len(buffered_polygon.exterior.coords) - 1
+                    if hasattr(buffered_polygon, "exterior")
+                    else 0
+                )
+
                 # Calculate area ratio to avoid over-buffering
                 original_area = polygon.area
                 buffered_area = buffered_polygon.area
-                area_increase = buffered_area / original_area if original_area > 0 else 1.0
-                
-                print(f"  Buffered: {buffered_coverage:.1%} coverage, {buffered_vertices} vertices, {area_increase:.1f}x area")
-                
+                area_increase = (
+                    buffered_area / original_area if original_area > 0 else 1.0
+                )
+
+                print(
+                    f"  Buffered: {buffered_coverage:.1%} coverage, {buffered_vertices} vertices, {area_increase:.1f}x area"
+                )
+
                 # More conservative acceptance criteria - avoid excessive area growth
                 coverage_improvement = buffered_coverage - coverage
-                
+
                 # Balanced acceptance: prioritize coverage but control area growth
-                if (buffered_coverage >= 0.98 and area_increase < 3.0 and buffered_vertices < 120) or \
-                   (coverage_improvement > 0.05 and area_increase < 2.5 and buffered_vertices < 100) or \
-                   (coverage_improvement > 0.03 and area_increase < 2.0 and buffered_vertices < 80) or \
-                   (coverage_improvement > 0.10 and buffered_vertices < 150):  # Accept big improvements
+                if (
+                    (
+                        buffered_coverage >= 0.98
+                        and area_increase < 3.0
+                        and buffered_vertices < 120
+                    )
+                    or (
+                        coverage_improvement > 0.05
+                        and area_increase < 2.5
+                        and buffered_vertices < 100
+                    )
+                    or (
+                        coverage_improvement > 0.03
+                        and area_increase < 2.0
+                        and buffered_vertices < 80
+                    )
+                    or (coverage_improvement > 0.10 and buffered_vertices < 150)
+                ):  # Accept big improvements
                     polygon = buffered_polygon
                     coverage = buffered_coverage
                     metadata["coverage_enhanced"] = True
@@ -208,11 +246,15 @@ def create_flightline_polygon(lon, lat):
                     metadata["post_buffer_vertices"] = buffered_vertices
                     metadata["area_increase_ratio"] = area_increase
                 else:
-                    print(f"    Rejected buffering: area increase {area_increase:.1f}x too large or insufficient improvement")
-                    
+                    print(
+                        f"    Rejected buffering: area increase {area_increase:.1f}x too large or insufficient improvement"
+                    )
+
                     # Emergency fallback: if original coverage is really bad, accept any reasonable improvement
                     if coverage < 0.85 and buffered_coverage > coverage + 0.15:
-                        print("    Emergency fallback: accepting due to very low initial coverage")
+                        print(
+                            "    Emergency fallback: accepting due to very low initial coverage"
+                        )
                         polygon = buffered_polygon
                         coverage = buffered_coverage
                         metadata["coverage_enhanced"] = True
@@ -220,7 +262,7 @@ def create_flightline_polygon(lon, lat):
                         metadata["enhancement_improvement"] = coverage_improvement
                         metadata["post_buffer_vertices"] = buffered_vertices
                         metadata["area_increase_ratio"] = area_increase
-        
+
         metadata["final_data_coverage"] = coverage
 
         # Calculate final metrics
@@ -252,7 +294,7 @@ def create_flightline_polygon(lon, lat):
 def _calculate_data_coverage(polygon, data_points, sample_size=2000):
     """
     Calculate what percentage of data points are covered by the polygon.
-    
+
     Parameters:
     -----------
     polygon : shapely.geometry.Polygon
@@ -261,37 +303,37 @@ def _calculate_data_coverage(polygon, data_points, sample_size=2000):
         Nx2 array of [lon, lat] data points
     sample_size : int
         Maximum number of points to sample for performance
-        
+
     Returns:
     --------
     float : Coverage ratio (0.0 to 1.0)
     """
     if len(data_points) == 0:
         return 0.0
-    
+
     # Sample points if dataset is large
     if len(data_points) > sample_size:
         indices = np.random.choice(len(data_points), sample_size, replace=False)
         sample_points = data_points[indices]
     else:
         sample_points = data_points
-    
+
     # Count points inside polygon
     points_inside = 0
     for point in sample_points:
         if polygon.contains(Point(point)):
             points_inside += 1
-    
+
     return points_inside / len(sample_points)
 
 
 def _buffer_enhance_coverage(polygon, data_points, target_coverage=0.98):
     """
     Enhance polygon coverage by applying a simple buffer to expand coverage.
-    
-    This is much more efficient than complex point-by-point enhancement and 
+
+    This is much more efficient than complex point-by-point enhancement and
     maintains reasonable vertex counts while improving data coverage.
-    
+
     Parameters:
     -----------
     polygon : shapely.geometry.Polygon
@@ -300,76 +342,84 @@ def _buffer_enhance_coverage(polygon, data_points, target_coverage=0.98):
         Nx2 array of [lon, lat] data points
     target_coverage : float
         Target coverage ratio to achieve
-        
+
     Returns:
     --------
     shapely.geometry.Polygon or None : Buffered polygon or None if enhancement failed
     """
     try:
         current_coverage = _calculate_data_coverage(polygon, data_points)
-        
+
         if current_coverage >= target_coverage:
             return polygon
-        
+
         # Calculate appropriate buffer size based on data characteristics
         # Use a small buffer - typically 0.001-0.005 degrees (100m-500m at equator)
         lon_range = np.ptp(data_points[:, 0])
-        lat_range = np.ptp(data_points[:, 1]) 
+        lat_range = np.ptp(data_points[:, 1])
         avg_range = (lon_range + lat_range) / 2
-        
+
         # Adaptive buffer sizing based on dataset characteristics
         is_small_dataset = len(data_points) < 100
-        
+
         if is_small_dataset:
             # For small datasets, use moderate buffering but with area control
             base_buffer = avg_range * 0.005  # Same as normal datasets
-            max_buffer = avg_range * 0.015   # Slightly more conservative max
+            max_buffer = avg_range * 0.015  # Slightly more conservative max
         else:
             # Standard buffering for larger datasets
             base_buffer = avg_range * 0.005  # 0.5%
-            max_buffer = avg_range * 0.02    # 2%
-        
+            max_buffer = avg_range * 0.02  # 2%
+
         for multiplier in [1.0, 1.5, 2.0, 3.0]:  # Removed 2.5 to be more conservative
             buffer_size = min(base_buffer * multiplier, max_buffer)
-            
+
             # Apply buffer
             buffered = polygon.buffer(buffer_size)
             buffered = make_valid(buffered)
-            
+
             # Take largest component if multipolygon
-            if hasattr(buffered, 'geoms'):
+            if hasattr(buffered, "geoms"):
                 buffered = max(buffered.geoms, key=lambda p: p.area)
-            
+
             # Smooth and simplify the buffered polygon to reduce vertex count
             smoothed = _smooth_buffered_polygon(buffered, data_points)
             if smoothed:
                 buffered = smoothed
-            
+
             # Check coverage improvement
             new_coverage = _calculate_data_coverage(buffered, data_points)
-            
+
             # Check vertex count
-            vertices = len(buffered.exterior.coords) - 1 if hasattr(buffered, "exterior") else 0
-            
+            vertices = (
+                len(buffered.exterior.coords) - 1
+                if hasattr(buffered, "exterior")
+                else 0
+            )
+
             # Accept if we improve coverage significantly (more generous acceptance)
-            if new_coverage >= target_coverage and vertices < 150:  # Increased vertex limit
+            if (
+                new_coverage >= target_coverage and vertices < 150
+            ):  # Increased vertex limit
                 return buffered
-            elif new_coverage > current_coverage + 0.03 and vertices < 80:  # Lower threshold for improvement
+            elif (
+                new_coverage > current_coverage + 0.03 and vertices < 80
+            ):  # Lower threshold for improvement
                 # Accept smaller improvement with lower vertex count
                 return buffered
-        
+
         # If no good buffer found, try one small buffer as fallback
         small_buffer = polygon.buffer(base_buffer * 0.5)
         small_buffer = make_valid(small_buffer)
-        if hasattr(small_buffer, 'geoms'):
+        if hasattr(small_buffer, "geoms"):
             small_buffer = max(small_buffer.geoms, key=lambda p: p.area)
-        
+
         fallback_coverage = _calculate_data_coverage(small_buffer, data_points)
         if fallback_coverage > current_coverage:
             return small_buffer
-        
+
         return None
-        
+
     except Exception as e:
         print(f"  Buffer enhancement failed: {e}")
         return None
@@ -378,70 +428,73 @@ def _buffer_enhance_coverage(polygon, data_points, target_coverage=0.98):
 def _smooth_buffered_polygon(polygon, data_points):
     """
     Smooth and simplify a buffered polygon to reduce vertex count while preserving coverage.
-    
+
     Parameters:
     -----------
     polygon : shapely.geometry.Polygon
         Buffered polygon to smooth
     data_points : array-like
         Original data points for coverage checking
-        
+
     Returns:
     --------
     shapely.geometry.Polygon or None : Smoothed polygon or None if failed
     """
     try:
-        if not hasattr(polygon, 'exterior'):
+        if not hasattr(polygon, "exterior"):
             return None
-            
+
         original_vertices = len(polygon.exterior.coords) - 1
         original_coverage = _calculate_data_coverage(polygon, data_points)
-        
+
         # Don't smooth if already low vertex count
         if original_vertices <= 30:
             return polygon
-            
+
         # Calculate data range for tolerance scaling
         lon_range = np.ptp(data_points[:, 0])
         lat_range = np.ptp(data_points[:, 1])
         avg_range = (lon_range + lat_range) / 2
-        
+
         # Try different simplification tolerances
         base_tolerance = avg_range * 0.001  # Start with 0.1% of data range
-        
+
         best_polygon = polygon
         best_vertices = original_vertices
-        
+
         for multiplier in [0.5, 1.0, 1.5, 2.0, 2.5]:
             tolerance = base_tolerance * multiplier
-            
+
             # Apply simplification
             simplified = polygon.simplify(tolerance, preserve_topology=True)
             simplified = make_valid(simplified)
-            
-            if not hasattr(simplified, 'exterior'):
+
+            if not hasattr(simplified, "exterior"):
                 continue
-                
+
             # Check vertex reduction and coverage preservation
             new_vertices = len(simplified.exterior.coords) - 1
             new_coverage = _calculate_data_coverage(simplified, data_points)
-            
+
             # Accept if we reduce vertices significantly while keeping high coverage
             vertex_reduction = (original_vertices - new_vertices) / original_vertices
             coverage_loss = original_coverage - new_coverage
-            
+
             # Good trade-off: reduce vertices by 25%+ with minimal coverage loss
-            if (vertex_reduction >= 0.25 and coverage_loss <= 0.02 and 
-                new_vertices < best_vertices):
+            if (
+                vertex_reduction >= 0.25
+                and coverage_loss <= 0.02
+                and new_vertices < best_vertices
+            ):
                 best_polygon = simplified
                 best_vertices = new_vertices
-        
+
         # Return smoothed version only if it's meaningfully better
         if best_vertices < original_vertices * 0.8:  # At least 20% vertex reduction
             return best_polygon
         else:
             return polygon
-            
+
     except Exception as e:
         print(f"  Smoothing failed: {e}")
         return polygon
@@ -450,100 +503,104 @@ def _smooth_buffered_polygon(polygon, data_points):
 def _handle_antimeridian_crossing(lon):
     """
     Detect and handle antimeridian crossing in longitude data.
-    
+
     When a flightline crosses the antimeridian (±180° longitude), coordinates
     can jump from ~179° to ~-179°, creating artificial longitude ranges of ~358°.
     This breaks polygon generation algorithms.
-    
+
     Strategy: Convert to a continuous longitude range by adding 360° to negative
     longitudes when crossing is detected.
-    
+
     Parameters:
     -----------
     lon : array-like
         Array of longitude values
-        
+
     Returns:
     --------
     array : Processed longitude values
     """
     lon = np.array(lon)
-    
+
     if len(lon) < 2:
         return lon
-        
+
     # Detect potential antimeridian crossing
     lon_range = np.ptp(lon)  # Peak-to-peak (max - min)
-    
+
     # If longitude range > 180°, likely antimeridian crossing
     if lon_range > 180:
         print(f"  Antimeridian crossing detected (range: {lon_range:.1f}°)")
-        
+
         # Find the largest gap between consecutive longitudes
         lon_sorted_idx = np.argsort(lon)
         lon_sorted = lon[lon_sorted_idx]
-        
+
         # Calculate gaps between consecutive sorted longitudes
         gaps = np.diff(lon_sorted)
         max_gap_idx = np.argmax(gaps)
         max_gap = gaps[max_gap_idx]
-        
+
         # If the largest gap is > 180°, it's likely the antimeridian crossing
         if max_gap > 180:
             # Split point: longitude value after the largest gap
             split_lon = lon_sorted[max_gap_idx + 1]
-            
+
             # Add 360° to all longitudes less than the split point
             # This creates a continuous longitude range
             adjusted_lon = lon.copy()
             adjusted_lon[lon < split_lon] += 360
-            
+
             new_range = np.ptp(adjusted_lon)
-            print(f"  Adjusted longitude range: {new_range:.1f}° (split at {split_lon:.1f}°)")
-            
+            print(
+                f"  Adjusted longitude range: {new_range:.1f}° (split at {split_lon:.1f}°)"
+            )
+
             return adjusted_lon
         else:
             # Large range but no clear crossing point - might be global data
-            print(f"  Large longitude range ({lon_range:.1f}°) but no clear antimeridian crossing")
+            print(
+                f"  Large longitude range ({lon_range:.1f}°) but no clear antimeridian crossing"
+            )
             return lon
-    
+
     return lon
 
 
 def _normalize_polygon_coordinates(polygon):
     """
     Normalize polygon coordinates to standard [-180, 180] longitude range.
-    
+
     After antimeridian processing, polygon coordinates might be outside the
     standard longitude range (e.g., 270° instead of -90°). This function
     normalizes them back to [-180, 180] for proper GeoJSON output.
-    
+
     Parameters:
     -----------
     polygon : shapely.geometry.Polygon
         Polygon with potentially unnormalized coordinates
-        
+
     Returns:
     --------
     shapely.geometry.Polygon : Polygon with normalized coordinates
     """
     try:
-        if not hasattr(polygon, 'exterior'):
+        if not hasattr(polygon, "exterior"):
             return polygon
-            
+
         # Get exterior coordinates
         coords = list(polygon.exterior.coords)
-        
+
         # Normalize longitude coordinates
         normalized_coords = []
         for lon, lat in coords:
             # Normalize longitude to [-180, 180] range
             normalized_lon = ((lon + 180) % 360) - 180
             normalized_coords.append((normalized_lon, lat))
-        
+
         # Create new polygon with normalized coordinates
         normalized_polygon = Polygon(normalized_coords)
-        
+
         # Handle any interior holes (though rare for our use case)
         if polygon.interiors:
             holes = []
@@ -554,11 +611,9 @@ def _normalize_polygon_coordinates(polygon):
                     hole_coords.append((normalized_lon, lat))
                 holes.append(hole_coords)
             normalized_polygon = Polygon(normalized_coords, holes)
-        
+
         return make_valid(normalized_polygon)
-        
+
     except Exception as e:
         print(f"  Coordinate normalization failed: {e}")
         return polygon
-
-

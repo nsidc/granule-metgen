@@ -168,45 +168,51 @@ class CMRClient:
 
         # For small collections (<=2000 granules), just get all and sample
         if total_hits <= 2000:
-            print(f"Small collection detected, fetching all {total_hits} granules for sampling...")
+            print(
+                f"Small collection detected, fetching all {total_hits} granules for sampling..."
+            )
             all_granules = self.query_granules(
                 short_name, provider=provider, limit=total_hits
             )
             import random
 
             return random.sample(all_granules, min(count, len(all_granules)))
-        
-        # For medium collections (2K-10K), use pagination-based sampling  
+
+        # For medium collections (2K-10K), use pagination-based sampling
         elif total_hits <= 10000 and count <= 50:
             print("Medium collection detected, using pagination sampling...")
             import random
-            
+
             # Calculate random page offsets to sample from different parts of the collection
-            max_pages = min(total_hits // 20, 100)  # 20 granules per page, max 100 pages
-            random_pages = random.sample(range(max_pages), min(count // 5 + 1, max_pages))
-            
+            max_pages = min(
+                total_hits // 20, 100
+            )  # 20 granules per page, max 100 pages
+            random_pages = random.sample(
+                range(max_pages), min(count // 5 + 1, max_pages)
+            )
+
             sampled_granules = []
             seen_ids = set()
-            
+
             for page in random_pages:
                 # CMR uses page_num, not offset - calculate page number
                 page_num = page + 1  # CMR pages are 1-indexed
-                
+
                 # Get granules from this page by using the page_num in query
                 endpoint = f"{self.base_url}/search/granules.json"
                 params = {
-                    "short_name": short_name, 
+                    "short_name": short_name,
                     "page_size": 20,
-                    "page_num": page_num
+                    "page_num": page_num,
                 }
                 if provider:
                     params["provider"] = provider
-                    
+
                 response = self.session.get(endpoint, params=params)
                 response.raise_for_status()
                 data = response.json()
                 page_granules = data.get("feed", {}).get("entry", [])
-                
+
                 for g in page_granules:
                     g_id = g.get("id", "")
                     if g_id not in seen_ids:
@@ -214,10 +220,10 @@ class CMRClient:
                         sampled_granules.append(g)
                         if len(sampled_granules) >= count:
                             break
-                            
+
                 if len(sampled_granules) >= count:
                     break
-                    
+
             return sampled_granules[:count]
 
         # For large collections, use temporal sampling
@@ -254,15 +260,15 @@ class CMRClient:
 
         # More efficient approach: Use larger time windows with higher limits
         # and sample from the results, reducing the number of API calls
-        
+
         total_days = (end_dt - start_dt).days
-        
+
         if total_days > 365:
             # For collections spanning multiple years, use monthly sampling
             window_days = 30
             granules_per_query = min(50, count * 2)  # Get more granules per query
         elif total_days > 30:
-            # For collections spanning months, use weekly sampling  
+            # For collections spanning months, use weekly sampling
             window_days = 7
             granules_per_query = min(25, count * 2)
         else:
@@ -272,8 +278,10 @@ class CMRClient:
 
         attempts = 0
         max_attempts = min(count, 20)  # Cap max attempts to reasonable number
-        
-        print(f"Sampling {count} random granules from {short_name} (spanning {total_days} days)...")
+
+        print(
+            f"Sampling {count} random granules from {short_name} (spanning {total_days} days)..."
+        )
 
         while len(random_granules) < count and attempts < max_attempts:
             attempts += 1
@@ -296,9 +304,10 @@ class CMRClient:
             # Randomly sample from returned granules to add variety
             if granules:
                 import random
+
                 sample_size = min(len(granules), count - len(random_granules))
                 sampled_granules = random.sample(granules, sample_size)
-                
+
                 # Add unique granules
                 for g in sampled_granules:
                     g_id = g.get("id", "")
@@ -307,7 +316,7 @@ class CMRClient:
                         random_granules.append(g)
                         if len(random_granules) >= count:
                             break
-                
+
                 # Progress feedback for large requests
                 if count >= 20 and len(random_granules) % 10 == 0:
                     print(f"  Found {len(random_granules)}/{count} granules...")
@@ -322,7 +331,7 @@ class CMRClient:
         if len(random_granules) < count:
             remaining = count - len(random_granules)
             print(f"  Filling remaining {remaining} granules with recent ones...")
-            
+
             recent = self.query_granules(
                 short_name,
                 provider=provider,

@@ -45,12 +45,15 @@ class PolygonComparisonDriver:
         self.output_dir.mkdir(exist_ok=True)
 
         self.cmr_client = CMRClient(token=token)
-        print("[PolygonDriver] Using optimized polygon generation (concave hull + smart buffering)")
-            
+        print(
+            "[PolygonDriver] Using optimized polygon generation (concave hull + smart buffering)"
+        )
+
         self.token = token
 
         # Set up parallel processing
         import os
+
         if max_workers is None:
             # Conservative default: min of 4 workers or CPU count
             self.max_workers = min(4, os.cpu_count() or 1)
@@ -80,7 +83,9 @@ class PolygonComparisonDriver:
         data_extensions : list
             Valid data file extensions
         """
-        print(f"\n[PolygonDriver] Processing {n_granules} random granules from {short_name}")
+        print(
+            f"\n[PolygonDriver] Processing {n_granules} random granules from {short_name}"
+        )
         print("=" * 80)
 
         # Create collection output directory
@@ -107,11 +112,17 @@ class PolygonComparisonDriver:
 
         # Process granules in parallel
         if len(granules) > 1 and self.max_workers > 1:
-            print(f"Processing granules in parallel using {self.max_workers} workers...")
-            results = self._process_granules_parallel(granules, collection_dir, data_extensions)
+            print(
+                f"Processing granules in parallel using {self.max_workers} workers..."
+            )
+            results = self._process_granules_parallel(
+                granules, collection_dir, data_extensions
+            )
         else:
             print("Processing granules sequentially...")
-            results = self._process_granules_sequential(granules, collection_dir, data_extensions)
+            results = self._process_granules_sequential(
+                granules, collection_dir, data_extensions
+            )
 
         # Create collection summary
         self.create_collection_summary(collection_dir, short_name, results)
@@ -135,7 +146,9 @@ class PolygonComparisonDriver:
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # Submit all tasks
             future_to_granule = {
-                executor.submit(self.process_granule, granule, collection_dir, data_extensions): granule
+                executor.submit(
+                    self.process_granule, granule, collection_dir, data_extensions
+                ): granule
                 for granule in granules
             }
 
@@ -149,13 +162,21 @@ class PolygonComparisonDriver:
                     result = future.result()
                     if result:
                         results.append(result)
-                        print(f"✅ [{completed_count}/{len(granules)}] Completed: {granule_name}...")
+                        print(
+                            f"✅ [{completed_count}/{len(granules)}] Completed: {granule_name}..."
+                        )
                     else:
-                        print(f"⚠️  [{completed_count}/{len(granules)}] Failed: {granule_name}...")
+                        print(
+                            f"⚠️  [{completed_count}/{len(granules)}] Failed: {granule_name}..."
+                        )
                 except Exception as e:
-                    print(f"❌ [{completed_count}/{len(granules)}] Error: {granule_name}... - {str(e)[:100]}")
+                    print(
+                        f"❌ [{completed_count}/{len(granules)}] Error: {granule_name}... - {str(e)[:100]}"
+                    )
 
-        print(f"\nParallel processing complete: {len(results)}/{len(granules)} granules succeeded")
+        print(
+            f"\nParallel processing complete: {len(results)}/{len(granules)} granules succeeded"
+        )
         return results
 
     def process_specific_granule(
@@ -274,7 +295,9 @@ class PolygonComparisonDriver:
             cmr_geojson = UMMGParser.extract_polygons(umm_json, granule_ur)
 
             if not cmr_geojson.get("features"):
-                print(f"[PolygonDriver] Warning: No polygon found in CMR for {granule_ur}")
+                print(
+                    f"[PolygonDriver] Warning: No polygon found in CMR for {granule_ur}"
+                )
                 return None
 
             # Save CMR polygon
@@ -311,7 +334,7 @@ class PolygonComparisonDriver:
             print("\n[PolygonDriver] Stage 2: Analyze CMR Polygon")
             cmr_coverage = self._calculate_cmr_data_coverage(cmr_geojson, lon, lat)
             print(f"  CMR data coverage: {cmr_coverage:.1%}")
-            
+
             # Get CMR vertex count
             cmr_vertices = 0
             for feature in cmr_geojson.get("features", []):
@@ -357,10 +380,14 @@ class PolygonComparisonDriver:
             )
 
             print("\n[PolygonDriver] Results:")
-            print(f"  Generated data coverage: {metrics.get('generated_data_coverage', 0):.1%}")
+            print(
+                f"  Generated data coverage: {metrics.get('generated_data_coverage', 0):.1%}"
+            )
             print(f"  Generated vertices: {metrics['generated_vertices']}")
             print(f"  Area ratio (generated/CMR): {metrics.get('area_ratio', 0):.3f}")
-            print(f"  Non-data area: {metrics.get('generated_non_data_coverage', 0):.1%}")
+            print(
+                f"  Non-data area: {metrics.get('generated_non_data_coverage', 0):.1%}"
+            )
 
             return {
                 "granule_ur": granule_ur,
@@ -418,7 +445,9 @@ class PolygonComparisonDriver:
                     return output_path
                 else:
                     print(f"  Download failed with status {response.status_code}")
-                    print("[PolygonDriver] Creating dummy data file for demonstration...")
+                    print(
+                        "[PolygonDriver] Creating dummy data file for demonstration..."
+                    )
                     self._create_dummy_data_file(output_path)
                     return output_path
 
@@ -1488,7 +1517,9 @@ def main():
             print("Continuing without authentication...")
 
     # Create driver
-    driver = PolygonComparisonDriver(output_dir=args.output, token=token, max_workers=args.workers)
+    driver = PolygonComparisonDriver(
+        output_dir=args.output, token=token, max_workers=args.workers
+    )
 
     # Process either specific granule or random collection
     if args.granule:
