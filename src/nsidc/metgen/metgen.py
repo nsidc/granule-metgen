@@ -43,6 +43,7 @@ from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws, config, constants
 from nsidc.metgen.readers import generic, registry, utilities
+from nsidc.metgen.spatial import create_flightline_polygon
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -1120,17 +1121,21 @@ def populate_spatial(
         and len(spatial_values) >= 3
     ):
         try:
-            # Import the spatial module for polygon generation
-            import json
-
-            from nsidc.metgen.spatial import create_flightline_polygon
+            # Create configured polygon generator using partial application
+            generate_polygon = partial(
+                create_flightline_polygon,
+                target_coverage=configuration.spatial_polygon_target_coverage
+                or constants.DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE,
+                max_vertices=configuration.spatial_polygon_max_vertices
+                or constants.DEFAULT_SPATIAL_POLYGON_MAX_VERTICES,
+            )
 
             # Extract lon/lat arrays from spatial_values
             lons = [point["Longitude"] for point in spatial_values]
             lats = [point["Latitude"] for point in spatial_values]
 
-            # Generate polygon using our spatial module
-            polygon, metadata = create_flightline_polygon(lons, lats)
+            # Generate polygon using our configured spatial module
+            polygon, metadata = generate_polygon(lons, lats)
 
             if polygon is not None:
                 # Convert shapely polygon to UMM-G format

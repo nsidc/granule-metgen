@@ -16,12 +16,12 @@ from shapely.geometry import Point, Polygon
 from shapely.validation import make_valid
 
 
-def create_flightline_polygon(lon, lat):
+def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
     """
     Create a polygon representing the flightline coverage using concave hull.
 
-    This function matches the signature of PolygonGenerator.create_flightline_polygon
-    but uses a simple, reliable approach with just the concave_hull library.
+    This function uses a simple, reliable approach with the concave_hull library
+    and configurable quality parameters.
 
     Parameters:
     -----------
@@ -29,6 +29,10 @@ def create_flightline_polygon(lon, lat):
         Longitude coordinates
     lat : array-like
         Latitude coordinates
+    target_coverage : float, optional
+        Target data coverage percentage (default: 0.98)
+    max_vertices : int, optional
+        Maximum number of vertices in final polygon (default: 100)
 
     Returns:
     --------
@@ -187,13 +191,13 @@ def create_flightline_polygon(lon, lat):
         coverage = _calculate_data_coverage(polygon, original_points)
         metadata["initial_data_coverage"] = coverage
 
-        # Apply buffering if coverage is below target (restored to be less restrictive)
-        if coverage < 0.98:  # Back to 98% threshold
+        # Apply buffering if coverage is below target
+        if coverage < target_coverage:
             print(
-                f"  Initial coverage {coverage:.1%} < 98%, applying buffer enhancement..."
+                f"  Initial coverage {coverage:.1%} < {target_coverage:.0%}, applying buffer enhancement..."
             )
             buffered_polygon = _buffer_enhance_coverage(
-                polygon, original_points, target_coverage=0.98
+                polygon, original_points, target_coverage=target_coverage
             )
             if buffered_polygon:
                 buffered_coverage = _calculate_data_coverage(
@@ -222,21 +226,24 @@ def create_flightline_polygon(lon, lat):
                 # Balanced acceptance: prioritize coverage but control area growth
                 if (
                     (
-                        buffered_coverage >= 0.98
+                        buffered_coverage >= target_coverage
                         and area_increase < 3.0
-                        and buffered_vertices < 120
+                        and buffered_vertices < max_vertices * 1.2
                     )
                     or (
                         coverage_improvement > 0.05
                         and area_increase < 2.5
-                        and buffered_vertices < 100
+                        and buffered_vertices < max_vertices
                     )
                     or (
                         coverage_improvement > 0.03
                         and area_increase < 2.0
-                        and buffered_vertices < 80
+                        and buffered_vertices < max_vertices * 0.8
                     )
-                    or (coverage_improvement > 0.10 and buffered_vertices < 150)
+                    or (
+                        coverage_improvement > 0.10
+                        and buffered_vertices < max_vertices * 1.5
+                    )
                 ):  # Accept big improvements
                     polygon = buffered_polygon
                     coverage = buffered_coverage
