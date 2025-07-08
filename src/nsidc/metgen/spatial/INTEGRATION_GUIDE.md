@@ -42,64 +42,50 @@ spatial_polygon_max_vertices = 100
 
 Note: The section name is capitalized as `[Spatial]` to maintain consistency with other configuration sections like `[Source]`, `[Collection]`, etc. The default for `spatial_polygon_enabled` is `True`.
 
-## 2. Spatial Processor Integration
+## 2. Spatial Processor Integration ✅ COMPLETED
 
-The recommended approach is to integrate polygon generation at the UMM-G creation stage using a `SpatialProcessor`, not at the reader level. This provides better separation of concerns and follows project rules.
+The spatial polygon generation has been integrated directly into the UMM-G creation process by enhancing the existing `populate_spatial()` function.
 
-### Create `src/nsidc/metgen/spatial_processor.py`:
+### Implementation Details:
 
-The `SpatialProcessor` class handles spatial polygon generation during UMM-G metadata creation, applying the rules defined in the project README:
+The integration has been implemented by enhancing the existing `populate_spatial()` function in `src/nsidc/metgen/metgen.py`:
 
-- `.spatial` files with >= 2 geodetic points → GPolygon(s) calculated to enclose all points
-- Data files with >= 2 geodetic points → GPolygon(s) calculated to enclose all points  
-- NetCDF gridded data with >= 3 geodetic points → GPolygon calculated from grid perimeter
-- Collections like LVISF2, IPFLT1B, ILVIS2 → Apply polygon generation automatically
-
-### In `src/nsidc/metgen/metgen.py`:
-
-Replace the `populate_spatial` function call with the spatial processor:
-
+#### Modified Function Signature:
 ```python
-from nsidc.metgen.spatial_processor import process_spatial_extent_with_polygon_generation
-
-# In the granule processing function, replace:
-# summary["spatial_extent"] = populate_spatial(gsr, summary["geometry"])
-
-# With:
-summary["spatial_extent"] = process_spatial_extent_with_polygon_generation(
-    config=config,
-    spatial_representation=gsr,
-    spatial_values=summary["geometry"],
-    collection_name=config.get('global', {}).get('auth_id', ''),
-    data_file_path=granule_file,
-    coordinate_data=coordinate_data  # If available from reader
-)
+def populate_spatial(
+    spatial_representation: str, 
+    spatial_values: list, 
+    configuration: config.Config = None, 
+    spatial_content: list = None
+) -> str:
 ```
 
-### Reader Modifications (Optional Enhancement):
+#### Key Integration Logic:
+- **Polygon generation is triggered only when**:
+  - `configuration.spatial_polygon_enabled` is `True`
+  - `spatial_content` is not `None` (indicating data came from `.spatial` file)
+  - `spatial_representation` is `GEODETIC`
+  - `len(spatial_values) >= 3` (minimum points for polygon)
 
-Readers can optionally provide full coordinate data for better polygon generation:
+- **Fallback behavior**: If any condition is not met or polygon generation fails, the function falls back to the original MetGenC spatial processing
 
+#### Integration Point:
 ```python
-# In NetCDFReader or CSVReader
-def get_coordinate_data(self):
-    """Provide full coordinate arrays for spatial processing."""
-    try:
-        if hasattr(self, 'dataset'):
-            # NetCDF case
-            return {
-                'longitude': self.dataset.variables['longitude'][:],
-                'latitude': self.dataset.variables['latitude'][:]
-            }
-        elif hasattr(self, 'dataframe'):
-            # CSV case  
-            return {
-                'longitude': self.dataframe['longitude'].values,
-                'latitude': self.dataframe['latitude'].values
-            }
-    except Exception:
-        return None
+# In create_ummg() function:
+summary["spatial_extent"] = populate_spatial(gsr, summary["geometry"], configuration, spatial_content)
 ```
+
+This approach ensures:
+- ✅ Polygon generation only occurs for `.spatial` files
+- ✅ Existing behavior preserved for all other cases
+- ✅ No breaking changes to the API
+- ✅ Graceful fallback on errors
+
+### Current Status:
+- ✅ **Configuration integration** completed
+- ✅ **Spatial polygon generation** integrated into UMM-G creation
+- ✅ **Conditional processing** ensures polygon generation only for `.spatial` files
+- ✅ **Backward compatibility** maintained for existing workflows
 
 ## 3. CLI Integration
 
