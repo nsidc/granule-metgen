@@ -8,6 +8,7 @@ for randomly selected granules from a collection.
 
 import argparse
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -22,12 +23,13 @@ from .cmr_client import CMRClient, PolygonComparator, UMMGParser, sanitize_granu
 
 # Import our modules
 from .polygon_generator import PolygonGenerator
+from . import standard_polygon_generator
 
 
 class PolygonComparisonDriver:
     """Driver for automated polygon comparison with CMR."""
 
-    def __init__(self, output_dir="polygon_comparisons", token=None):
+    def __init__(self, output_dir="polygon_comparisons", token=None, max_workers=None, generator_type="bespoke"):
         """
         Initialize the driver.
 
@@ -37,22 +39,36 @@ class PolygonComparisonDriver:
             Directory for output files
         token : str, optional
             Bearer token for CMR/Earthdata authentication
+        max_workers : int, optional
+            Maximum number of parallel workers (default: min(4, cpu_count))
+        generator_type : str
+            Type of polygon generator to use ("bespoke" or "standard")
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
         self.cmr_client = CMRClient(token=token)
-        self.polygon_generator = PolygonGenerator()
+        self.generator_type = generator_type
+        
+        # Set up polygon generator based on type
+        if generator_type == "standard":
+            self.polygon_generator = None  # Will use functional approach
+            print(f"[PolygonDriver] Using standard algorithms (alphashape, concave hull)")
+        else:
+            self.polygon_generator = PolygonGenerator()
+            print(f"[PolygonDriver] Using bespoke algorithms")
+            
         self.token = token
 
-        # Our best method configuration
-        self.best_method = {
-            "method": "adaptive_beam",
-            "iterative_simplify": True,
-            "min_iou": 0.70,  # Lower threshold matches CMR better
-            "min_coverage": 0.90,
-            "target_vertices": 8,  # Target similar to CMR
-        }
+        # Set up parallel processing
+        import os
+        if max_workers is None:
+            # Conservative default: min of 4 workers or CPU count
+            self.max_workers = min(4, os.cpu_count() or 1)
+        else:
+            self.max_workers = max(1, min(max_workers, 8))  # Cap at 8 to be nice to CMR
+
+        # Polygon generator will handle all method selection and optimization internally
 
     def process_collection(
         self,
@@ -75,8 +91,8 @@ class PolygonComparisonDriver:
         data_extensions : list
             Valid data file extensions
         """
-        print(f"Processing {n_granules} random granules from {short_name}")
-        print("=" * 70)
+        print(f"\n[PolygonDriver] Processing {n_granules} random granules from {short_name}")
+        print("=" * 80)
 
         # Create collection output directory
         collection_dir = self.output_dir / sanitize_granule_ur(short_name)
@@ -88,7 +104,7 @@ class PolygonComparisonDriver:
                 short_name, provider=provider, count=n_granules
             )
         except Exception as e:
-            print(f"Error querying CMR: {e}")
+            print(f"[PolygonDriver] Error querying CMR: {e}")
             import traceback
 
             traceback.print_exc()
@@ -98,18 +114,60 @@ class PolygonComparisonDriver:
             print(f"No granules found for collection {short_name}")
             return
 
-        print(f"Found {len(granules)} granules to process")
+        print(f"[PolygonDriver] Found {len(granules)} granules to process")
 
-        # Process each granule
-        results = []
-        for i, granule in enumerate(granules, 1):
-            print(f"\nProcessing granule {i}/{len(granules)}...")
-            result = self.process_granule(granule, collection_dir, data_extensions)
-            if result:
-                results.append(result)
+        # Process granules in parallel
+        if len(granules) > 1 and self.max_workers > 1:
+            print(f"Processing granules in parallel using {self.max_workers} workers...")
+            results = self._process_granules_parallel(granules, collection_dir, data_extensions)
+        else:
+            print("Processing granules sequentially...")
+            results = self._process_granules_sequential(granules, collection_dir, data_extensions)
 
         # Create collection summary
         self.create_collection_summary(collection_dir, short_name, results)
+
+    def _process_granules_sequential(self, granules, collection_dir, data_extensions):
+        """Process granules sequentially (original method)."""
+        results = []
+        for i, granule in enumerate(granules, 1):
+            print(f"\n{'='*80}")
+            print(f"[PolygonDriver] Granule {i}/{len(granules)}")
+            result = self.process_granule(granule, collection_dir, data_extensions)
+            if result:
+                results.append(result)
+        return results
+
+    def _process_granules_parallel(self, granules, collection_dir, data_extensions):
+        """Process granules in parallel using ThreadPoolExecutor."""
+        results = []
+        completed_count = 0
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Submit all tasks
+            future_to_granule = {
+                executor.submit(self.process_granule, granule, collection_dir, data_extensions): granule
+                for granule in granules
+            }
+
+            # Process completed tasks as they finish
+            for future in as_completed(future_to_granule):
+                completed_count += 1
+                granule = future_to_granule[future]
+                granule_name = granule.get("title", "Unknown")[:50]
+
+                try:
+                    result = future.result()
+                    if result:
+                        results.append(result)
+                        print(f"✅ [{completed_count}/{len(granules)}] Completed: {granule_name}...")
+                    else:
+                        print(f"⚠️  [{completed_count}/{len(granules)}] Failed: {granule_name}...")
+                except Exception as e:
+                    print(f"❌ [{completed_count}/{len(granules)}] Error: {granule_name}... - {str(e)[:100]}")
+
+        print(f"\nParallel processing complete: {len(results)}/{len(granules)} granules succeeded")
+        return results
 
     def process_specific_granule(
         self,
@@ -132,8 +190,8 @@ class PolygonComparisonDriver:
         data_extensions : list
             Valid data file extensions
         """
-        print(f"Processing specific granule: {granule_ur}")
-        print("=" * 70)
+        print(f"\n[PolygonDriver] Processing specific granule: {granule_ur}")
+        print("=" * 80)
 
         # Create collection output directory
         collection_dir = self.output_dir / sanitize_granule_ur(short_name)
@@ -188,7 +246,7 @@ class PolygonComparisonDriver:
                 print("\nProcessing failed.")
 
         except Exception as e:
-            print(f"Error querying CMR: {e}")
+            print(f"[PolygonDriver] Error querying CMR: {e}")
             import traceback
 
             traceback.print_exc()
@@ -213,7 +271,7 @@ class PolygonComparisonDriver:
         granule_ur = granule_entry.get("title", "Unknown")
         concept_id = granule_entry.get("id", "")
 
-        print(f"  Granule: {granule_ur}")
+        print(f"\n[PolygonDriver] Processing: {granule_ur}")
 
         # Create granule output directory
         granule_dir = output_dir / sanitize_granule_ur(granule_ur)
@@ -227,7 +285,7 @@ class PolygonComparisonDriver:
             cmr_geojson = UMMGParser.extract_polygons(umm_json, granule_ur)
 
             if not cmr_geojson.get("features"):
-                print(f"  Warning: No polygon found in CMR for {granule_ur}")
+                print(f"[PolygonDriver] Warning: No polygon found in CMR for {granule_ur}")
                 return None
 
             # Save CMR polygon
@@ -240,10 +298,10 @@ class PolygonComparisonDriver:
             data_url = UMMGParser.find_data_file(data_urls, data_extensions)
 
             if not data_url:
-                print(f"  Warning: No data file found for {granule_ur}")
+                print(f"[PolygonDriver] Warning: No data file found for {granule_ur}")
                 return None
 
-            print(f"  Data URL: {data_url}")
+            print(f"[PolygonDriver] Data URL: {data_url}")
 
             # Download and load data
             data_file = self.download_data_file(data_url, granule_dir)
@@ -251,44 +309,46 @@ class PolygonComparisonDriver:
                 return None
 
             # Load data points
-            print(f"  Loading data from {data_file}")
+            print(f"\n[PolygonDriver] Stage 1: Load Data")
+            print(f"  File: {data_file.name}")
             lon, lat = self.load_data_points(data_file)
             if lon is None or len(lon) == 0:
-                print(f"  Warning: Could not load data from {data_file}")
+                print(f"[PolygonDriver] Error: Could not load data from {data_file}")
                 return None
 
-            print(f"  Loaded {len(lon)} data points")
+            print(f"  Points loaded: {len(lon)}")
 
-            # Calculate CMR data coverage to use as minimum threshold
+            # Calculate CMR data coverage to compare against
+            print(f"\n[PolygonDriver] Stage 2: Analyze CMR Polygon")
             cmr_coverage = self._calculate_cmr_data_coverage(cmr_geojson, lon, lat)
-            print(f"  CMR polygon data coverage: {cmr_coverage:.1%}")
+            print(f"  CMR data coverage: {cmr_coverage:.1%}")
+            
+            # Get CMR vertex count
+            cmr_vertices = 0
+            for feature in cmr_geojson.get("features", []):
+                if feature.get("geometry", {}).get("type") == "Polygon":
+                    coords = feature["geometry"]["coordinates"][0]
+                    cmr_vertices += len(coords) - 1
+            print(f"  CMR vertices: {cmr_vertices}")
 
-            # Update method with CMR coverage constraint
-            method_params = self.best_method.copy()
-            if cmr_coverage > 0:
-                method_params["min_coverage"] = max(
-                    cmr_coverage, method_params.get("min_coverage", 0.90)
-                )
-                print(
-                    f"  Using minimum coverage constraint: {method_params['min_coverage']:.1%}"
-                )
-
-            # Generate polygon using our best method
-            polygon, metadata = self.polygon_generator.create_flightline_polygon(
-                lon, lat, **method_params
-            )
+            # Generate polygon using selected generator type
+            if self.generator_type == "standard":
+                polygon, metadata = standard_polygon_generator.create_flightline_polygon(lon, lat)
+            else:
+                polygon, metadata = self.polygon_generator.create_flightline_polygon(lon, lat)
 
             # Store CMR coverage in metadata for display
             metadata["cmr_data_coverage"] = cmr_coverage
-            metadata["min_coverage_used"] = method_params.get("min_coverage", 0.90)
 
             # Save generated polygon
+            print(f"\n[PolygonDriver] Stage 4: Save Results")
             generated_geojson = self.create_geojson(polygon, metadata, granule_ur)
             generated_polygon_file = granule_dir / "generated_polygon.geojson"
             with open(generated_polygon_file, "w") as f:
                 json.dump(generated_geojson, f, indent=2)
 
             # Compare polygons with data coverage
+            print(f"\n[PolygonDriver] Stage 5: Compare Polygons")
             metrics = PolygonComparator.compare(
                 cmr_geojson, generated_geojson, data_points=np.column_stack((lon, lat))
             )
@@ -310,9 +370,11 @@ class PolygonComparisonDriver:
                 metadata,
             )
 
-            print(
-                f"  IoU: {metrics['iou']:.3f}, Vertices: {metrics['generated_vertices']}"
-            )
+            print(f"\n[PolygonDriver] Results:")
+            print(f"  Generated data coverage: {metrics.get('generated_data_coverage', 0):.1%}")
+            print(f"  Generated vertices: {metrics['generated_vertices']}")
+            print(f"  Area ratio (generated/CMR): {metrics.get('area_ratio', 0):.3f}")
+            print(f"  Non-data area: {metrics.get('generated_non_data_coverage', 0):.1%}")
 
             return {
                 "granule_ur": granule_ur,
@@ -347,11 +409,11 @@ class PolygonComparisonDriver:
         output_path = output_dir / filename
 
         if output_path.exists():
-            print(f"  Using cached data file: {filename}")
+            print(f"[PolygonDriver] Using cached data file: {filename}")
             return output_path
 
         try:
-            print(f"  Downloading: {filename}")
+            print(f"[PolygonDriver] Downloading: {filename}")
 
             # Try authenticated download first
             if self.token and ("earthdata.nasa.gov" in url or "nsidc.org" in url):
@@ -370,7 +432,7 @@ class PolygonComparisonDriver:
                     return output_path
                 else:
                     print(f"  Download failed with status {response.status_code}")
-                    print("  Creating dummy data file for demonstration...")
+                    print("[PolygonDriver] Creating dummy data file for demonstration...")
                     self._create_dummy_data_file(output_path)
                     return output_path
 
@@ -388,9 +450,9 @@ class PolygonComparisonDriver:
             return output_path
 
         except Exception as e:
-            print(f"  Error downloading file: {e}")
+            print(f"[PolygonDriver] Error downloading file: {e}")
             if "401" in str(e) or "Unauthorized" in str(e):
-                print("  Creating dummy data file for demonstration...")
+                print("[PolygonDriver] Creating dummy data file for demonstration...")
                 self._create_dummy_data_file(output_path)
                 return output_path
             return None
@@ -612,29 +674,42 @@ class PolygonComparisonDriver:
                         elif col_lower == "lat" or col_lower == "latitude":
                             lat_col = col
 
-                    # Also check exact uppercase matches for IGBTH4
+                    # Also check exact uppercase matches for IGBTH4 and LVIS formats
                     if not lon_col:
                         for col in data.columns:
-                            if col.strip() == "LON":
+                            col_stripped = col.strip()
+                            if col_stripped in ["LON", "HLON", "GLON", "TLON"]:
                                 lon_col = col
                                 break
                     if not lat_col:
                         for col in data.columns:
-                            if col.strip() == "LAT":
+                            col_stripped = col.strip()
+                            if col_stripped in ["LAT", "HLAT", "GLAT", "TLAT"]:
                                 lat_col = col
                                 break
 
                     if lon_col and lat_col:
                         print(f"    Using columns: {lon_col} (lon), {lat_col} (lat)")
-                        lon = data[lon_col].values
-                        lat = data[lat_col].values
 
-                        # Filter valid coordinates
+                        # Convert to numeric, handling any non-numeric values
+                        try:
+                            lon = pd.to_numeric(data[lon_col], errors="coerce").values
+                            lat = pd.to_numeric(data[lat_col], errors="coerce").values
+                        except Exception:
+                            lon = data[lon_col].values
+                            lat = data[lat_col].values
+
+                        # Convert from 0-360 to -180-180 if needed
+                        lon = np.where(lon > 180, lon - 360, lon)
+
+                        # Filter valid coordinates (including LVIS-style missing values)
                         mask = (
                             np.isfinite(lon)
                             & np.isfinite(lat)
                             & (lon != 0)
                             & (lat != 0)
+                            & (lon != -999)
+                            & (lat != -999)
                         )
 
                         valid_count = mask.sum()
@@ -789,6 +864,7 @@ class PolygonComparisonDriver:
             "geometry": polygon.__geo_interface__,
             "properties": {
                 "source": "Generated",
+                "generator_type": self.generator_type,
                 "granule_ur": granule_ur,
                 "method": metadata.get("method", "unknown"),
                 "vertices": metadata.get("vertices", 0),
@@ -1031,6 +1107,10 @@ class PolygonComparisonDriver:
                 if isinstance(metadata.get("adaptive_buffer"), (int, float))
                 else "N/A",
             ],
+            [
+                "Generation Time",
+                f'{metadata.get("generation_time_seconds", 0):.3f} s',
+            ],
         ]
 
         # Create left table
@@ -1093,9 +1173,15 @@ class PolygonComparisonDriver:
         # Color code specific metric values in left table
         for row_idx in range(len(left_table_data)):
             cell_key = left_table_data[row_idx][0]
-            if cell_key == "IoU" and metrics["iou"] >= 0.8:
+            if (
+                cell_key == "Data Coverage"
+                and metrics.get("generated_data_coverage", 0) >= 0.9
+            ):
                 left_table[(row_idx, 1)].set_facecolor("lightgreen")
-            elif cell_key == "IoU" and metrics["iou"] < 0.8:
+            elif (
+                cell_key == "Data Coverage"
+                and metrics.get("generated_data_coverage", 0) < 0.9
+            ):
                 left_table[(row_idx, 1)].set_facecolor("lightcoral")
             elif cell_key == "Area Ratio" and 0.5 <= metrics["area_ratio"] <= 2.0:
                 left_table[(row_idx, 1)].set_facecolor("lightgreen")
@@ -1150,10 +1236,15 @@ class PolygonComparisonDriver:
             return
 
         # Calculate aggregate statistics
-        ious = [r["metrics"]["iou"] for r in results]
+        data_coverages = [
+            r["metrics"].get("generated_data_coverage", 0) for r in results
+        ]
         area_ratios = [r["metrics"]["area_ratio"] for r in results]
         cmr_coverages = [r["metrics"]["cmr_covered_by_generated"] for r in results]
         vertex_counts = [r["metrics"]["generated_vertices"] for r in results]
+        generation_times = [
+            r["metadata"].get("generation_time_seconds", 0) for r in results
+        ]
 
         # Create summary report
         summary_text = f"""# Polygon Comparison Summary for {short_name}
@@ -1162,18 +1253,19 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 ## Processing Summary
 - Total granules processed: {len(results)}
-- Processing method: {self.best_method['method']}
-- Iterative simplification: {'Enabled' if self.best_method['iterative_simplify'] else 'Disabled'}
-- Target vertices: {self.best_method.get('target_vertices', 'N/A')}
+- Generator type: {self.generator_type}
+- Processing method: {"Standard algorithms (alphashape/concave hull)" if self.generator_type == "standard" else "Bespoke algorithms with auto-selection"}
+- Iterative simplification: {"N/A (handled by standard algorithms)" if self.generator_type == "standard" else "Enabled"}
+- Target vertices: {"Auto-selected by algorithm" if self.generator_type == "standard" else "Auto-selected based on data characteristics"}
 
 ## Aggregate Metrics
 
-### IoU (Intersection over Union)
-- Mean: {np.mean(ious):.3f}
-- Median: {np.median(ious):.3f}
-- Min: {np.min(ious):.3f}
-- Max: {np.max(ious):.3f}
-- Std Dev: {np.std(ious):.3f}
+### Data Coverage (Generated Polygon)
+- Mean: {np.mean(data_coverages):.1%}
+- Median: {np.median(data_coverages):.1%}
+- Min: {np.min(data_coverages):.1%}
+- Max: {np.max(data_coverages):.1%}
+- Std Dev: {np.std(data_coverages):.3f}
 
 ### Area Ratio (Generated/CMR)
 - Mean: {np.mean(area_ratios):.3f}
@@ -1193,26 +1285,37 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 - Min: {np.min(vertex_counts)}
 - Max: {np.max(vertex_counts)}
 
+### Generation Time (seconds)
+- Mean: {np.mean(generation_times):.3f}
+- Median: {np.median(generation_times):.3f}
+- Min: {np.min(generation_times):.3f}
+- Max: {np.max(generation_times):.3f}
+- Total: {np.sum(generation_times):.1f}
+
 ## Quality Assessment
-- Granules with IoU >= 0.8: {sum(1 for iou in ious if iou >= 0.8)}/{len(ious)} ({100*sum(1 for iou in ious if iou >= 0.8)/len(ious):.0f}%)
+- Granules with data coverage >= 90%: {sum(1 for dc in data_coverages if dc >= 0.9)}/{len(data_coverages)} ({100*sum(1 for dc in data_coverages if dc >= 0.9)/len(data_coverages):.0f}%)
 - Granules with area ratio in [0.5, 2.0]: {sum(1 for ar in area_ratios if 0.5 <= ar <= 2.0)}/{len(area_ratios)} ({100*sum(1 for ar in area_ratios if 0.5 <= ar <= 2.0)/len(area_ratios):.0f}%)
 - Granules with CMR coverage >= 90%: {sum(1 for cc in cmr_coverages if cc >= 0.9)}/{len(cmr_coverages)} ({100*sum(1 for cc in cmr_coverages if cc >= 0.9)/len(cmr_coverages):.0f}%)
+- Granules with Great vertices (≤16): {sum(1 for vc in vertex_counts if vc <= 16)}/{len(vertex_counts)} ({100*sum(1 for vc in vertex_counts if vc <= 16)/len(vertex_counts):.0f}%)
+- Granules with Good vertices (≤32): {sum(1 for vc in vertex_counts if vc <= 32)}/{len(vertex_counts)} ({100*sum(1 for vc in vertex_counts if vc <= 32)/len(vertex_counts):.0f}%)
 
 ## Individual Granule Results
 
-| Granule | IoU | Area Ratio | CMR Coverage | Vertices | Data Points |
-|---------|-----|------------|--------------|----------|-------------|
+| Granule | Data Coverage | Area Ratio | CMR Coverage | Vertices | Data Points | Gen Time (s) |
+|---------|---------------|------------|--------------|----------|-------------|--------------|
 """
 
         for r in results:
-            summary_text += f"| {r['granule_ur'][:50]}... | {r['metrics']['iou']:.3f} | {r['metrics']['area_ratio']:.3f} | {r['metrics']['cmr_covered_by_generated']:.1%} | {r['metrics']['generated_vertices']} | {r['data_points']:,} |\n"
+            data_cov = r["metrics"].get("generated_data_coverage", 0)
+            gen_time = r["metadata"].get("generation_time_seconds", 0)
+            summary_text += f"| {r['granule_ur'][:50]}... | {data_cov:.1%} | {r['metrics']['area_ratio']:.3f} | {r['metrics']['cmr_covered_by_generated']:.1%} | {r['metrics']['generated_vertices']} | {r['data_points']:,} | {gen_time:.3f} |\n"
 
         # Save summary
         summary_file = output_dir / "collection_summary.md"
         with open(summary_file, "w") as f:
             f.write(summary_text)
 
-        print(f"\nCollection summary saved to: {summary_file}")
+        print(f"\n[PolygonDriver] Collection summary saved to: {summary_file}")
 
         # Create visualization of aggregate metrics
         self.create_metrics_visualization(output_dir, results)
@@ -1230,23 +1333,28 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         """
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
-        # IoU distribution
+        # Data coverage distribution
         ax = axes[0, 0]
-        ious = [r["metrics"]["iou"] for r in results]
-        ax.hist(ious, bins=20, color="skyblue", edgecolor="black", alpha=0.7)
-        ax.axvline(0.8, color="red", linestyle="--", label="Target (0.8)")
-        ax.set_xlabel("IoU")
+        data_coverages = [
+            r["metrics"].get("generated_data_coverage", 0) for r in results
+        ]
+        ax.hist(data_coverages, bins=20, color="skyblue", edgecolor="black", alpha=0.7)
+        ax.axvline(0.9, color="red", linestyle="--", label="Target (90%)")
+        ax.axvline(1.0, color="green", linestyle="--", label="Perfect (100%)")
+        ax.set_xlabel("Data Coverage")
         ax.set_ylabel("Count")
-        ax.set_title("IoU Distribution")
+        ax.set_title("Data Coverage Distribution")
         ax.legend()
         ax.grid(True, alpha=0.3)
+        # Format x-axis as percentages
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x:.0%}"))
 
         # Area ratio distribution
         ax = axes[0, 1]
         area_ratios = [r["metrics"]["area_ratio"] for r in results]
         ax.hist(area_ratios, bins=20, color="lightgreen", edgecolor="black", alpha=0.7)
         ax.axvline(1.0, color="red", linestyle="--", label="Perfect (1.0)")
-        ax.set_xlabel("Area Ratio")
+        ax.set_xlabel("Area Ratio (Generated/CMR)")
         ax.set_ylabel("Count")
         ax.set_title("Area Ratio Distribution")
         ax.legend()
@@ -1266,18 +1374,53 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # Scatter plot: IoU vs Vertices
-        ax = axes[1, 1]
-        ax.scatter(vertices, ious, alpha=0.6, s=100, c="blue")
-        ax.set_xlabel("Generated Vertices")
-        ax.set_ylabel("IoU")
-        ax.set_title("IoU vs Vertex Count")
-        ax.grid(True, alpha=0.3)
+        # Add vertex quality zones
+        ax.axvline(16, color="darkgreen", linestyle=":", alpha=0.7, label="Great (≤16)")
+        ax.axvline(32, color="orange", linestyle=":", alpha=0.7, label="Good (≤32)")
+        ax.axvline(127, color="red", linestyle=":", alpha=0.7, label="OK (≤127)")
+        ax.legend()
 
-        # Add trend line
-        z = np.polyfit(vertices, ious, 1)
-        p = np.poly1d(z)
-        ax.plot(sorted(vertices), p(sorted(vertices)), "r--", alpha=0.8)
+        # Scatter plot: Data Coverage vs Vertices (colored by generation time)
+        ax = axes[1, 1]
+        generation_times = [
+            r["metadata"].get("generation_time_seconds", 0) for r in results
+        ]
+
+        # Create scatter plot with color mapping for generation time
+        scatter = ax.scatter(
+            vertices,
+            data_coverages,
+            c=generation_times,
+            cmap="viridis",
+            alpha=0.7,
+            s=100,
+            edgecolors="black",
+            linewidth=0.5,
+        )
+
+        # Add colorbar for timing
+        cbar = plt.colorbar(scatter, ax=ax)
+        cbar.set_label("Generation Time (seconds)", rotation=270, labelpad=15)
+
+        ax.set_xlabel("Generated Vertices")
+        ax.set_ylabel("Data Coverage")
+        ax.set_title("Coverage vs Complexity vs Speed")
+        ax.grid(True, alpha=0.3)
+        # Format y-axis as percentages
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x:.0%}"))
+
+        # Add target lines
+        ax.axhline(0.9, color="red", linestyle="--", alpha=0.7, label="90% Target")
+        ax.axhline(1.0, color="white", linestyle="--", alpha=0.9, label="100% Perfect")
+        ax.axvline(16, color="white", linestyle=":", alpha=0.7, label="Great (≤16)")
+        ax.axvline(32, color="white", linestyle=":", alpha=0.7, label="Good (≤32)")
+        ax.legend(fontsize=7, loc="lower right")
+
+        # Add trend line for coverage vs vertices
+        if len(vertices) > 1 and len(data_coverages) > 1:
+            z = np.polyfit(vertices, data_coverages, 1)
+            p = np.poly1d(z)
+            ax.plot(sorted(vertices), p(sorted(vertices)), "r--", alpha=0.8)
 
         plt.suptitle("Aggregate Metrics Analysis", fontsize=16, fontweight="bold")
         plt.tight_layout()
@@ -1286,7 +1429,7 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         plt.savefig(metrics_file, dpi=150, bbox_inches="tight")
         plt.close()
 
-        print(f"Metrics visualization saved to: {metrics_file}")
+        print(f"[PolygonDriver] Metrics visualization saved to: {metrics_file}")
 
 
 def main():
@@ -1331,6 +1474,21 @@ def main():
         help="Specific granule name to evaluate (e.g., LVISF2_IS_ARCSIX2024_0815_R2503_066145.TXT)",
     )
 
+    parser.add_argument(
+        "-w",
+        "--workers",
+        type=int,
+        default=None,
+        help="Number of parallel workers (default: min(4, cpu_count), max 8)",
+    )
+
+    parser.add_argument(
+        "--generator",
+        choices=["bespoke", "standard"],
+        default="bespoke",
+        help="Polygon generator type: 'bespoke' (current implementation) or 'standard' (alphashape/concave hull) (default: bespoke)",
+    )
+
     args = parser.parse_args()
 
     # Load token from file if provided
@@ -1345,7 +1503,7 @@ def main():
             print("Continuing without authentication...")
 
     # Create driver
-    driver = PolygonComparisonDriver(output_dir=args.output, token=token)
+    driver = PolygonComparisonDriver(output_dir=args.output, token=token, max_workers=args.workers, generator_type=args.generator)
 
     # Process either specific granule or random collection
     if args.granule:

@@ -184,6 +184,27 @@ files = [
 ]
 
 [[package]]
+name = "alphashape"
+version = "1.3.1"
+description = "Toolbox for generating alpha shapes."
+optional = false
+python-versions = "*"
+files = [
+    {file = "alphashape-1.3.1-py2.py3-none-any.whl", hash = "sha256:96a5ddd5f09534a35f03a8916aeeaac00fe4d6bec2f9ad78f87f57be3007f795"},
+    {file = "alphashape-1.3.1.tar.gz", hash = "sha256:7a27340afc5f8ed301577acec46bb0cf2bada5410045f7289142e735ef6977ec"},
+]
+
+[package.dependencies]
+Click = ">=6.0"
+click-log = ">=0.3.2"
+networkx = ">=2.5"
+numpy = ">=1.8.0"
+rtree = ">=0.9.7"
+scipy = ">=1.0.0"
+shapely = ">=1.4.0"
+trimesh = ">=3.9.8"
+
+[[package]]
 name = "annotated-types"
 version = "0.7.0"
 description = "Reusable constraint types to use with typing.Annotated"
@@ -689,6 +710,20 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "click-log"
+version = "0.4.0"
+description = "Logging integration for Click"
+optional = false
+python-versions = "*"
+files = [
+    {file = "click-log-0.4.0.tar.gz", hash = "sha256:3970f8570ac54491237bcdb3d8ab5e3eef6c057df29f8c3d1151a51a9c23b975"},
+    {file = "click_log-0.4.0-py2.py3-none-any.whl", hash = "sha256:a43e394b528d52112af599f2fc9e4b7cf3c15f94e53581f74fa6867e68c91756"},
+]
+
+[package.dependencies]
+click = "*"
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -698,6 +733,53 @@ files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
     {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},
 ]
+
+[[package]]
+name = "concave-hull"
+version = "0.0.9"
+description = "A very fast 2D concave hull algorithm"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "concave_hull-0.0.9-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:5e174a47ccd5ba0d40d7a6b3d135ff369c48703fa0c89e0c9a630d5ae3893e35"},
+    {file = "concave_hull-0.0.9-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:a90dd326451f4729f70721fb2874baaf8b767178593e8ab3ceda857a0f4e9469"},
+    {file = "concave_hull-0.0.9-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7eb2a6f3e14df1818b5ad5f2199774dbe88dd03113009916f6e61028ea91e923"},
+    {file = "concave_hull-0.0.9-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4760ac36178d7fe4e90f9a55daaa445310edbecea9c5d7374a69fe612b4ca632"},
+    {file = "concave_hull-0.0.9-cp310-cp310-win_amd64.whl", hash = "sha256:274b27f2b2cad32cd16ebc25dd32f832e1a781b854bd7ea6afc5dec145b99e9d"},
+    {file = "concave_hull-0.0.9-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:4ce71ea121bf67d39df53221fe4451c5b4ebc8e80adbf2178bf1d1b21cdcff20"},
+    {file = "concave_hull-0.0.9-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:7f9efba0dd2a259b86bd4c4778ea2c439e5990b3a974e669b5e7db63dbd937c9"},
+    {file = "concave_hull-0.0.9-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5e7a72867569b2ac601aa7f0ec955e01ad33358e6130a11512754b68147441ff"},
+    {file = "concave_hull-0.0.9-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1c1e276e88d91336f31515aee1070e2f76772177f47dad24e6ee2f2fe8b4b72b"},
+    {file = "concave_hull-0.0.9-cp311-cp311-win_amd64.whl", hash = "sha256:ac0bece551f0f9ca7e8f0709819851c502de5ffb5cea98aea89bc04f23eb2f8b"},
+    {file = "concave_hull-0.0.9-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:5e09c11db2cd3940acb55c7f9cddee70004944c9065e18b2d4d927afc4b85aae"},
+    {file = "concave_hull-0.0.9-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:5f7620205ae40f938e7c43816aeaf2f9d181e3475e4af2e873ffe014d7c2ced2"},
+    {file = "concave_hull-0.0.9-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8fd646c93e105ca8dcd5b8fb46af1b810b0562485d8a00f658eb5bef0bfa6050"},
+    {file = "concave_hull-0.0.9-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3e09c88000ea00a1b80887c116956987dc877552f63ea43757c133fdd48a5a22"},
+    {file = "concave_hull-0.0.9-cp312-cp312-win_amd64.whl", hash = "sha256:29efe6cf9ba0e29034b8c051f4d03380985219262ccb31b0bac3188cc8641fa4"},
+    {file = "concave_hull-0.0.9-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:8f4f534c2829e1171d2376029dfc99e4c322cb87548b271c9f9164c58cc8bca2"},
+    {file = "concave_hull-0.0.9-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:5c445dc44982faff860695f7d9bc3c2fffc37e5feab42e064a346134ac378c46"},
+    {file = "concave_hull-0.0.9-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7b3bd94b29885e60ee1ba3f57f6d16ba8bd121255c546a7ab5ab75cf2a9bc469"},
+    {file = "concave_hull-0.0.9-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2fe7d8e9a25bee4c360e2ed6452d557451efbfd2afc5e9d0b8bbc5e40cc04a38"},
+    {file = "concave_hull-0.0.9-cp313-cp313-win_amd64.whl", hash = "sha256:7aefca8c35261e95f83809beebd7f534e3f29b603502a23139177ff20aa837b1"},
+    {file = "concave_hull-0.0.9-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:99a189e4b1c3ff9f21ed7c317da23099281805f53862cbd4f25d09bfe8e32e74"},
+    {file = "concave_hull-0.0.9-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d5f5ba5d2409a4d98a66df7673bad2852b1036439ec6163f5f69ab6d8070aa65"},
+    {file = "concave_hull-0.0.9-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:248daa73b0abc73fbfe5a17f8c8c582c08e816ba8213ba53bff2476c0a9e9e43"},
+    {file = "concave_hull-0.0.9-cp37-cp37m-win_amd64.whl", hash = "sha256:053e4b053fed3825694e744866951d2a9695b52f9bde042aec9d94bcc86a17ca"},
+    {file = "concave_hull-0.0.9-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:f40524e855f4e6365855fd39968205eb8466730e2830fbe5d15c353040a15d1e"},
+    {file = "concave_hull-0.0.9-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:e0ff94761b33ffac21a9dc32e56298c58a964c8e02e7c6195fd07171f88afe12"},
+    {file = "concave_hull-0.0.9-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:aa78991f22a3922ad7f22894a6ee0ba30223953e1c5c87350dff61b8b93d1772"},
+    {file = "concave_hull-0.0.9-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:34d4e26b09ea1a6090ac9bb3287b5c9153567530499550513906afe1211ab3da"},
+    {file = "concave_hull-0.0.9-cp38-cp38-win_amd64.whl", hash = "sha256:584763f0086978e31e9a058e534dabe03b541db75ad5fa9dff36371c8fdca721"},
+    {file = "concave_hull-0.0.9-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:7fbb1ff4a6e5c46ef6f830380033d71b02568e74c0bfc2bff11356c4f12f41b7"},
+    {file = "concave_hull-0.0.9-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:560eccd2a613bb71635ebaca7416df5d7c8d3847bb367b49fd9fd9c8eb8c6acd"},
+    {file = "concave_hull-0.0.9-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:66b496912298480529c22c8f5b6d5f55a822bf40bb92be282990ddd01315022f"},
+    {file = "concave_hull-0.0.9-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d0ec18b0c5a378efd2a09ef85d4f695e57672b5789ef03fa6f8a807f4b360803"},
+    {file = "concave_hull-0.0.9-cp39-cp39-win_amd64.whl", hash = "sha256:ba3ef4ec205d5c18277726644fff332194cca86c93be8a5f6178f23d136481f5"},
+    {file = "concave_hull-0.0.9.tar.gz", hash = "sha256:f0727dc6bff5138b5988c3baeefef42c0dc494c838a86624667047d7c9678bd8"},
+]
+
+[package.extras]
+test = ["pytest", "scipy"]
 
 [[package]]
 name = "contourpy"
@@ -3503,6 +3585,25 @@ files = [
 ]
 
 [[package]]
+name = "rtree"
+version = "1.4.0"
+description = "R-Tree spatial index for Python GIS"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "rtree-1.4.0-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:4d1bebc418101480aabf41767e772dd2155d3b27b1376cccbd93e4509485e091"},
+    {file = "rtree-1.4.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:997f8c38d5dffa3949ea8adb4c8b291ea5cd4ef5ee69455d642dd171baf9991d"},
+    {file = "rtree-1.4.0-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:0133d9c54ab3ffe874ba6d411dbe0254765c5e68d92da5b91362c370f16fd997"},
+    {file = "rtree-1.4.0-py3-none-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:d3b7bf1fe6463139377995ebe22a01a7005d134707f43672a3c09305e12f5f43"},
+    {file = "rtree-1.4.0-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:27e4a6d617d63dcb82fcd4c2856134b8a3741bd1af3b1a0d98e886054f394da5"},
+    {file = "rtree-1.4.0-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:5258e826064eab82439760201e9421ce6d4340789d6d080c1b49367ddd03f61f"},
+    {file = "rtree-1.4.0-py3-none-musllinux_1_2_i686.whl", hash = "sha256:20d5b3f9cf8bbbcc9fec42ab837c603c5dd86103ef29134300c8da2495c1248b"},
+    {file = "rtree-1.4.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:a67bee1233370a4c72c0969a96d2a1df1ba404ddd9f146849c53ab420eab361b"},
+    {file = "rtree-1.4.0-py3-none-win_amd64.whl", hash = "sha256:ba83efc7b7563905b1bfdfc14490c4bfb59e92e5e6156bdeb6ec5df5117252f4"},
+    {file = "rtree-1.4.0.tar.gz", hash = "sha256:9d97c7c5dcf25f6c0599c76d9933368c6a8d7238f2c1d00e76f1a69369ca82a0"},
+]
+
+[[package]]
 name = "ruamel-yaml"
 version = "0.18.6"
 description = "ruamel.yaml is a YAML parser/emitter that supports roundtrip preservation of comments, seq/map flow style, and map key order"
@@ -3993,6 +4094,28 @@ slack = ["slack-sdk"]
 telegram = ["requests"]
 
 [[package]]
+name = "trimesh"
+version = "4.6.13"
+description = "Import, export, process, analyze and view triangular meshes."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "trimesh-4.6.13-py3-none-any.whl", hash = "sha256:b20b4c3ff03d185ec5b2b0e3adce6e75d8d73508861f2c1be3e40ab47cf18fee"},
+    {file = "trimesh-4.6.13.tar.gz", hash = "sha256:2950dd6c3c9c9948a652f7a2966319b47130467bbbf447b254e02b9d90c94f14"},
+]
+
+[package.dependencies]
+numpy = ">=1.20"
+
+[package.extras]
+all = ["trimesh[deprecated,easy,recommend,test,test-more]"]
+deprecated = ["gmsh (==4.12.2)", "openctm"]
+easy = ["charset-normalizer", "colorlog", "embreex", "httpx", "jsonschema", "lxml", "manifold3d (>=2.3.0)", "mapbox_earcut (>=1.0.2)", "networkx", "pillow", "pycollada", "rtree", "scipy", "shapely", "svg.path", "vhacdx", "xxhash"]
+recommend = ["cascadio", "fast-simplification", "meshio", "psutil", "pyglet (<2)", "python-fcl", "scikit-image", "sympy"]
+test = ["pyinstrument", "pytest", "pytest-cov", "ruff"]
+test-more = ["coveralls", "ezdxf", "ipython", "marimo", "matplotlib", "pymeshlab", "pyright", "pytest-beartype", "triangle", "xatlas"]
+
+[[package]]
 name = "types-python-dateutil"
 version = "2.9.0.20250516"
 description = "Typing stubs for python-dateutil"
@@ -4396,4 +4519,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "6e74ac5e043937935b25ffe3b9de02fff978d16d0ce43c8b38de5bb70e43c932"
+content-hash = "93d4de25c6a1d750637d949adbca15e6a2f3ae6155729b6fe533eda34d147f95"
