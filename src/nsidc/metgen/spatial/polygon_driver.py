@@ -6,9 +6,7 @@ This module automatically compares generated polygons with CMR polygons
 for randomly selected granules from a collection.
 """
 
-import argparse
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -28,7 +26,7 @@ from .polygon_generator import create_flightline_polygon
 class PolygonComparisonDriver:
     """Driver for automated polygon comparison with CMR."""
 
-    def __init__(self, output_dir="polygon_comparisons", token=None, max_workers=None):
+    def __init__(self, output_dir="polygon_comparisons", token=None):
         """
         Initialize the driver.
 
@@ -38,8 +36,6 @@ class PolygonComparisonDriver:
             Directory for output files
         token : str, optional
             Bearer token for CMR/Earthdata authentication
-        max_workers : int, optional
-            Maximum number of parallel workers (default: min(4, cpu_count))
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
@@ -50,17 +46,6 @@ class PolygonComparisonDriver:
         )
 
         self.token = token
-
-        # Set up parallel processing
-        import os
-
-        if max_workers is None:
-            # Conservative default: min of 4 workers or CPU count
-            self.max_workers = min(4, os.cpu_count() or 1)
-        else:
-            self.max_workers = max(1, min(max_workers, 8))  # Cap at 8 to be nice to CMR
-
-        # Polygon generator uses optimized concave hull + smart buffering approach
 
     def process_collection(
         self,
@@ -110,19 +95,11 @@ class PolygonComparisonDriver:
 
         print(f"[PolygonDriver] Found {len(granules)} granules to process")
 
-        # Process granules in parallel
-        if len(granules) > 1 and self.max_workers > 1:
-            print(
-                f"Processing granules in parallel using {self.max_workers} workers..."
-            )
-            results = self._process_granules_parallel(
-                granules, collection_dir, data_extensions
-            )
-        else:
-            print("Processing granules sequentially...")
-            results = self._process_granules_sequential(
-                granules, collection_dir, data_extensions
-            )
+        # Process granules sequentially
+        print("Processing granules...")
+        results = self._process_granules_sequential(
+            granules, collection_dir, data_extensions
+        )
 
         # Create collection summary
         self.create_collection_summary(collection_dir, short_name, results)
@@ -138,46 +115,6 @@ class PolygonComparisonDriver:
                 results.append(result)
         return results
 
-    def _process_granules_parallel(self, granules, collection_dir, data_extensions):
-        """Process granules in parallel using ThreadPoolExecutor."""
-        results = []
-        completed_count = 0
-
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            # Submit all tasks
-            future_to_granule = {
-                executor.submit(
-                    self.process_granule, granule, collection_dir, data_extensions
-                ): granule
-                for granule in granules
-            }
-
-            # Process completed tasks as they finish
-            for future in as_completed(future_to_granule):
-                completed_count += 1
-                granule = future_to_granule[future]
-                granule_name = granule.get("title", "Unknown")[:50]
-
-                try:
-                    result = future.result()
-                    if result:
-                        results.append(result)
-                        print(
-                            f"✅ [{completed_count}/{len(granules)}] Completed: {granule_name}..."
-                        )
-                    else:
-                        print(
-                            f"⚠️  [{completed_count}/{len(granules)}] Failed: {granule_name}..."
-                        )
-                except Exception as e:
-                    print(
-                        f"❌ [{completed_count}/{len(granules)}] Error: {granule_name}... - {str(e)[:100]}"
-                    )
-
-        print(
-            f"\nParallel processing complete: {len(results)}/{len(granules)} granules succeeded"
-        )
-        return results
 
     def process_specific_granule(
         self,
@@ -1446,99 +1383,3 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         print(f"[PolygonDriver] Metrics visualization saved to: {metrics_file}")
 
 
-def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Compare generated polygons with CMR polygons for random granules"
-    )
-
-    parser.add_argument("short_name", help="Collection short name (e.g., ILVIS2)")
-
-    parser.add_argument(
-        "-n",
-        "--number",
-        type=int,
-        default=5,
-        help="Number of random granules to process (default: 5)",
-    )
-
-    parser.add_argument(
-        "-p", "--provider", help="Data provider (e.g., NSIDC_ECS, LPDAAC_ECS)"
-    )
-
-    parser.add_argument(
-        "-o",
-        "--output",
-        default="polygon_comparisons",
-        help="Output directory (default: polygon_comparisons)",
-    )
-
-    parser.add_argument("--token-file", help="Path to file containing EDL bearer token")
-
-    parser.add_argument(
-        "--extensions",
-        nargs="+",
-        default=[".TXT", ".txt", ".h5", ".HDF5", ".nc", ".csv", ".CSV"],
-        help="Valid data file extensions",
-    )
-
-    parser.add_argument(
-        "-g",
-        "--granule",
-        help="Specific granule name to evaluate (e.g., LVISF2_IS_ARCSIX2024_0815_R2503_066145.TXT)",
-    )
-
-    parser.add_argument(
-        "-w",
-        "--workers",
-        type=int,
-        default=None,
-        help="Number of parallel workers (default: min(4, cpu_count), max 8)",
-    )
-
-    parser.add_argument(
-        "--generator",
-        choices=["bespoke", "standard"],
-        default="bespoke",
-        help="Polygon generator type: 'bespoke' (current implementation) or 'standard' (alphashape/concave hull) (default: bespoke)",
-    )
-
-    args = parser.parse_args()
-
-    # Load token from file if provided
-    token = None
-    if args.token_file:
-        try:
-            with open(args.token_file, "r") as f:
-                token = f.read().strip()
-            print(f"Loaded EDL bearer token from {args.token_file}")
-        except Exception as e:
-            print(f"Warning: Could not read token file {args.token_file}: {e}")
-            print("Continuing without authentication...")
-
-    # Create driver
-    driver = PolygonComparisonDriver(
-        output_dir=args.output, token=token, max_workers=args.workers
-    )
-
-    # Process either specific granule or random collection
-    if args.granule:
-        # Process specific granule
-        driver.process_specific_granule(
-            short_name=args.short_name,
-            granule_ur=args.granule,
-            provider=args.provider,
-            data_extensions=args.extensions,
-        )
-    else:
-        # Process random collection
-        driver.process_collection(
-            short_name=args.short_name,
-            provider=args.provider,
-            n_granules=args.number,
-            data_extensions=args.extensions,
-        )
-
-
-if __name__ == "__main__":
-    main()

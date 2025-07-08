@@ -87,58 +87,53 @@ This approach ensures:
 - ✅ **Conditional processing** ensures polygon generation only for `.spatial` files
 - ✅ **Backward compatibility** maintained for existing workflows
 
-## 3. CLI Integration
+## 3. CLI Integration ✅ COMPLETED
 
-Add polygon comparison command to MetGenC CLI:
+A standalone CLI tool has been created for polygon operations:
 
-### In `src/nsidc/metgen/cli.py`:
+### Standalone CLI: `metgenc-polygons`
 
-```python
-from nsidc.metgen.spatial.polygon_driver import PolygonComparisonDriver
+Created `src/nsidc/metgen/spatial_cli.py` with a dedicated CLI for spatial polygon operations:
 
-@cli.command()
-@click.argument('collection')
-@click.option('-n', '--number', default=5, help='Number of granules to process')
-@click.option('-p', '--provider', help='Data provider')
-@click.option('--token-file', help='Path to EDL bearer token file')
-@click.option('-o', '--output', default='polygon_comparisons', help='Output directory')
-@click.option('-w', '--workers', default=1, help='Number of parallel workers')
-@click.option('--granule', help='Process specific granule instead of random selection')
-def compare_polygons(collection, number, provider, token_file, output, workers, granule):
-    """Compare generated polygons with CMR polygons for a collection."""
-    
-    # Load token if provided
-    token = None
-    if token_file:
-        try:
-            with open(token_file, 'r') as f:
-                token = f.read().strip()
-            print(f"Loaded EDL bearer token from {token_file}")
-        except Exception as e:
-            print(f"Warning: Could not read token file {token_file}: {e}")
-    
-    # Create driver with parallel processing support
-    driver = PolygonComparisonDriver(
-        output_dir=output, 
-        token=token, 
-        max_workers=workers
-    )
-    
-    if granule:
-        # Process specific granule
-        driver.process_specific_granule(
-            short_name=collection,
-            granule_ur=granule,
-            provider=provider
-        )
-    else:
-        # Process random granules from collection
-        driver.process_collection(
-            short_name=collection,
-            provider=provider,
-            n_granules=number
-        )
+#### Installation:
+The CLI is automatically available after installing the package:
+```bash
+poetry install
+# or
+pip install nsidc-metgenc
 ```
+
+#### Usage Examples:
+```bash
+# Show available commands
+metgenc-polygons --help
+
+# Compare 10 random LVISF2 granules with CMR
+metgenc-polygons compare LVISF2 -n 10 --provider NSIDC_CPRD
+
+# Compare specific granule with authentication
+metgenc-polygons compare LVISF2 --granule "GRANULE_NAME" --token-file ~/.edl_token
+
+# Use custom output directory
+metgenc-polygons compare ILVIS2 -n 20 -o /tmp/polygon_analysis
+
+# Validate a polygon file
+metgenc-polygons validate my_polygon.geojson --check-coverage --points-file points.csv
+
+# Show tool information
+metgenc-polygons info
+```
+
+#### Available Commands:
+- **`compare`**: Compare generated polygons with CMR polygons for collections
+- **`validate`**: Validate polygon files and check data coverage
+- **`info`**: Display tool information and usage
+
+#### Benefits of Standalone CLI:
+- ✅ **Separation of concerns**: Polygon tools are separate from main MetGenC workflow
+- ✅ **Clean interface**: No cluttering of main `metgenc` command
+- ✅ **Focused functionality**: All polygon-related operations in one place
+- ✅ **Easy to discover**: `metgenc-polygons --help` shows all polygon operations
 
 ## 4. Testing Integration
 
