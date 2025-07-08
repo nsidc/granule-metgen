@@ -1,6 +1,5 @@
 {
     "RangeDateTime": {
-      "BeginningDateTime": "$begin_date_time",
-      "EndingDateTime": "$end_date_time"
+      $date_time_range
     }
 }

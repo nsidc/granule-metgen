@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nsidc-metgenc"
-version = "1.8.0rc1"
+version = "1.8.0"
 description = "The nsidc-metgenc package enables data producers as well as Operations staff managing the data ingest workflow to create metadata files conforming to NASA's Common Metadata Repository UMM-G specification."
 authors = ["National Snow and Ice Data Center (NSIDC) <nsidc@nsidc.org>"]
 readme = "README.md"
@@ -51,7 +51,7 @@ scipy = "^1.16.0"
 netcdf4 = "^1.7.2"
 
 [tool.bumpversion]
-current_version = "1.8.0rc1"
+current_version = "1.8.0"
 parse = """(?x)
     (?P<major>0|[1-9]\\d*)\\.
     (?P<minor>0|[1-9]\\d*)\\.

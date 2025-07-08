@@ -39,6 +39,7 @@ class Config:
     premet_dir: Optional[str] = None
     spatial_dir: Optional[str] = None
     collection_geometry_override: Optional[bool] = False
+    collection_temporal_override: Optional[bool] = False
     time_start_regex: Optional[str] = None
     time_coverage_duration: Optional[str] = None
     pixel_size: Optional[int] = None
@@ -141,6 +142,7 @@ def configuration(
         "dry_run": constants.DEFAULT_DRY_RUN,
         "browse_regex": constants.DEFAULT_BROWSE_REGEX,
         "collection_geometry_override": constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE,
+        "collection_temporal_override": constants.DEFAULT_COLLECTION_TEMPORAL_OVERRIDE,
         "spatial_polygon_enabled": constants.DEFAULT_SPATIAL_POLYGON_ENABLED,
         "spatial_polygon_target_coverage": constants.DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE,
         "spatial_polygon_max_vertices": constants.DEFAULT_SPATIAL_POLYGON_MAX_VERTICES,
@@ -222,6 +224,14 @@ def configuration(
                 environment,
                 "Source",
                 "collection_geometry_override",
+                bool,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Source",
+                "collection_temporal_override",
                 bool,
                 config_parser,
                 overrides,
