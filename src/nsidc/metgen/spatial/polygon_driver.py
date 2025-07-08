@@ -29,7 +29,7 @@ from . import standard_polygon_generator
 class PolygonComparisonDriver:
     """Driver for automated polygon comparison with CMR."""
 
-    def __init__(self, output_dir="polygon_comparisons", token=None, max_workers=None, generator_type="bespoke"):
+    def __init__(self, output_dir="polygon_comparisons", token=None, max_workers=None, generator_type="standard"):
         """
         Initialize the driver.
 
@@ -56,7 +56,7 @@ class PolygonComparisonDriver:
             print(f"[PolygonDriver] Using standard algorithms (alphashape, concave hull)")
         else:
             self.polygon_generator = PolygonGenerator()
-            print(f"[PolygonDriver] Using bespoke algorithms")
+            print(f"[PolygonDriver] Using bespoke algorithms (now redirects to standard)")
             
         self.token = token
 
