@@ -17,14 +17,24 @@ This module provides functionality for generating optimized spatial coverage pol
 ```python
 from nsidc.metgen.spatial import PolygonGenerator, CMRClient
 
-# Generate a polygon
+# Generate a polygon - algorithm automatically selects optimal method
 generator = PolygonGenerator()
-polygon, metadata = generator.create_flightline_polygon(
-    lon_array, lat_array,
-    method='adaptive_beam',
-    iterative_simplify=True,
-    target_vertices=8
-)
+polygon, metadata = generator.create_flightline_polygon(lon_array, lat_array)
+
+# The algorithm automatically:
+# - Analyzes data characteristics (density, linearity, spacing)
+# - Selects the optimal generation method
+# - Determines appropriate parameters (buffer size, target vertices)
+# - Generates and optimizes the polygon
+# - Ensures high data coverage with minimal non-data area
+
+# Metadata includes:
+# - method: Selected generation method
+# - points: Number of input points  
+# - vertices: Final vertex count
+# - data_coverage: Percentage of data covered
+# - generation_time_seconds: Total processing time
+# - data_analysis: Characteristics that drove method selection
 
 # Compare with CMR
 client = CMRClient(token='your-bearer-token')
@@ -43,21 +53,25 @@ python polygon_cli.py ILVIS2 -n 5
 
 ## Key Features
 
-- Multiple polygon generation methods (convex, concave, alpha shapes, beam methods)
-- Adaptive buffer sizing based on data density
-- Iterative simplification to match CMR polygon characteristics
-- Comprehensive comparison metrics (IoU, area ratio, coverage)
-- Automated workflow for batch processing
+- **Automatic method selection** - Analyzes data characteristics to choose optimal approach
+- **Multiple polygon generation methods** - beam sampling, union buffer, line buffer
+- **Adaptive parameter tuning** - Buffer sizes, vertex targets, and coverage thresholds automatically determined
+- **Iterative simplification** - Reduces vertices while maintaining data coverage
+- **Comprehensive metrics** - Data coverage, area ratio, non-data area, processing time
+- **Parallel processing** - Batch process multiple granules efficiently
 
-## Configuration
+## How It Works
 
-The module uses optimized default settings:
-- Method: adaptive_beam
-- Target vertices: 8
-- Minimum IoU: 0.70
-- Minimum coverage: 0.90
+The algorithm follows these steps:
 
-These can be overridden via function parameters or command-line arguments.
+1. **Data Analysis** - Examines point density, spatial distribution, linearity, and spacing regularity
+2. **Method Selection** - Chooses between:
+   - `union_buffer` - For sparse or highly irregular data
+   - `line_buffer` - For linear, regular flightlines
+   - `beam` methods - For moderate cases
+3. **Parameter Optimization** - Determines buffer sizes and target vertices based on data characteristics
+4. **Polygon Generation** - Creates initial polygon using selected method
+5. **Iterative Simplification** - Reduces vertices while maintaining coverage requirements
 
 ## Integration with MetGenC
 
@@ -66,9 +80,6 @@ This module can be integrated into MetGenC's configuration:
 ```ini
 [spatial]
 enabled = true
-method = adaptive_beam
-simplify = true
-target_vertices = 8
 ```
 
 Then use in MetGenC processing:
@@ -79,9 +90,12 @@ from nsidc.metgen.spatial import PolygonGenerator
 # In your reader or processor
 if config.spatial.enabled:
     generator = PolygonGenerator()
-    spatial_polygon = generator.create_flightline_polygon(
+    spatial_polygon, metadata = generator.create_flightline_polygon(
         data['longitude'], 
-        data['latitude'],
-        **config.spatial.params
+        data['latitude']
     )
+    
+    # Log the results
+    print(f"Generated {metadata['vertices']} vertex polygon using {metadata['method']} method")
+    print(f"Data coverage: {metadata.get('data_coverage', 'N/A')}")
 ```

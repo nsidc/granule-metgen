@@ -46,7 +46,7 @@ class TestSimplification:
         initial_vertices = len(complex_polygon.exterior.coords) - 1
 
         simplified, history = iterative_simplify_polygon(
-            complex_polygon, target_vertices=10, min_iou=0.80
+            complex_polygon, target_vertices=10
         )
 
         final_vertices = len(simplified.exterior.coords) - 1
@@ -67,7 +67,6 @@ class TestSimplification:
             complex_polygon,
             data_points=inside_points,
             target_vertices=8,
-            min_iou=0.70,
             min_coverage=0.95,
         )
 
@@ -84,7 +83,6 @@ class TestSimplification:
             simplified, history = iterative_simplify_polygon(
                 complex_polygon,
                 target_vertices=target,
-                min_iou=0.60,  # Relaxed constraint
             )
 
             vertices = len(simplified.exterior.coords) - 1
@@ -98,7 +96,6 @@ class TestSimplification:
             complex_polygon,
             data_points=data_points,
             target_vertices=6,
-            min_iou=0.95,  # Very strict
             min_coverage=0.99,
         )
 
@@ -107,7 +104,6 @@ class TestSimplification:
             complex_polygon,
             data_points=data_points,
             target_vertices=6,
-            min_iou=0.70,  # Relaxed
             min_coverage=0.90,
         )
 
@@ -124,7 +120,6 @@ class TestSimplification:
         simplified, history = iterative_simplify_polygon(
             simple_polygon,
             target_vertices=3,  # Less than current
-            min_iou=0.90,
         )
 
         final_vertices = len(simplified.exterior.coords) - 1
@@ -136,7 +131,7 @@ class TestSimplification:
     def test_history_tracking(self, complex_polygon):
         """Test that simplification history is properly tracked."""
         simplified, history = iterative_simplify_polygon(
-            complex_polygon, target_vertices=10, min_iou=0.80
+            complex_polygon, target_vertices=10
         )
 
         assert isinstance(history, list)
@@ -146,7 +141,7 @@ class TestSimplification:
         for entry in history:
             assert "iteration" in entry
             assert "vertices" in entry
-            assert "iou" in entry
+            assert "data_coverage" in entry
             assert "tolerance" in entry
 
         # Vertices should decrease through iterations
@@ -154,30 +149,26 @@ class TestSimplification:
         for i in range(1, len(vertices_sequence)):
             assert vertices_sequence[i] <= vertices_sequence[i - 1]
 
-    def test_iou_calculation(self, complex_polygon):
-        """Test that IoU is calculated correctly during simplification."""
+    def test_data_coverage_calculation(self, complex_polygon):
+        """Test that data coverage is calculated correctly during simplification."""
         simplified, history = iterative_simplify_polygon(
-            complex_polygon, target_vertices=20, min_iou=0.85
+            complex_polygon, target_vertices=20, min_coverage=0.90
         )
 
-        # Check that final IoU meets constraint
-        intersection = complex_polygon.intersection(simplified).area
-        union = complex_polygon.union(simplified).area
-        actual_iou = intersection / union if union > 0 else 0
+        # Check that final coverage meets constraint
+        assert simplified.is_valid
+        assert len(simplified.exterior.coords) - 1 <= 20
 
-        assert actual_iou >= 0.85
-
-        # Check IoU in history
+        # Check coverage in history
         if history:
-            last_iou = history[-1]["iou"]
-            assert abs(last_iou - actual_iou) < 0.01  # Should match
+            last_coverage = history[-1]["data_coverage"]
+            assert last_coverage >= 0.90
 
     def test_max_iterations_limit(self, complex_polygon):
         """Test that simplification respects max iterations."""
         simplified, history = iterative_simplify_polygon(
             complex_polygon,
             target_vertices=4,  # Very aggressive
-            min_iou=0.50,
             max_iterations=3,  # Limit iterations
         )
 
@@ -188,10 +179,10 @@ class TestSimplification:
         empty_points = np.array([]).reshape(0, 2)
 
         simplified, history = iterative_simplify_polygon(
-            complex_polygon, data_points=empty_points, target_vertices=10, min_iou=0.80
+            complex_polygon, data_points=empty_points, target_vertices=10
         )
 
-        # Should still simplify based on IoU only
+        # Should still simplify based on data coverage only
         assert isinstance(simplified, Polygon)
         assert simplified.is_valid
         assert (

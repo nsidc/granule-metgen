@@ -15,11 +15,10 @@ SPATIAL_SCHEMA = {
     'method': {
         'type': 'string', 
         'default': 'adaptive_beam',
-        'allowed': ['convex', 'concave', 'alpha', 'buffer', 'centerline', 'beam', 'adaptive_beam']
+        'allowed': ['beam', 'adaptive_beam', 'union_buffer', 'line_buffer']
     },
     'simplify': {'type': 'boolean', 'default': True},
     'target_vertices': {'type': 'integer', 'default': 8, 'min': 4, 'max': 100},
-    'min_iou': {'type': 'float', 'default': 0.70, 'min': 0.0, 'max': 1.0},
     'min_coverage': {'type': 'float', 'default': 0.90, 'min': 0.0, 'max': 1.0}
 }
 ```
@@ -32,7 +31,6 @@ enabled = true
 method = adaptive_beam
 simplify = true
 target_vertices = 8
-min_iou = 0.70
 min_coverage = 0.90
 ```
 
@@ -61,7 +59,6 @@ class NetCDFReader(Reader):
                 method=self.config['spatial'].get('method', 'adaptive_beam'),
                 iterative_simplify=self.config['spatial'].get('simplify', True),
                 target_vertices=self.config['spatial'].get('target_vertices', 8),
-                min_iou=self.config['spatial'].get('min_iou', 0.70),
                 min_coverage=self.config['spatial'].get('min_coverage', 0.90)
             )
             

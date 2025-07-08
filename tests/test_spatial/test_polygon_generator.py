@@ -40,19 +40,6 @@ class TestPolygonGenerator:
         lat = np.array([35, 35.1, 35.2, 35.3, 35.4])
         return lon, lat
 
-    def test_buffer_method(self, generator, sparse_flightline):
-        """Test buffer method polygon generation."""
-        lon, lat = sparse_flightline
-
-        polygon, metadata = generator.create_flightline_polygon(
-            lon, lat, method="buffer", buffer_distance=500
-        )
-
-        assert isinstance(polygon, Polygon)
-        assert polygon.is_valid
-        assert metadata["method"] == "buffer"
-        assert metadata["buffer_m"] == 500
-
     def test_beam_method(self, generator, simple_flightline):
         """Test beam method polygon generation."""
         lon, lat = simple_flightline
@@ -80,6 +67,79 @@ class TestPolygonGenerator:
         assert "adaptive_buffer" in metadata
         assert metadata["adaptive_buffer"] > 0
 
+    def test_union_buffer_method(self, generator, sparse_flightline):
+        """Test union buffer method polygon generation."""
+        lon, lat = sparse_flightline
+
+        polygon, metadata = generator.create_flightline_polygon(
+            lon, lat, method="union_buffer", buffer_distance=300
+        )
+
+        assert isinstance(polygon, Polygon)
+        assert polygon.is_valid
+        assert metadata["method"] == "union_buffer"
+        assert metadata["buffer_m"] == 300
+        assert "initial_circles" in metadata
+        assert metadata["initial_circles"] == len(lon)
+        assert "data_coverage" in metadata
+        assert metadata["data_coverage"] >= 0.9  # Should cover most data points
+
+    def test_union_buffer_adaptive_calculation(self, generator, sparse_flightline):
+        """Test union buffer method with adaptive buffer calculation."""
+        lon, lat = sparse_flightline
+
+        # Don't provide buffer_distance to trigger adaptive calculation
+        polygon, metadata = generator.create_flightline_polygon(
+            lon, lat, method="union_buffer"
+        )
+
+        assert isinstance(polygon, Polygon)
+        assert polygon.is_valid
+        assert metadata["method"] == "union_buffer"
+        assert "adaptive_buffer_calculation" in metadata
+        assert metadata["adaptive_buffer_calculation"] == "nearest_neighbors"
+        assert metadata["buffer_m"] > 0  # Should calculate some buffer size
+        assert "initial_circles" in metadata
+        assert "data_coverage" in metadata
+        assert metadata["data_coverage"] >= 0.9  # Should still cover most data points
+
+    def test_line_buffer_method(self, generator, simple_flightline):
+        """Test line buffer method polygon generation."""
+        lon, lat = simple_flightline
+
+        polygon, metadata = generator.create_flightline_polygon(
+            lon, lat, method="line_buffer", buffer_distance=400
+        )
+
+        assert isinstance(polygon, Polygon)
+        assert polygon.is_valid
+        assert metadata["method"] == "line_buffer"
+        assert metadata["buffer_m"] == 400
+        assert "optimization_attempts" in metadata
+        assert metadata["total_attempts"] > 0
+        assert "best_score" in metadata
+        assert metadata["vertices"] >= 3  # Should have reasonable vertex count
+        assert metadata["data_coverage"] >= 0.8  # Should cover most data points
+
+    def test_line_buffer_adaptive_calculation(self, generator, simple_flightline):
+        """Test line buffer method with adaptive buffer calculation."""
+        lon, lat = simple_flightline
+
+        # Don't provide buffer_distance to trigger adaptive calculation
+        polygon, metadata = generator.create_flightline_polygon(
+            lon, lat, method="line_buffer"
+        )
+
+        assert isinstance(polygon, Polygon)
+        assert polygon.is_valid
+        assert metadata["method"] == "line_buffer"
+        assert "adaptive_buffer_calculation" in metadata
+        assert metadata["adaptive_buffer_calculation"] == "sequential_distances"
+        assert metadata["buffer_m"] > 0  # Should calculate some buffer size
+        assert "optimization_attempts" in metadata
+        assert metadata["total_attempts"] > 0
+        assert metadata["data_coverage"] >= 0.8  # Should cover most data points
+
     def test_iterative_simplification(self, generator, complex_flightline):
         """Test polygon simplification."""
         lon, lat = complex_flightline
@@ -91,12 +151,11 @@ class TestPolygonGenerator:
             method="beam",
             iterative_simplify=True,
             target_vertices=10,
-            min_iou=0.70,
         )
 
         assert isinstance(polygon, Polygon)
         assert polygon.is_valid
-        # With min_iou=0.70, simplification may stop before reaching exactly 10 vertices
+        # With min_coverage=0.90, simplification may stop before reaching exactly 10 vertices
         # to maintain quality. Allow up to 50 vertices as reasonable simplification.
         assert metadata["vertices"] <= 50  # Should be simplified from original ~470
         assert "simplification_history" in metadata
@@ -131,9 +190,7 @@ class TestPolygonGenerator:
         lon = np.array([])
         lat = np.array([])
 
-        polygon, metadata = generator.create_flightline_polygon(
-            lon, lat, method="buffer"
-        )
+        polygon, metadata = generator.create_flightline_polygon(lon, lat, method="beam")
 
         assert polygon is None
         assert metadata["points"] == 0
@@ -144,7 +201,7 @@ class TestPolygonGenerator:
         lat = np.array([35])
 
         polygon, metadata = generator.create_flightline_polygon(
-            lon, lat, method="buffer", buffer_distance=100
+            lon, lat, method="beam", buffer_distance=100
         )
 
         # Should create a buffer around the single point
@@ -158,7 +215,7 @@ class TestPolygonGenerator:
         lat = np.array([35, 35.5])
 
         polygon, metadata = generator.create_flightline_polygon(
-            lon, lat, method="buffer", buffer_distance=200
+            lon, lat, method="beam", buffer_distance=200
         )
 
         # Should create a buffered line
@@ -237,7 +294,6 @@ class TestPolygonGenerator:
             lat,
             method="beam",
             iterative_simplify=True,
-            min_iou=0.95,  # Very strict
             min_coverage=0.99,
         )
 
@@ -247,7 +303,6 @@ class TestPolygonGenerator:
             lat,
             method="beam",
             iterative_simplify=True,
-            min_iou=0.70,  # Relaxed
             min_coverage=0.90,
         )
 
@@ -264,7 +319,7 @@ class TestPolygonGenerator:
 
         # Should complete in reasonable time
         polygon, metadata = generator.create_flightline_polygon(
-            lon, lat, method="buffer", buffer_distance=300
+            lon, lat, method="beam", buffer_distance=300
         )
 
         assert isinstance(polygon, Polygon)
@@ -303,3 +358,89 @@ class TestPolygonGenerator:
 
         assert metadata["method"] == "adaptive_beam"
         assert "adaptive_buffer" in metadata
+
+    def test_generation_timing(self, generator, simple_flightline):
+        """Test that generation timing is recorded."""
+        lon, lat = simple_flightline
+
+        polygon, metadata = generator.create_flightline_polygon(
+            lon, lat, method="beam", buffer_distance=300
+        )
+
+        # Check that timing metadata is present
+        assert "generation_time_seconds" in metadata
+        assert isinstance(metadata["generation_time_seconds"], (int, float))
+        assert metadata["generation_time_seconds"] > 0
+        assert (
+            metadata["generation_time_seconds"] < 10
+        )  # Should be reasonable for test data
+
+    def test_union_buffer_disconnected_components(self, generator):
+        """Test union buffer method with disconnected data clusters."""
+        # Create two separate clusters that should result in disconnected components
+        np.random.seed(42)  # For reproducible results
+
+        # First cluster
+        lon1 = np.random.normal(-120, 0.01, 20)
+        lat1 = np.random.normal(35, 0.01, 20)
+
+        # Second cluster (far enough to be disconnected with small buffer)
+        lon2 = np.random.normal(-119, 0.01, 20)
+        lat2 = np.random.normal(35.5, 0.01, 20)
+
+        lon = np.concatenate([lon1, lon2])
+        lat = np.concatenate([lat1, lat2])
+
+        # Use small buffer to ensure disconnected components initially
+        polygon, metadata = generator.create_flightline_polygon(
+            lon, lat, method="union_buffer", buffer_distance=100, connect_regions=True
+        )
+
+        assert isinstance(polygon, Polygon)
+        assert polygon.is_valid
+        assert metadata["method"] == "union_buffer"
+        assert "disconnected_components" in metadata
+        assert "connected" in metadata
+
+        # Should result in either connection or taking largest component
+        if metadata["disconnected_components"] > 1:
+            assert metadata["connected"]  # Should attempt connection
+
+        # Data coverage should be reasonable (may be lower with small buffer and disconnected clusters)
+        assert metadata["data_coverage"] >= 0.6  # Relaxed threshold for this edge case
+
+    def test_union_buffer_vertex_optimization(self, generator, simple_flightline):
+        """Test that union buffer method works with iterative simplification."""
+        lon, lat = simple_flightline
+
+        # Test with simplification to achieve target vertex count
+        polygon, metadata = generator.create_flightline_polygon(
+            lon,
+            lat,
+            method="union_buffer",
+            buffer_distance=400,
+            iterative_simplify=True,
+            target_vertices=12,
+        )
+
+        assert isinstance(polygon, Polygon)
+        assert polygon.is_valid
+        assert metadata["method"] == "union_buffer"
+
+        # Should be simplified
+        assert "simplification_history" in metadata
+        assert len(metadata["simplification_history"]) > 0
+
+        # Final vertex count should be reasonable (meeting goals)
+        final_vertices = metadata["vertices"]
+        assert final_vertices <= 127  # Should be at least "OK" level
+
+        # Preferably in "Great" or "Good" range
+        if final_vertices <= 32:
+            print(f"  Excellent: {final_vertices} vertices (Great/Good range)")
+        elif final_vertices <= 127:
+            print(f"  Good: {final_vertices} vertices (OK range)")
+
+        # Data coverage should remain high even after simplification
+        if metadata.get("data_coverage", 0) > 0:
+            assert metadata["data_coverage"] >= 0.85
