@@ -6,12 +6,10 @@ polygons from point data, particularly for LVIS/ILVIS2 LIDAR flightline data.
 """
 
 from .cmr_client import CMRClient, PolygonComparator, UMMGParser, sanitize_granule_ur
-from .polygon_generator import PolygonGenerator
-from .standard_polygon_generator import create_flightline_polygon
+from .polygon_generator import create_flightline_polygon
 
 __all__ = [
-    "PolygonGenerator",
-    "create_flightline_polygon",  # Direct access to standard generator
+    "create_flightline_polygon",
     "CMRClient",
     "UMMGParser",
     "PolygonComparator",

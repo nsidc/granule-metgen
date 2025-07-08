@@ -22,14 +22,13 @@ from shapely.geometry import Point
 from .cmr_client import CMRClient, PolygonComparator, UMMGParser, sanitize_granule_ur
 
 # Import our modules
-from .polygon_generator import PolygonGenerator
-from . import standard_polygon_generator
+from .polygon_generator import create_flightline_polygon
 
 
 class PolygonComparisonDriver:
     """Driver for automated polygon comparison with CMR."""
 
-    def __init__(self, output_dir="polygon_comparisons", token=None, max_workers=None, generator_type="standard"):
+    def __init__(self, output_dir="polygon_comparisons", token=None, max_workers=None):
         """
         Initialize the driver.
 
@@ -41,22 +40,12 @@ class PolygonComparisonDriver:
             Bearer token for CMR/Earthdata authentication
         max_workers : int, optional
             Maximum number of parallel workers (default: min(4, cpu_count))
-        generator_type : str
-            Type of polygon generator to use ("bespoke" or "standard")
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
         self.cmr_client = CMRClient(token=token)
-        self.generator_type = generator_type
-        
-        # Set up polygon generator based on type
-        if generator_type == "standard":
-            self.polygon_generator = None  # Will use functional approach
-            print(f"[PolygonDriver] Using standard algorithms (alphashape, concave hull)")
-        else:
-            self.polygon_generator = PolygonGenerator()
-            print(f"[PolygonDriver] Using bespoke algorithms (now redirects to standard)")
+        print(f"[PolygonDriver] Using optimized polygon generation (concave hull + smart buffering)")
             
         self.token = token
 
@@ -68,7 +57,7 @@ class PolygonComparisonDriver:
         else:
             self.max_workers = max(1, min(max_workers, 8))  # Cap at 8 to be nice to CMR
 
-        # Polygon generator will handle all method selection and optimization internally
+        # Polygon generator uses optimized concave hull + smart buffering approach
 
     def process_collection(
         self,
@@ -331,11 +320,8 @@ class PolygonComparisonDriver:
                     cmr_vertices += len(coords) - 1
             print(f"  CMR vertices: {cmr_vertices}")
 
-            # Generate polygon using selected generator type
-            if self.generator_type == "standard":
-                polygon, metadata = standard_polygon_generator.create_flightline_polygon(lon, lat)
-            else:
-                polygon, metadata = self.polygon_generator.create_flightline_polygon(lon, lat)
+            # Generate polygon using optimized approach
+            polygon, metadata = create_flightline_polygon(lon, lat)
 
             # Store CMR coverage in metadata for display
             metadata["cmr_data_coverage"] = cmr_coverage
@@ -864,7 +850,6 @@ class PolygonComparisonDriver:
             "geometry": polygon.__geo_interface__,
             "properties": {
                 "source": "Generated",
-                "generator_type": self.generator_type,
                 "granule_ur": granule_ur,
                 "method": metadata.get("method", "unknown"),
                 "vertices": metadata.get("vertices", 0),
@@ -1253,10 +1238,10 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 ## Processing Summary
 - Total granules processed: {len(results)}
-- Generator type: {self.generator_type}
-- Processing method: {"Standard algorithms (alphashape/concave hull)" if self.generator_type == "standard" else "Bespoke algorithms with auto-selection"}
-- Iterative simplification: {"N/A (handled by standard algorithms)" if self.generator_type == "standard" else "Enabled"}
-- Target vertices: {"Auto-selected by algorithm" if self.generator_type == "standard" else "Auto-selected based on data characteristics"}
+- Generator type: standard
+- Processing method: Optimized algorithms (concave hull + smart buffering)
+- Iterative simplification: N/A (handled by standard algorithms)
+- Target vertices: Auto-selected by algorithm
 
 ## Aggregate Metrics
 
@@ -1503,7 +1488,7 @@ def main():
             print("Continuing without authentication...")
 
     # Create driver
-    driver = PolygonComparisonDriver(output_dir=args.output, token=token, max_workers=args.workers, generator_type=args.generator)
+    driver = PolygonComparisonDriver(output_dir=args.output, token=token, max_workers=args.workers)
 
     # Process either specific granule or random collection
     if args.granule:
