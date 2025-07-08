@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
+
 ## v1.8.0
 
 * Adds a generic reader used when `metgenc` processes granules with an unknown

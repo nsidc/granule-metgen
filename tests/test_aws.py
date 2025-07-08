@@ -5,6 +5,7 @@ from tempfile import TemporaryFile
 import boto3
 import pytest
 from moto import mock_aws
+
 from nsidc.metgen import aws
 
 # Unit tests for the 'aws' module functions.
