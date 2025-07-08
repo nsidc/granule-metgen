@@ -35,7 +35,7 @@ moto = {extras = ["all"], version = "^5.0.14"}
 pytest-watcher = "^0.4.3"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "0.5.7"
+ruff = "^0.12.0"
 mypy = "^1.11.1"
 bump-my-version = "^0.28.1"
 sphinx = "^8.1.3"

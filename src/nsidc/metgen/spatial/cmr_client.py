@@ -666,7 +666,7 @@ class PolygonComparator:
             # Set radius as 2% of smaller dimension
             adaptive_radius = smaller_dimension * 0.02
             print(
-                f"    Using adaptive radius: {adaptive_radius*111000:.0f}m (2% of {smaller_dimension*111000:.0f}m bounding box)"
+                f"    Using adaptive radius: {adaptive_radius * 111000:.0f}m (2% of {smaller_dimension * 111000:.0f}m bounding box)"
             )
 
             # Function to estimate non-data coverage for a polygon with given parameters
@@ -760,14 +760,14 @@ class PolygonComparator:
             print("    Calculating non-data coverage...")
             cmr_coverage, cmr_radius, cmr_samples = find_converged_coverage(cmr_geom)
             print(
-                f"      CMR polygon: converged at {cmr_samples} samples, {cmr_radius*111000:.0f}m radius"
+                f"      CMR polygon: converged at {cmr_samples} samples, {cmr_radius * 111000:.0f}m radius"
             )
 
             gen_coverage, gen_radius, gen_samples = find_converged_coverage(
                 generated_geom
             )
             print(
-                f"      Generated polygon: converged at {gen_samples} samples, {gen_radius*111000:.0f}m radius"
+                f"      Generated polygon: converged at {gen_samples} samples, {gen_radius * 111000:.0f}m radius"
             )
 
             metrics["cmr_non_data_coverage"] = cmr_coverage
@@ -827,27 +827,27 @@ def create_comparison_summary(granule_ur, metrics):
     """
     summary = f"""
 Polygon Comparison Summary for {granule_ur}
-{'=' * 60}
+{"=" * 60}
 
 Area Comparison:
-  CMR Area:       {metrics['cmr_area_deg2']:.6f} deg²
-  Generated Area: {metrics['generated_area_deg2']:.6f} deg²
-  Area Ratio:     {metrics['area_ratio']:.3f}
+  CMR Area:       {metrics["cmr_area_deg2"]:.6f} deg²
+  Generated Area: {metrics["generated_area_deg2"]:.6f} deg²
+  Area Ratio:     {metrics["area_ratio"]:.3f}
 
 Overlap Metrics:
-  IoU (Intersection over Union): {metrics['iou']:.3f}
-  CMR covered by Generated:      {metrics['cmr_covered_by_generated']:.1%}
-  Generated covered by CMR:      {metrics['generated_covered_by_cmr']:.1%}
+  IoU (Intersection over Union): {metrics["iou"]:.3f}
+  CMR covered by Generated:      {metrics["cmr_covered_by_generated"]:.1%}
+  Generated covered by CMR:      {metrics["generated_covered_by_cmr"]:.1%}
 
 Shape Metrics:
-  CMR Vertices:       {metrics['cmr_vertices']}
-  Generated Vertices: {metrics['generated_vertices']}
-  Hausdorff Distance: {metrics['hausdorff_distance']:.6f} deg
-  Centroid Distance:  {metrics['centroid_distance']:.6f} deg
+  CMR Vertices:       {metrics["cmr_vertices"]}
+  Generated Vertices: {metrics["generated_vertices"]}
+  Hausdorff Distance: {metrics["hausdorff_distance"]:.6f} deg
+  Centroid Distance:  {metrics["centroid_distance"]:.6f} deg
 
 Quality Assessment:
-  {'✓' if metrics['iou'] >= 0.8 else '✗'} IoU >= 0.8
-  {'✓' if 0.5 <= metrics['area_ratio'] <= 2.0 else '✗'} Area ratio between 0.5 and 2.0
-  {'✓' if metrics['cmr_covered_by_generated'] >= 0.9 else '✗'} CMR coverage >= 90%
+  {"✓" if metrics["iou"] >= 0.8 else "✗"} IoU >= 0.8
+  {"✓" if 0.5 <= metrics["area_ratio"] <= 2.0 else "✗"} Area ratio between 0.5 and 2.0
+  {"✓" if metrics["cmr_covered_by_generated"] >= 0.9 else "✗"} CMR coverage >= 90%
 """
     return summary

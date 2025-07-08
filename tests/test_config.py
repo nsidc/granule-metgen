@@ -4,6 +4,7 @@ from configparser import ConfigParser, ExtendedInterpolation
 from unittest.mock import patch
 
 import pytest
+
 from nsidc.metgen import config, constants
 
 # Unit tests for the 'config' module functions.

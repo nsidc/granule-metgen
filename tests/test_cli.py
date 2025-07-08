@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
+
 from nsidc.metgen.cli import cli
 
 INI_FILE = "./fixtures/test.ini"

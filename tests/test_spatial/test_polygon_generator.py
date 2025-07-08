@@ -4,8 +4,9 @@ Tests for the polygon_generator module.
 
 import numpy as np
 import pytest
-from nsidc.metgen.spatial import create_flightline_polygon
 from shapely.geometry import Point, Polygon
+
+from nsidc.metgen.spatial import create_flightline_polygon
 
 
 class TestPolygonGenerator:

@@ -131,7 +131,7 @@ class PolygonComparisonDriver:
         """Process granules sequentially (original method)."""
         results = []
         for i, granule in enumerate(granules, 1):
-            print(f"\n{'='*80}")
+            print(f"\n{'=' * 80}")
             print(f"[PolygonDriver] Granule {i}/{len(granules)}")
             result = self.process_granule(granule, collection_dir, data_extensions)
             if result:
@@ -492,7 +492,7 @@ class PolygonComparisonDriver:
             f.write("# LFID SHOTNUMBER TIME LON LAT Z_SURF\n")
             for i in range(n_points):
                 f.write(
-                    f"{i+1} {i+1000} {i*0.001:.3f} {lon[i]:.6f} {lat[i]:.6f} {100 + 10*np.random.randn():.2f}\n"
+                    f"{i + 1} {i + 1000} {i * 0.001:.3f} {lon[i]:.6f} {lat[i]:.6f} {100 + 10 * np.random.randn():.2f}\n"
                 )
 
     def _calculate_cmr_data_coverage(self, cmr_geojson, lon, lat):
@@ -997,7 +997,7 @@ class PolygonComparisonDriver:
         ax2.set_ylim(bounds[2], bounds[3])
         ax2.set_aspect("equal")
         ax2.set_title(
-            f'CMR Polygon ({metrics["cmr_vertices"]} vertices)', fontweight="bold"
+            f"CMR Polygon ({metrics['cmr_vertices']} vertices)", fontweight="bold"
         )
         ax2.set_xlabel("Longitude")
         ax2.set_ylabel("Latitude")
@@ -1021,7 +1021,7 @@ class PolygonComparisonDriver:
         ax3.set_ylim(bounds[2], bounds[3])
         ax3.set_aspect("equal")
         ax3.set_title(
-            f'Generated Polygon ({metrics["generated_vertices"]} vertices)',
+            f"Generated Polygon ({metrics['generated_vertices']} vertices)",
             fontweight="bold",
         )
         ax3.set_xlabel("Longitude")
@@ -1065,18 +1065,18 @@ class PolygonComparisonDriver:
             ["Metric", "CMR Polygon", "New Polygon"],
             [
                 "Area",
-                f'{metrics["cmr_area_deg2"]:.6f}°²',
-                f'{metrics["generated_area_deg2"]:.6f}°²',
+                f"{metrics['cmr_area_deg2']:.6f}°²",
+                f"{metrics['generated_area_deg2']:.6f}°²",
             ],
             [
                 "Vertices",
-                f'{metrics["cmr_vertices"]}',
-                f'{metrics["generated_vertices"]}',
+                f"{metrics['cmr_vertices']}",
+                f"{metrics['generated_vertices']}",
             ],
             [
                 "Data Coverage",
-                f'{metrics.get("cmr_data_coverage", 0):.1%}',
-                f'{metrics.get("generated_data_coverage", 0):.1%}',
+                f"{metrics.get('cmr_data_coverage', 0):.1%}",
+                f"{metrics.get('generated_data_coverage', 0):.1%}",
             ],
         ]
 
@@ -1085,8 +1085,8 @@ class PolygonComparisonDriver:
             left_table_data.append(
                 [
                     "Non-data Coverage",
-                    f'{metrics.get("cmr_non_data_coverage", 0):.1%}',
-                    f'{metrics.get("generated_non_data_coverage", 0):.1%}',
+                    f"{metrics.get('cmr_non_data_coverage', 0):.1%}",
+                    f"{metrics.get('generated_non_data_coverage', 0):.1%}",
                 ]
             )
 
@@ -1098,32 +1098,32 @@ class PolygonComparisonDriver:
                 "100% Data Coverage",
                 "✓"
                 if metrics.get("generated_data_coverage", 0) >= 1.0
-                else f'✗ ({metrics.get("generated_data_coverage", 0):.1%})',
+                else f"✗ ({metrics.get('generated_data_coverage', 0):.1%})",
             ],
             [
                 "Vertices ≤ CMR",
                 "✓"
                 if metrics["generated_vertices"] <= metrics["cmr_vertices"]
-                else f'✗ ({metrics["generated_vertices"]} > {metrics["cmr_vertices"]})',
+                else f"✗ ({metrics['generated_vertices']} > {metrics['cmr_vertices']})",
             ],
             [
                 "Area ≤ CMR",
                 "✓"
                 if metrics["area_ratio"] <= 1.0
-                else f'✗ ({metrics["area_ratio"]:.2f}x)',
+                else f"✗ ({metrics['area_ratio']:.2f}x)",
             ],
             ["", ""],
             ["Generation Info", ""],
             ["Method", metadata.get("method", "unknown")],
             [
                 "Adaptive Buffer",
-                f'{metadata.get("adaptive_buffer", "N/A"):.1f} m'
+                f"{metadata.get('adaptive_buffer', 'N/A'):.1f} m"
                 if isinstance(metadata.get("adaptive_buffer"), (int, float))
                 else "N/A",
             ],
             [
                 "Generation Time",
-                f'{metadata.get("generation_time_seconds", 0):.3f} s',
+                f"{metadata.get('generation_time_seconds', 0):.3f} s",
             ],
         ]
 
@@ -1263,7 +1263,7 @@ class PolygonComparisonDriver:
         # Create summary report
         summary_text = f"""# Polygon Comparison Summary for {short_name}
 
-Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 ## Processing Summary
 - Total granules processed: {len(results)}
@@ -1307,11 +1307,11 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 - Total: {np.sum(generation_times):.1f}
 
 ## Quality Assessment
-- Granules with data coverage >= 90%: {sum(1 for dc in data_coverages if dc >= 0.9)}/{len(data_coverages)} ({100*sum(1 for dc in data_coverages if dc >= 0.9)/len(data_coverages):.0f}%)
-- Granules with area ratio in [0.5, 2.0]: {sum(1 for ar in area_ratios if 0.5 <= ar <= 2.0)}/{len(area_ratios)} ({100*sum(1 for ar in area_ratios if 0.5 <= ar <= 2.0)/len(area_ratios):.0f}%)
-- Granules with CMR coverage >= 90%: {sum(1 for cc in cmr_coverages if cc >= 0.9)}/{len(cmr_coverages)} ({100*sum(1 for cc in cmr_coverages if cc >= 0.9)/len(cmr_coverages):.0f}%)
-- Granules with Great vertices (≤16): {sum(1 for vc in vertex_counts if vc <= 16)}/{len(vertex_counts)} ({100*sum(1 for vc in vertex_counts if vc <= 16)/len(vertex_counts):.0f}%)
-- Granules with Good vertices (≤32): {sum(1 for vc in vertex_counts if vc <= 32)}/{len(vertex_counts)} ({100*sum(1 for vc in vertex_counts if vc <= 32)/len(vertex_counts):.0f}%)
+- Granules with data coverage >= 90%: {sum(1 for dc in data_coverages if dc >= 0.9)}/{len(data_coverages)} ({100 * sum(1 for dc in data_coverages if dc >= 0.9) / len(data_coverages):.0f}%)
+- Granules with area ratio in [0.5, 2.0]: {sum(1 for ar in area_ratios if 0.5 <= ar <= 2.0)}/{len(area_ratios)} ({100 * sum(1 for ar in area_ratios if 0.5 <= ar <= 2.0) / len(area_ratios):.0f}%)
+- Granules with CMR coverage >= 90%: {sum(1 for cc in cmr_coverages if cc >= 0.9)}/{len(cmr_coverages)} ({100 * sum(1 for cc in cmr_coverages if cc >= 0.9) / len(cmr_coverages):.0f}%)
+- Granules with Great vertices (≤16): {sum(1 for vc in vertex_counts if vc <= 16)}/{len(vertex_counts)} ({100 * sum(1 for vc in vertex_counts if vc <= 16) / len(vertex_counts):.0f}%)
+- Granules with Good vertices (≤32): {sum(1 for vc in vertex_counts if vc <= 32)}/{len(vertex_counts)} ({100 * sum(1 for vc in vertex_counts if vc <= 32) / len(vertex_counts):.0f}%)
 
 ## Individual Granule Results
 
