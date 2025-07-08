@@ -1,6 +1,10 @@
-# Integration Guide for MetGenC
+# Integration Guide for MetGenC Spatial Module
 
 This guide explains how to integrate the spatial polygon generation module into the main MetGenC codebase.
+
+## Overview
+
+The spatial module has been simplified to use a single, optimized polygon generation approach that combines concave hull generation with intelligent buffering to achieve 98%+ data coverage with minimal vertices.
 
 ## 1. Configuration Integration
 
@@ -12,14 +16,8 @@ Add spatial polygon options to MetGenC's configuration schema:
 # Add to configuration schema
 SPATIAL_SCHEMA = {
     'enabled': {'type': 'boolean', 'default': False},
-    'method': {
-        'type': 'string', 
-        'default': 'adaptive_beam',
-        'allowed': ['beam', 'adaptive_beam', 'union_buffer', 'line_buffer']
-    },
-    'simplify': {'type': 'boolean', 'default': True},
-    'target_vertices': {'type': 'integer', 'default': 8, 'min': 4, 'max': 100},
-    'min_coverage': {'type': 'float', 'default': 0.90, 'min': 0.0, 'max': 1.0}
+    'target_coverage': {'type': 'float', 'default': 0.98, 'min': 0.80, 'max': 1.0},
+    'max_vertices': {'type': 'integer', 'default': 100, 'min': 10, 'max': 200}
 }
 ```
 
@@ -28,24 +26,22 @@ SPATIAL_SCHEMA = {
 ```ini
 [spatial]
 enabled = true
-method = adaptive_beam
-simplify = true
-target_vertices = 8
-min_coverage = 0.90
+target_coverage = 0.98
+max_vertices = 100
 ```
 
 ## 2. Reader Integration
 
-Modify readers to optionally generate spatial polygons:
+Modify readers to generate spatial polygons:
 
 ### In `src/nsidc/metgen/readers/NetCDFReader.py`:
 
 ```python
-from nsidc.metgen.spatial import PolygonGenerator
+from nsidc.metgen.spatial import create_flightline_polygon
 
 class NetCDFReader(Reader):
     def get_spatial_extent(self, filename):
-        """Get spatial extent using polygon generation if enabled."""
+        """Get spatial extent using optimized polygon generation."""
         
         if self.config.get('spatial', {}).get('enabled', False):
             # Extract coordinates from NetCDF
@@ -53,14 +49,7 @@ class NetCDFReader(Reader):
             lat = self.dataset.variables['latitude'][:]
             
             # Generate optimized polygon
-            generator = PolygonGenerator()
-            polygon, metadata = generator.create_flightline_polygon(
-                lon, lat,
-                method=self.config['spatial'].get('method', 'adaptive_beam'),
-                iterative_simplify=self.config['spatial'].get('simplify', True),
-                target_vertices=self.config['spatial'].get('target_vertices', 8),
-                min_coverage=self.config['spatial'].get('min_coverage', 0.90)
-            )
+            polygon, metadata = create_flightline_polygon(lon, lat)
             
             # Convert to GeoJSON for UMM-G
             return {
@@ -97,7 +86,8 @@ from nsidc.metgen.spatial.polygon_driver import PolygonComparisonDriver
 @click.option('-p', '--provider', help='Data provider')
 @click.option('--token-file', help='Path to EDL bearer token file')
 @click.option('-o', '--output', default='polygon_comparisons', help='Output directory')
-def compare_polygons(collection, number, provider, token_file, output):
+@click.option('-w', '--workers', default=1, help='Number of parallel workers')
+def compare_polygons(collection, number, provider, token_file, output, workers):
     """Compare generated polygons with CMR polygons for a collection."""
     
     # Load token if provided
@@ -107,7 +97,7 @@ def compare_polygons(collection, number, provider, token_file, output):
             token = f.read().strip()
     
     # Run comparison
-    driver = PolygonComparisonDriver(output_dir=output, token=token)
+    driver = PolygonComparisonDriver(output_dir=output, token=token, max_workers=workers)
     driver.process_collection(
         short_name=collection,
         provider=provider,
@@ -124,7 +114,7 @@ Add tests for spatial polygon generation:
 ```python
 import pytest
 import numpy as np
-from nsidc.metgen.spatial import PolygonGenerator
+from nsidc.metgen.spatial import create_flightline_polygon
 
 def test_polygon_generation():
     """Test basic polygon generation."""
@@ -132,33 +122,37 @@ def test_polygon_generation():
     lon = np.array([-120, -119.5, -119, -118.5])
     lat = np.array([35, 35.1, 35.2, 35.3])
     
-    generator = PolygonGenerator()
-    polygon, metadata = generator.create_flightline_polygon(
-        lon, lat,
-        method='convex'
-    )
+    polygon, metadata = create_flightline_polygon(lon, lat)
     
     assert polygon is not None
     assert metadata['vertices'] >= 3
-    assert metadata['method'] == 'convex'
+    assert metadata['method'] == 'concave_hull'
+    assert metadata['final_data_coverage'] >= 0.90
 
-def test_simplification():
-    """Test polygon simplification."""
-    # Create more complex test data
-    t = np.linspace(0, 10, 100)
+def test_large_dataset():
+    """Test polygon generation with large datasets."""
+    # Create large test data
+    t = np.linspace(0, 10, 10000)
     lon = -120 + 0.1 * t
     lat = 35 + 0.05 * t
     
-    generator = PolygonGenerator()
-    polygon, metadata = generator.create_flightline_polygon(
-        lon, lat,
-        method='beam',
-        iterative_simplify=True,
-        target_vertices=8
-    )
+    polygon, metadata = create_flightline_polygon(lon, lat)
     
-    assert metadata['vertices'] <= 20  # Should be simplified
-    assert 'simplification_history' in metadata
+    assert metadata['vertices'] <= 150  # Should be manageable
+    assert metadata['final_data_coverage'] >= 0.95
+    assert 'subsampling_used' in metadata
+
+def test_antimeridian_crossing():
+    """Test handling of antimeridian crossing."""
+    # Create data that crosses antimeridian
+    lon = np.array([179, 179.5, -179.5, -179])
+    lat = np.array([60, 60.1, 60.2, 60.3])
+    
+    polygon, metadata = create_flightline_polygon(lon, lat)
+    
+    assert polygon is not None
+    assert polygon.is_valid
+    assert metadata['vertices'] >= 3
 ```
 
 ## 5. Documentation Updates
@@ -170,13 +164,15 @@ Update MetGenC documentation to include spatial polygon generation:
 ```markdown
 ## Spatial Polygon Generation
 
-MetGenC now includes advanced polygon generation capabilities for creating
-optimized spatial coverage polygons from point data. This is particularly
-useful for LIDAR flightline data (LVIS, ILVIS2).
+MetGenC includes optimized polygon generation capabilities for creating
+spatial coverage polygons from point data, particularly useful for 
+LIDAR flightline data (LVIS, ILVIS2).
 
 ### Features
-- Multiple polygon generation algorithms
-- Automatic simplification to match CMR standards
+- Single optimized algorithm combining concave hull + intelligent buffering
+- Achieves 98%+ data coverage with minimal vertices
+- Handles antimeridian crossing for global datasets
+- Automatic subsampling for large datasets
 - CMR polygon comparison and validation
 
 ### Usage
@@ -184,7 +180,7 @@ Enable in your configuration:
 ```ini
 [spatial]
 enabled = true
-method = adaptive_beam
+target_coverage = 0.98
 ```
 
 Compare with CMR:
@@ -195,14 +191,15 @@ metgenc compare-polygons LVISF2 -n 10 --token-file ~/.edl_token
 
 ## 6. Dependencies
 
-Add required dependencies to `pyproject.toml` or `requirements.txt`:
+Add required dependencies to `pyproject.toml`:
 
 ```toml
 [tool.poetry.dependencies]
 shapely = "^2.0"
 geopandas = "^0.14"
-pyproj = "^3.6"
-scipy = "^1.11"
+matplotlib = "^3.7"
+concave-hull = "^0.0.3"
+requests = "^2.31"
 ```
 
 ## Complete Integration Example
@@ -220,17 +217,15 @@ def process_granule(config, granule_file):
     
     # Add spatial polygon if enabled
     if config.get('spatial', {}).get('enabled', False):
-        from nsidc.metgen.spatial import PolygonGenerator
+        from nsidc.metgen.spatial import create_flightline_polygon
         
         # Get coordinates from reader
         coords = reader.get_coordinates()
         
         # Generate polygon
-        generator = PolygonGenerator()
-        polygon, poly_metadata = generator.create_flightline_polygon(
+        polygon, poly_metadata = create_flightline_polygon(
             coords['longitude'],
-            coords['latitude'],
-            **config['spatial']
+            coords['latitude']
         )
         
         # Update metadata with polygon
@@ -241,4 +236,12 @@ def process_granule(config, granule_file):
     return metadata
 ```
 
-This integration allows MetGenC to generate optimized polygons that match CMR standards while maintaining backward compatibility with existing configurations.
+## Key Simplifications Made
+
+1. **Single Algorithm**: Replaced multiple generation methods with one optimized approach
+2. **Removed Classes**: Eliminated `PolygonGenerator` class in favor of simple function
+3. **Consolidated Modules**: Combined functionality into `polygon_generator.py`
+4. **Removed Complexity**: Eliminated iterative simplification and adaptive method selection
+5. **Focused Approach**: Optimized specifically for LIDAR flightline data patterns
+
+This simplified integration maintains high performance while reducing code complexity and maintenance overhead.
