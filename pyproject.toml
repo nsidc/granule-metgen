@@ -5,7 +5,7 @@ description = "The nsidc-metgenc package enables data producers as well as Opera
 authors = ["National Snow and Ice Data Center (NSIDC) <nsidc@nsidc.org>"]
 readme = "README.md"
 package-mode = true
-packages = [{include = "nsidc", from = "src"}]
+packages = [{include = "nsidc", from = "src"}, {include = "tests"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -49,6 +49,8 @@ geopandas = "^1.1.0"
 shapely = "^2.1.1"
 scipy = "^1.16.0"
 netcdf4 = "^1.7.2"
+requests = "^2.32.4"
+beautifulsoup4 = "^4.13.4"
 
 [tool.bumpversion]
 current_version = "1.9.0rc0"
@@ -138,3 +140,4 @@ addopts = [
 metgenc = 'nsidc.metgen.cli:cli'
 metgenc-polygons = 'nsidc.metgen.spatial_cli:cli'
 metgenc-env = { reference = "scripts/metgenc-env.sh", type= "file" }
+metgenc-integration-tests = 'tests.integration.run_integration_tests:main'
