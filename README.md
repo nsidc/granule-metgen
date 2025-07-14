@@ -151,22 +151,22 @@ and files with your values.
 MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials
 to retrieve collection metadata. If authentication fails,
 collection metadata will not be accessible to help compensate for metadata elements
-missing from MetGenC's configuration (a.k.a. `.ini`) files or the data files themselves.
+missing from science files or a data set's configuration (`.ini`) file.
 
-Export the following variables to your environment before you run `metgenc process`
-to start data ingest:
+Always export the following variables to your environment before running
+`metgenc process` (there's more on what this entails to come):
 
     $ export EARTHDATA_USERNAME=your-EDL-user-name
     $ export EARTHDATA_PASSWORD=your-EDL-password
 
-If you have a different user name/password combo for UAT and PROD
-environments, be sure to set the values appropriate for the environment you're
+If you have a different user name/password combo for UAT from that of the PROD
+environment, be sure to set the values appropriate for the environment you're
 ingesting to.
 
 If collection metadata are unavailable either due to an authentication failure
 or because the collection information doesn't yet exist in CMR, MetGenC will
 continue processing with the information available from the `.ini` file and the
-data files.
+science files.
 
 ## Before Running MetGenC: Tips and Assumptions
 
@@ -217,13 +217,13 @@ secret_key     ****************cJ+5              env
   `projection_y_coordinate` attribute.
 * (y[0],x[0]) represents the upper left corner of the spatial coverage.
 * Spatial coordinate values represent the center of the area covered by a measurement.
-* Only one coordinate system is used by all data variables in all data files
+* Only one coordinate system is used by all data variables in all science files
   (i.e. only one grid mapping variable is present in a file, and the content of
-  that variable is the same in every data file).
+  that variable is the same in every science file).
 
 ### MetGenC `ini` File Assumtions
 * If a `pixel_size` value is present in the `.ini` file, its units are assumed to be
-  the same as the units of the spatial coordinate variables.
+* the same as the units of the spatial coordinate variables in the data set's science files.
 * Date/time strings can be parsed using `datetime.fromisoformat`
 * Checksums are all SHA256
 
@@ -314,7 +314,7 @@ For data sets determined to be suited to taking on their collection's spatial ex
 a `collection_geometry_override=True` attribute/value pair can be added to the .ini file
 to facilitate granules taking on their collection extent. Setting 
 `collection_geometry_override=False` in the .ini file will make MetGenC look to the
-data files or premet/spatial files for granule-level spatial representation geometry.
+science files or premet/spatial files for granule-level spatial representation geometry.
 
 For data sets with flightline-type data collection where the contents of .spatial files
 are meant to represent point clouds, the .ini file will need the attribute/value pair
@@ -323,8 +323,8 @@ are meant to represent point clouds, the .ini file will need the attribute/value
 Geometry Logic Table Notes:
 1. `GCS` = (CMR's) geometry coordinate system
 2. `BR` = bounding rectangle
-3. `.spo` = `.spo` file associated with each granule data file.
-4. `.spatial` = `.spatial` file associated with each granule data file.
+3. `.spo` = `.spo` file associated with each granule science file.
+4. `.spatial` = `.spatial` file associated with each granule science file.
 
 | source | num points | GCS | error? | expected output | comments |
 | ------ | ------------ | ---- | ------ | ------- | --- |
@@ -336,9 +336,9 @@ Geometry Logic Table Notes:
 | .spatial | 2 | cartesian | no | BR as defined by spatial file. | |
 | .spatial | >= 2 | geodetic | no | GPolygon(s) calculated to enclose all points. | If `spatial_polygon_enabled=true` (default) and ≥3 points, uses optimized polygon generation with target coverage and vertex limits. |
 | .spatial | > 2 | cartesian | yes | | No cartesian-associated geometry for point cloud. |
-| data file (NSIDC/CF-compliant netCDF) | NA | cartesian | no | BR | min/max lon/lat points for BR expected to be included in global attributes. |
-| data file (NSIDC/CF-compliant) | 1 or > 2 | geodetic | no | | Error if only two points. GPolygon calculated from grid perimeter. |
-| data file, non-NSIDC/CF-compliant netCDF or other format | NA | either | no | As specified by `.ini` file. | Configuration file must include a `spatial_dir` value (a path to the directory with valid `.spatial` or `.spo` files), or `collection_geometry_override=True` entry (which must be defined as a single point or a single bounding rectangle). |
+| science file (NSIDC/CF-compliant netCDF) | NA | cartesian | no | BR | min/max lon/lat points for BR expected to be included in global attributes. |
+| science file (NSIDC/CF-compliant) | 1 or > 2 | geodetic | no | | Error if only two points. GPolygon calculated from grid perimeter. |
+| science file, non-NSIDC/CF-compliant netCDF or other format | NA | either | no | As specified by `.ini` file. | Configuration file must include a `spatial_dir` value (a path to the directory with valid `.spatial` or `.spo` files), or `collection_geometry_override=True` entry (which must be defined as a single point or a single bounding rectangle). |
 | collection metadata with one BR | NA | cartesian | no | BR as described in collection metadata. | |
 | collection metadata with two or more BR | NA | cartesian | yes | | Two-part bounding rectangle is not a valid granule-level geometry. |
 | collection metadata | NA | geodetic | yes | | Collection-level spatial representation can't be set as `geodetic`. |
@@ -363,7 +363,7 @@ Show MetGenC's help text:
         Commands:
           info     Summarizes the contents of a configuration file.
           init     Populates a configuration file based on user input.
-          process  Processes science data files based on configuration file...
+          process  Processes science files based on configuration file...
           validate Validates the contents of local JSON files.
 
 * For detailed help on each command, run: metgenc <command> --help, for example:
@@ -398,7 +398,7 @@ Example running **init**
 #### Optional Configuration Elements
 
 Some attribute values may be read from the `ini` file if they don't exist
-in the granule data file(s). This approach assumes the attribute values
+in the science file(s). This approach assumes the attribute values
 are the same for all granules. These values must be manually added to the
 `ini` file; they are not included in the `metgenc init` functionality.
 
@@ -522,7 +522,7 @@ not appear in the granule name recorded in the UMM-G and CNM output.
 Each of those strings uniquely identify all files associated with a given granule.
 - `NSIDC0081_SEAICE_PS_`, `_v2.0_` and `DUCk` will be combined with the `granuleid`
 text to form the granule name recorded in the UMM-G and CNM output (in the case of
-single data file granules, the file extension will be added to the granule name).
+single-file granules, the file extension will be added to the granule name).
 
 
 ---
@@ -597,7 +597,7 @@ metgenc process --help
 
 Usage: metgenc process [OPTIONS]
 
-  Processes science data files based on configuration file contents.
+  Processes science files based on configuration file contents.
 
 Options:
   -c, --config TEXT   Path to configuration file  [required]
