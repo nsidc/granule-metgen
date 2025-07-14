@@ -295,10 +295,9 @@ See [Optional Configuration Elements](#optional-configuration-elements)
 ### Geometry Logic
 
 The geometry behind granule-level spatial representation (point, gpolygon, or bounding 
-rectangle) for a data set can be implemented by MetGenC via either: file-level metadata
-(such as a CF/NSIDC Compliant netCDF file), `.spatial` or `.spo` files, or 
-collection-level spataial representation. On a finer level to dial in MetGenC 
-behavior, attribute settings in a data set's .ini file are also adjustable.
+rectangle) required for a data set can be implemented by MetGenC via either: file-level metadata
+(such as a CF/NSIDC Compliant netCDF file), `.spatial` / `.spo` files, or 
+collection-level spataial representation. 
 
 When MetGenC is run with netCDF files that are
 both CF and NSIDC Compliant (for those requirements, refer to the table:
@@ -307,16 +306,17 @@ information from within the file's metadata will be used to generate an appropri
 gpolygon or bounding rectangle for each granule.
 
 In some cases, non-netCDF files, and/or netCDF files that are non-CF or non-NSIDC
-compliant will require certain attributes be added to or made active in the data set's
-.ini file, while other cases will require modifying .ini file attributes in addition to
-using premet and spatial files as SIPSMetgen did.
+compliant will require an operator to define or modify data set details expressed through
+attributes in an .ini file, in other cases an operator will need to further modify the 
+.ini file to specify paths to where premet and spatial files are stored for MetGenC to use
+as input files.
 
-For data sets determined to be suited to taking on their collection's spatial extent 
-(as long as it's a single bounding rectangle, and not two or more bounding rectangles),
+For granules suited to using the spatial extent defined for its collection, 
 a `collection_geometry_override=True` attribute/value pair can be added to the .ini file
-to facilitate granules taking on their collection extent. Setting 
-`collection_geometry_override=False` in the .ini file will make MetGenC look to the
-science files or premet/spatial files for granule-level spatial representation geometry.
+(as long as it's a single bounding rectangle, and not two or more bounding rectangles).
+Setting `collection_geometry_override=False` in the .ini file will make MetGenC look to the
+science files or premet/spatial files for the granule-level spatial representation geometry
+to use.
 
 For data sets with flightline-type data collection where the contents of .spatial files
 are meant to represent point clouds, the .ini file will need the attribute/value pair
