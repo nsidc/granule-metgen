@@ -11,7 +11,8 @@
     + [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
     + [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
     + [Attribute Reference links](#attribute-reference-links)
-    + [Geometry logic](#geometry-logic)
+    + [Geometry Logic](#geometry-logic)
+      - [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table)
   * [Running MetGenC: Its Commands In-depth](#running-metgenc-its-commands-in-depth)
     + [help](#help)
     + [init](#init)
@@ -291,7 +292,7 @@ See [Optional Configuration Elements](#optional-configuration-elements)
 * https://cfconventions.org/Data/cf-conventions/cf-conventions-1.11/cf-conventions.html
 * https://nsidc.org/sites/default/files/documents/other/nsidc-guidelines-netcdf-attributes.pdf
 
-### Geometry logic
+### Geometry Logic
 
 The geometry behind granule-level spatial representation (point, gpolygon, or bounding 
 rectangle) for a data set can be implemented by MetGenC via either: file-level metadata
@@ -321,11 +322,13 @@ For data sets with flightline-type data collection where the contents of .spatia
 are meant to represent point clouds, the .ini file will need the attribute/value pair
 `spatial_polygon_enabled=true` added.
 
-Geometry Logic Table Notes:
-1. `GCS` = (CMR's) geometry coordinate system
-2. `BR` = bounding rectangle
-3. `.spo` = `.spo` file associated with each granule science file.
-4. `.spatial` = `.spatial` file associated with each granule science file.
+### Geometry Logic and Expectations Table
+```
+GCS = (CMR's) geometry coordinate system.
+BR = bounding rectangle.
+.spo = .spo file associated with each granule science file to define GPolygon vertices.
+.spatial = .spatial file associated with each granule science file to define bounding rectangle, point, or point cloud (for a GPolygon to be generated around).
+```
 
 | source | num points | GCS | error? | expected output | comments |
 | ------ | ------------ | ---- | ------ | ------- | --- |
@@ -344,7 +347,6 @@ Geometry Logic Table Notes:
 | collection metadata with two or more BR | NA | cartesian | yes | | Two-part bounding rectangle is not a valid granule-level geometry. |
 | collection metadata | NA | geodetic | yes | | Collection-level spatial representation can't be set as `geodetic`. |
 | collection metadata specifying one or more points | NA | NA | yes | | TODO: Determine whether point value is handled. |
-
 
 ## Running MetGenC: Its Commands In-depth
 
@@ -367,7 +369,7 @@ Show MetGenC's help text:
           process  Processes science files based on configuration file...
           validate Validates the contents of local JSON files.
 
-* For detailed help on each command, run: metgenc <command> --help, for example:
+* For detailed help on each command, run: `metgenc <command name> --help`:
 
         $ metgenc process --help
 
@@ -375,11 +377,12 @@ Show MetGenC's help text:
 
 The **init** command can be used to generate a metgenc configuration (i.e., `.ini`) file for
 your data set, or edit an existing .ini file.
-* You can skip this step if you've already made an .ini file and prefer editing it
+* You can skip this step if you've already acquired or made an .ini file and prefer editing it
   manually (any text editor will work).
-* An existing configuration file can also be copied and renamed to be used for a different
-  data set, just be sure to update the data_dir, auth_id, version, provider, and any other details!
-* The configuration file's checksum_type should always be set to SHA256.
+* An existing configuration file can also be copied, renamed, and used with a different
+  data set, just be sure to update paths, regex values, etc that are data set-specific!
+* The .ini file's checksum_type should always be set to SHA256.
+* If creating a new .ini, remember to include `.ini` trailing the name you choose.
 
 ```
 metgenc init --help
@@ -394,7 +397,7 @@ Options:
 
 Example running **init**
 
-    $ metgenc init -c ./init/<name of the config file you’d like to create or modify>.ini
+    $ metgenc init -c ./init/<name of config file to create or modify>.ini
 
 #### Optional Configuration Elements
 
