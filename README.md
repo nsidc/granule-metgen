@@ -20,6 +20,7 @@
     + [info](#info)
     + [process](#process)
     + [validate](#validate)
+    + [Pretty-print a json file in your shell](#pretty-print-a-json-file-in-your-shell)
   * [Troubleshooting](#troubleshooting)
   * [For Developers](#for-developers)
     + [Contributing](#contributing)
@@ -149,8 +150,8 @@ and files with your values.
 
 MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials
 to retrieve collection metadata. If authentication fails,
-collection metadata will not be available to compensate for metadata elements
-missing from `ini` files or the data files themselves.
+collection metadata will not be accessible to help compensate for metadata elements
+missing from MetGenC's configuration (a.k.a. `.ini`) files or the data files themselves.
 
 Export the following variables to your environment before you run `metgenc process`
 to start data ingest:
@@ -164,7 +165,7 @@ ingesting to.
 
 If collection metadata are unavailable either due to an authentication failure
 or because the collection information doesn't yet exist in CMR, MetGenC will
-continue processing with the information available from the `ini` file and the
+continue processing with the information available from the `.ini` file and the
 data files.
 
 ## Before Running MetGenC: Tips and Assumptions
@@ -208,33 +209,6 @@ secret_key     ****************cJ+5              env
     region                us-west-2              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']
 ```
 
-* Show MetGenC's help text:
-
-        $ metgenc --help
-        Usage: metgenc [OPTIONS] COMMAND [ARGS]...
-
-          The metgenc utility allows users to create granule-level metadata, stage
-          granule files and their associated metadata to Cumulus, and post CNM
-          messages.
-
-        Options:
-          --help  Show this message and exit.
-
-        Commands:
-          info     Summarizes the contents of a configuration file.
-          init     Populates a configuration file based on user input.
-          process  Processes science data files based on configuration file...
-          validate Validates the contents of local JSON files.
-
-* For detailed help on each command, run: metgenc <command> --help, for example:
-
-        $ metgenc process --help
-
-* If you find you'd like to view a ummg or cnm json file in your shell, but don't want
-  to wade through unformatted json chaos, use `cat <ummg or cnm file name> | jq "."`,
-  e.g., cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "." to
-  pretty-print json file content to your screen.
-
 ### Assumptions for netCDF files for MetGenC
 
 * NetCDF files have an extension of `.nc` (per CF conventions).
@@ -248,7 +222,7 @@ secret_key     ****************cJ+5              env
   that variable is the same in every data file).
 
 ### MetGenC `ini` File Assumtions
-* If a `pixel_size` value is present in the `ini` file, its units are assumed to be
+* If a `pixel_size` value is present in the `.ini` file, its units are assumed to be
   the same as the units of the spatial coordinate variables.
 * Date/time strings can be parsed using `datetime.fromisoformat`
 * Checksums are all SHA256
@@ -278,8 +252,8 @@ secret_key     ****************cJ+5              env
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
 
 Notes:
-OC = Attributes (or elements of them) that may be represented in the `ini` file.
-P = Attributes that may be specified in a `premet` file; a `premet_dir` directory must be defined in the `ini` file.
+OC = Attributes (or elements of them) that may be represented in the `.ini` file.
+P = Attributes that may be specified in a `premet` file; a `premet_dir` directory must be defined in the `.ini` file.
 See [Optional Configuration Elements](#optional-configuration-elements)
 
 1. Used to populate the production date and time values in UMM-G output.
@@ -372,6 +346,29 @@ Geometry Logic Table Notes:
 
 
 ## Running MetGenC: Its Commands In-depth
+
+### help
+Show MetGenC's help text:
+
+        $ metgenc --help
+        Usage: metgenc [OPTIONS] COMMAND [ARGS]...
+
+          The metgenc utility allows users to create granule-level metadata, stage
+          granule files and their associated metadata to Cumulus, and post CNM
+          messages.
+
+        Options:
+          --help  Show this message and exit.
+
+        Commands:
+          info     Summarizes the contents of a configuration file.
+          init     Populates a configuration file based on user input.
+          process  Processes science data files based on configuration file...
+          validate Validates the contents of local JSON files.
+
+* For detailed help on each command, run: metgenc <command> --help, for example:
+
+        $ metgenc process --help
 
 ### init
 
@@ -614,7 +611,7 @@ Options:
 The **process** command can be run either with or without specifying the `-d` / `--dry-run` option.
 * When the dry run option is specified _and_ the `-wc` / `--write-cnm` option is invoked, or your config
 file contains `write_cnm_file = true` (instead of `= false`), CNM files will be written locally to the output/cnm
-directory. This allows you to validate and visually QC their content before letting them guide ingest to CUAT.
+directory. This promotes you having the ability to validate and visually QC their content before letting them guide ingest to CUAT.
 * When run without the dry run option, metgenc will transfer cnm messages to AWS, kicking off end-to-end ingest of
 data and ummg files to CUAT.
 
@@ -665,6 +662,13 @@ The package `check-jsonschema` is also installed by MetGenC and can be used to v
 
     $ check-jsonschema --schemafile <path to schema file> <path to cnm file>
 
+### Pretty-print a json file in your shell
+This is not a MetGenC command, but it's a handy way to `cat` a file and omit having
+to wade through unformatted json chaos:
+`cat <ummg or cnm file name> | jq "."`
+
+e.g., `cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "."` will
+pretty-print the contents of that json file in your shell!
 
 ## Troubleshooting
 
