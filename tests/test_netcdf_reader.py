@@ -2,6 +2,7 @@ import re
 from unittest.mock import patch
 
 import pytest
+
 from nsidc.metgen import constants
 from nsidc.metgen.readers import netcdf_reader
 

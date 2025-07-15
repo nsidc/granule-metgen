@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
+
 from nsidc.metgen import metgen
 from nsidc.metgen.readers import generic, registry
 

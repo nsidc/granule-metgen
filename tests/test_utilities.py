@@ -2,6 +2,7 @@ import re
 from unittest.mock import mock_open, patch
 
 import pytest
+
 from nsidc.metgen import constants, metgen
 from nsidc.metgen.readers import utilities
 

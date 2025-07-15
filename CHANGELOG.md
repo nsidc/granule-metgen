@@ -1,5 +1,6 @@
-## Unreleased
+## v1.9.0rc0
 
+* Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
 * Fix UMM-G `RangeDateTimes` template error.
 
 ## v1.8.0

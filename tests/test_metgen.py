@@ -6,6 +6,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 from funcy import identity, partial
+
 from nsidc.metgen import config, constants, metgen
 
 # Unit tests for the 'metgen' module functions.

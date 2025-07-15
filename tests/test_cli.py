@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
+
 from nsidc.metgen.cli import cli
 
 INI_FILE = "./fixtures/test.ini"
@@ -22,7 +23,8 @@ def cli_runner():
 
 def test_without_subcommand(cli_runner):
     result = cli_runner.invoke(cli)
-    assert result.exit_code == 0
+    # Click returns exit code 2 when no subcommand is provided to a command group
+    assert result.exit_code == 2
     assert "Usage" in result.output
     assert "Commands" in result.output
     for subcommand in ["info", "init", "process"]:
