@@ -6,8 +6,8 @@ sys.path.insert(0, str(Path("..", "..", "src").resolve()))
 project = "MetGenC"
 copyright = "2024, NSIDC"
 author = "National Snow and Ice Data Center"
-release = "v1.9.0rc0"
-version = "v1.9.0rc0"
+release = "v1.9.0rc1"
+version = "v1.9.0rc1"
 
 extensions = [
     "myst_parser",
