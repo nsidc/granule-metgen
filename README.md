@@ -664,12 +664,12 @@ Options:
 
 Example running **validate**
 
-    $ metgenc validate -c init/modscg.ini -t ummg (this will validate all UMM-G files)
-    $ metgenc validate -c init/modscg.ini (this will validate all cnm files that have been written locally)
+    $ metgenc validate -c init/modscg.ini -t ummg (adding the -t ummg option will validate all UMM-G files; -t cnm will validate all cnm files that have been written locally)
+    $ metgenc validate -c init/modscg.ini (without the -t option specified, just all locally written cnm files will be validated)
 
 The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file at a time:
 
-    $ check-jsonschema --schemafile <path to schema file> <path to cnm file>
+    $ check-jsonschema --schemafile <path to schema file> <path to cnm or UMM-G file to check>
 
 ### Pretty-print a json file in your shell
 This is not a MetGenC command, but it's a handy way to `cat` a file and omit having
