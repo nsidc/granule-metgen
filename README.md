@@ -248,9 +248,9 @@ secret_key     ****************cJ+5              env
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 6       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
 
-Note column meanings:
+Note column key:
 - OC = Optional configuration attributes (or elements of them) that may be represented in an `.ini` file.
-- P = Attributes that may be specified in a `premet` file; when used, a `premet_dir` path must be defined in the `.ini` file.
+- P = Premet file attributes that may be specified in a `premet` file; when used, a `premet_dir` path must be defined in the `.ini` file.
 See [Optional Configuration Elements](#optional-configuration-elements)
 - 1 = Used to populate the production date and time values in UMM-G output.
 - 2 = Used to populate the time begin and end UMM-G values.
@@ -593,7 +593,7 @@ Using configuration:
 * kinesis_stream_name: and staging_bucket_name: could be changed by the operator in the config file, but should be left as-is!
 * write_cnm_file:, and overwrite_ummg: are editable by operators in the config file
   * write_cnm_file: can be set here as `true` or `false`. Setting this to `true` when testing allows you to visually qc cnm content as well as run `metgenc validate` to assure they're valid for ingest. Once known to be valid, and you're ready to ingest data end-to-end, this can be edited to `false` to prevent cnm files from being written locally if desired. They'll always be sent to AWS regardless of the value being `true` or `false`.
-  * overwrite_ummg: when set to `true` will overwrite any existing ummg files for a data set present in the output/ummg directory. If set to `false` any existing files would be preserved, and only new files would be written.
+  * overwrite_ummg: when set to `true` will overwrite any existing UMM-G files for a data set present in the vm's MetGenC venv output/ummg directory. If set to `false` any existing files would be preserved, and only new files would be written.
 * checksum_type: is another config file entry that could be changed by the operator, but should be left as-is!
 * number: 1000000 is the default max granule count for ingest. This value is not found in the config file, thus it can only be changed by a DUCk developer if necessary.
 * dry_run: reflects the option included (or not) by the operator in the command line when `metgenc process` is run.
@@ -622,16 +622,16 @@ The **process** command can be run either with or without specifying the `-d` / 
 file contains `write_cnm_file = true` (instead of `= false`), CNM files will be written locally to the output/cnm
 directory. This promotes you having the ability to validate and visually QC their content before letting them guide ingest to CUAT.
 * When run without the dry run option, metgenc will transfer cnm messages to AWS, kicking off end-to-end ingest of
-data and ummg files to CUAT.
+data and UMM-G files to CUAT.
 
 Examples running **process**
 
-The following is an example of using the dry run option (-d) to generate ummg and write cnm as files (-wc) for three granules (-n 3):
+The following is an example of using the dry run option (-d) to generate UMM-G and write cnm as files (-wc) for three granules (-n 3):
 
     $ metgenc process -c ./init/test.ini -d -n 3 -wc
 
 This next example would run end-to-end ingest of all granules (assuming < 1000000 granules) in the data directory specified in the test.ini config file
-and their ummg files into the CUAT environment:
+and their UMM-G files into the CUAT environment:
 
     $ metgenc process -c ./init/test.ini -e uat
 
@@ -646,7 +646,7 @@ Notes: Before running **process** to ingest granules to CUAT (i.e., not run in d
 
 ### validate
 
-The **validate** command lets you review the JSON cnm or ummg output files created by
+The **validate** command lets you review the JSON cnm or UMM-G output files created by
 running `process`.
 
 ```
@@ -664,7 +664,7 @@ Options:
 
 Example running **validate**
 
-    $ metgenc validate -c init/modscg.ini -t ummg (this will validate all ummg files)
+    $ metgenc validate -c init/modscg.ini -t ummg (this will validate all UMM-G files)
     $ metgenc validate -c init/modscg.ini (this will validate all cnm files that have been written locally)
 
 The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file at a time:
@@ -674,7 +674,7 @@ The package `check-jsonschema` is also installed by MetGenC and can be used to v
 ### Pretty-print a json file in your shell
 This is not a MetGenC command, but it's a handy way to `cat` a file and omit having
 to wade through unformatted json chaos:
-`cat <ummg or cnm file name> | jq "."`
+`cat <UMM-G or cnm file name> | jq "."`
 
 e.g., `cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "."` will
 pretty-print the contents of that json file in your shell!
