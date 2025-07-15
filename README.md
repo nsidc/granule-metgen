@@ -248,27 +248,26 @@ secret_key     ****************cJ+5              env
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 6       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
 
-Notes:
-OC = Attributes (or elements of them) that may be represented in the `.ini` file.
-P = Attributes that may be specified in a `premet` file; a `premet_dir` directory must be defined in the `.ini` file.
+Note column meanings:
+- OC = Optional configuration attributes (or elements of them) that may be represented in an `.ini` file.
+- P = Attributes that may be specified in a `premet` file; when used, a `premet_dir` path must be defined in the `.ini` file.
 See [Optional Configuration Elements](#optional-configuration-elements)
-
-1. Used to populate the production date and time values in UMM-G output.
-2. Used to populate the time begin and end UMM-G values.
-3. A grid mapping variable is required if the horizontal spatial coordinates are not
+- 1 = Used to populate the production date and time values in UMM-G output.
+- 2 = Used to populate the time begin and end UMM-G values.
+- 3 = A grid mapping variable is required if the horizontal spatial coordinates are not
    longitude and latitude and the intent of the data provider is to geolocate
    the data. `grid_mapping` and `grid_mapping_name` allow programmatic identification of
    the variable holding information about the horizontal coordinate reference system.
-4. The `crs_wkt` ("well known text") value is handed to the
+- 4 = The `crs_wkt` ("well known text") value is handed to the
    `CRS` and `Transformer` modules in `pyproj` to conveniently deal
    with the reprojection of (y,x) values to EPSG 4326 (lon, lat) values.
-5. The `GeoTransform` value provides the pixel size per data value, which is then used
+- 5 = The `GeoTransform` value provides the pixel size per data value, which is then used
    to calculate the padding added to x and y values to create a GPolygon enclosing all
    of the data.
-6. The values of the coordinate variable identified by the `standard_name` attribute
+- 6 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_x_coordinate` are reprojected and thinned to create a
    GPolygon, bounding box, etc.
-7. The values of the coordinate variable identified by the `standard_name` attribute
+- 7 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding box, etc.
 
@@ -401,66 +400,72 @@ Example running **init**
 
 #### Optional Configuration Elements
 
-Some attribute values may be read from the `ini` file if they don't exist
-in the science file(s). This approach assumes the attribute values
-are the same for all granules. These values must be manually added to the
-`ini` file; they are not included in the `metgenc init` functionality.
+Some attribute values may be read from the `ini` file if the values
+can't be gleaned from or don't exist in the science file(s). This 
+approach assumes the attribute values are the same for all granules. 
+These values must be manually added to the `ini` file.
 
 See this project's GitHub file, `fixtures/test.ini` for examples.
 
-| (NetCDF) Attribute  | `ini` section | `ini` element | Note |
-| --------------------|-------------- | ------------- | ----- |
-| date_modified       | Collection    | date_modified |       |
-| time_coverage_start | Collection    | time_start_regex | 1  |
-| time_coverage_end   | Collection    | time_coverage_duration | 2 |
-| GeoTransform        | Collection    | pixel_size    |        |
+| `ini` element          | `ini` section | (NetCDF) Attribute  | Note |
+| -----------------------|-------------- | ------------------- | ---- |
+| date_modified          | Collection    | date_modified       |      |
+| time_start_regex       | Collection    | time_coverage_start | 1    |
+| time_coverage_duration | Collection    | time_coverage_end   | 2    |
+| pixel_size             | Collection    | GeoTransform        |      |
 
 
 1. Matched against file name to determine time coverage start value. Must match using
 the named group `(?P<time_coverage_start>)`.
+2. Duration value applied to `time_coverage_start` to determine `time_coverage_end`. Must
+be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
+- None of the above elements are prompted for in the `metgenc init` functionality.
 
-2. Duration value applied to `time_coverage_start` to determine `time_coverage_end`.  Must be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
-
-Two additional `ini` values are used to identify browse files and the file name
-pattern (if any) that indicates which file(s) should be grouped together as a
-single granule (or browse file(s) associated with a granule).
-
-| `ini` section | `ini` element | Note |
+To identify browse files and declare a file name pattern when necessary
+for grouping files in a granule and/or browse with files in a granule, two 
+further `ini` elements are available: 
+| `ini` element | `ini` section | Note |
 | ------------- | ------------- | ---- |
-| Collection    | browse_regex  | 1    |
-| Collection    | granule_regex | 2    |
+| browse_regex  | Collection    | 1    |
+| granule_regex | Collection    | 2    |
 
-1. The file name pattern identifying a browse file. Defaults to `_brws`. Included in the
- `metgenc init` prompts.
+1. The file name pattern identifying a browse file. The default is `_brws`. This element is
+ prompted for as one of the `metgenc init` prompts.
 2. The file name pattern identifying related files. Must  capture all text
  comprising the granule name in UMM-G and CNM output, and must provide a match
  using the named group `(?P<granuleid>)`. This value must be added manually; it
  is **not** included in the `metgenc init` prompts.
 
-Paths to the directories containing `premet` and `spatial` files are also
-included in the `ini` file. The user will be prompted for these values when running
-`metgenc init`.
-
-| `ini` section | `ini` element |
+When necessary, the following two `ini` elements can be used to define paths
+to the directories containing `premet` and `spatial` files. The user will be
+prompted for these values when running `metgenc init`.
+| `ini` element | `ini` section |
 | ------------- | ------------- |
-| Source        | premet_dir    |
-| Source        | spatial_dir   |
+| premet_dir    | Source        |
+| spatial_dir   | Source        |
 
-If granule spatial information is not available by interrogating the data or via
-`spatial` or `.spo` files, the operator may set a flag to force the metadata
-representing each granule's spatial extents to be set to those of the collection.
-The user will be prompted for the `collection_geometry_override`
-value when running `metgenc init`; the default is `False`.
+In cases of data sets where granule spatial information is not available
+by interrogating the data or via `spatial` or `.spo` files, the operator 
+may set a flag to force the metadata representing each granule's spatial 
+extents to be set to that of the collection. The user will be prompted 
+for the `collection_geometry_override` value when running `metgenc init`.
+The default value is `False`; setting it to `True` tells MetGenC to 
+use the collection's spatial extent for each granule.
+| `ini` element                | `ini` section |
+| ---------------------------- | ------------- |
+| collection_geometry_override | Source        |
 
-An analogous `ini` flag exists to indicate that the collection temporal extents
-should be used to populate the granule metadata temporal content.
-The user will be prompted for the `collection_temporal_override`
-value when running `metgenc init`; the default is `False`.
 
-| `ini` section | `ini` element                |
-| ------------- | ---------------------------- |
-| Source        | collection_geometry_override |
-| Source        | collection_temporal_override |
+Analogous to the above flag, another `ini` flag is available to indicate
+that the collection temporal extent should be used to populate the 
+granule-level temporal metadata. The user will be prompted for a
+`collection_temporal_override` value when running `metgenc init`.
+The default value is `False`; setting it to `True` tells MetGenC to 
+use the collection's temporal extent for each granule.
+
+| `ini` element                 | `ini` section |
+| ----------------------------- | --------------|
+| collection_temporal_override  | Source        |
 
 ##### Spatial Polygon Generation
 
