@@ -1,8 +1,9 @@
 ## v1.9.0rc0
 
 * Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
+* Fix UMM-G `RangeDateTimes` template error.
 
-## v1.9.0rc0
+## v1.8.0
 
 * Adds a generic reader used when `metgenc` processes granules with an unknown
   file-type. It uses spatial metadata from `spatial` files or collection metadata. (Issue-199)
