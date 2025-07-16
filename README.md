@@ -327,13 +327,13 @@ are meant to represent point clouds, the .ini file will need the attribute/value
 
 ### Geometry Logic and Expectations Table
 ```
-GCS = (CMR's) geometry coordinate system.
+GSRCS = (CMR's) granule spatial representation coordinate system.
 BR = bounding rectangle.
 .spo = .spo file associated with each granule science file to define GPolygon vertices.
 .spatial = .spatial file associated with each granule science file to define bounding rectangle, point, or point cloud (for a GPolygon to be generated around).
 ```
 
-| source | num points | GCS | error? | expected output | comments |
+| source | num points | GSRCS | error? | expected output | comments |
 | ------ | ------------ | ---- | ------ | ------- | --- |
 | .spo  |   any | cartesian | yes | | `.spo` inherently defines GPolygon vertices; GPolygons cannot be cartesian. |
 | .spo   | <= 2 | geodetic | yes | | At least three points are required to define a GPolygon. |
@@ -346,10 +346,10 @@ BR = bounding rectangle.
 | science file (NSIDC/CF-compliant netCDF) | NA | cartesian | no | BR | min/max lon/lat points for BR expected to be included in global attributes. |
 | science file (NSIDC/CF-compliant) | 1 or > 2 | geodetic | no | | Error if only two points. GPolygon calculated from grid perimeter. |
 | science file, non-NSIDC/CF-compliant netCDF or other format | NA | either | no | As specified by `.ini` file. | Configuration file must include a `spatial_dir` value (a path to the directory with valid `.spatial` or `.spo` files), or `collection_geometry_override=True` entry (which must be defined as a single point or a single bounding rectangle). |
-| collection metadata with one BR | NA | cartesian | no | BR as described in collection metadata. | |
-| collection metadata with two or more BR | NA | cartesian | yes | | Two-part bounding rectangle is not a valid granule-level geometry. |
-| collection metadata | NA | geodetic | yes | | Collection-level spatial representation can't be set as `geodetic`. |
-| collection metadata specifying one or more points | NA | NA | yes | | TODO: Determine whether point value is handled. |
+| collection spatial metadata geometry = cartesian with one BR | NA | cartesian | no | BR as described in collection metadata. | |
+| collection spatial metadata geometry = cartesian with one BR | NA | geodetic | yes | | Collection geometry and GSRCS must both be cartesian. |
+| collection spatial metadata geometry = cartesian with two or more BR | NA | cartesian | yes | | Two-part bounding rectangle is not a valid granule-level geometry. |
+| collection spatial metadata geometry specifying one or more points | NA | NA |  | | Not a known use case  |
 
 ## Running MetGenC: Its Commands In-depth
 
@@ -466,7 +466,6 @@ Each of those strings uniquely identify all files associated with a given granul
 text to form the granule name recorded in the UMM-G and CNM output (in the case of
 single-file granules, the file extension will be added to the granule name).
 
-
 #### When Premet and Spatial files are to be used
 When necessary, the following two `ini` elements can be used to define paths
 to the directories containing `premet` and `spatial` files. The user will be
@@ -475,6 +474,9 @@ prompted for these values when running `metgenc init`.
 | ------------- | ------------- |
 | premet_dir    | Source        |
 | spatial_dir   | Source        |
+
+If MetGenC processing fails, check the error message in the metgenc.log and check
+the [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table).
 
 #### Setting Collection Spatial Extent as Granule Spatial Extent
 In cases of data sets where granule spatial information is not available
@@ -487,6 +489,9 @@ use the collection's spatial extent for each granule.
 | `ini` element                | `ini` section |
 | ---------------------------- | ------------- |
 | collection_geometry_override | Source        |
+
+If MetGenC processing fails, check the error message in the metgenc.log and check
+the [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table).
 
 #### Setting Collection Temporal Extent as Granule Temporal Extent
 RARELY APPLICABLE (if ever)!!, but analogous to the above flag, another
