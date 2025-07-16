@@ -1,6 +1,7 @@
 ## UNRELEASED
 
-* Add an integration test suite for all collections. See the [integration test README](tests/integration/README.md)
+* Adds an integration test suite for all collections. See the [integration test README](tests/integration/README.md)
+* Fixes a bug which caused incorrect output file locations in some cases
 
 ## v1.9.0rc1
 
