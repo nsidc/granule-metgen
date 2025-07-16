@@ -17,8 +17,12 @@
     + [help](#help)
     + [init](#init)
       - [Optional Configuration Elements](#optional-configuration-elements)
-        * [Spatial Polygon Generation](#spatial-polygon-generation)
+      - [Granule and Browse RegEx](#granule-and-browse-regex)
         * [Example: Use of granule_regex](#example-use-of-granule_regex)
+      - [When Premet and Spatial Files Are to be Used](#when-premet-and-spatial-files-are-to-be-used)
+      - [Setting Collection Spatial Extent as Granule Spatial Extent](#setting-collection-spatial-extent-as-granule-spatial-extent)
+      - [Setting Collection Temporal Extent as Granule Temporal Extent](#setting-collection-temporal-extent-as-granule-temporal-extent)
+        * [Spatial Polygon Generation](#spatial-polygon-generation)
     + [info](#info)
     + [process](#process)
     + [validate](#validate)
@@ -399,7 +403,6 @@ Example running **init**
     $ metgenc init -c ./init/<name of config file to create or modify>.ini
 
 #### Optional Configuration Elements
-
 Some attribute values may be read from the `ini` file if the values
 can't be gleaned from or don't exist in the science file(s). This 
 approach assumes the attribute values are the same for all granules. 
@@ -421,6 +424,7 @@ the named group `(?P<time_coverage_start>)`.
 be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
 - None of the above elements are prompted for in the `metgenc init` functionality.
 
+#### Granule and Browse RegEx
 To identify browse files and declare a file name pattern when necessary
 for grouping files in a granule and/or browse with files in a granule, two 
 further `ini` elements are available: 
@@ -436,6 +440,34 @@ further `ini` elements are available:
  using the named group `(?P<granuleid>)`. This value must be added manually; it
  is **not** included in the `metgenc init` prompts.
 
+##### Example: Use of `granule_regex` 
+Given the `granule_regex`:
+```
+granule_regex = (NSIDC0081_SEAICE_PS_)(?P<granuleid>[NS]{1}\d{2}km_\d{8})(_v2.0_)(?:F\d{2}_)?(DUCk)
+```
+And two granules and their browse files:
+```
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_DUCk.nc
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F16_DUCk_brws.png
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F17_DUCk_brws.png
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F18_DUCk_brws.png
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F16_DUCk_brws.png
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F17_DUCk_brws.png
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F18_DUCk_brws.png
+```
+
+- `(?:F\d{2}_)?` will match the `F16_`, `F17_` and `F18_` strings in the browse
+file names, but the match will not be captured due to to the `?:` elements, and will
+not appear in the granule name recorded in the UMM-G and CNM output.
+- `N25km_20211101` and `S25km_20211102` will match the named capture group `granuleid`.
+Each of those strings uniquely identify all files associated with a given granule.
+- `NSIDC0081_SEAICE_PS_`, `_v2.0_` and `DUCk` will be combined with the `granuleid`
+text to form the granule name recorded in the UMM-G and CNM output (in the case of
+single-file granules, the file extension will be added to the granule name).
+
+
+#### When Premet and Spatial files are to be used
 When necessary, the following two `ini` elements can be used to define paths
 to the directories containing `premet` and `spatial` files. The user will be
 prompted for these values when running `metgenc init`.
@@ -444,31 +476,31 @@ prompted for these values when running `metgenc init`.
 | premet_dir    | Source        |
 | spatial_dir   | Source        |
 
+#### Setting Collection Spatial Extent as Granule Spatial Extent
 In cases of data sets where granule spatial information is not available
 by interrogating the data or via `spatial` or `.spo` files, the operator 
 may set a flag to force the metadata representing each granule's spatial 
 extents to be set to that of the collection. The user will be prompted 
 for the `collection_geometry_override` value when running `metgenc init`.
-The default value is `False`; setting it to `True` tells MetGenC to 
+The default value is `False`; setting it to `True` signals MetGenC to 
 use the collection's spatial extent for each granule.
 | `ini` element                | `ini` section |
 | ---------------------------- | ------------- |
 | collection_geometry_override | Source        |
 
-
-Analogous to the above flag, another `ini` flag is available to indicate
-that the collection temporal extent should be used to populate the 
-granule-level temporal metadata. The user will be prompted for a
-`collection_temporal_override` value when running `metgenc init`.
-The default value is `False`; setting it to `True` tells MetGenC to 
-use the collection's temporal extent for each granule.
+#### Setting Collection Temporal Extent as Granule Temporal Extent
+RARELY APPLICABLE (if ever)!!, but analogous to the above flag, another
+`ini` flag is available to indicate that the collection temporal extent
+should be used to populate the granule-level temporal metadata. The user
+will be prompted for a `collection_temporal_override` value when running
+`metgenc init`. The default value is `False`; setting it to `True` 
+signals MetGenC to use the collection's temporal extent for each granule.
 
 | `ini` element                 | `ini` section |
 | ----------------------------- | --------------|
 | collection_temporal_override  | Source        |
 
 ##### Spatial Polygon Generation
-
 MetGenC includes optimized polygon generation capabilities for creating spatial coverage polygons from point data, particularly useful for LIDAR flightline data. **This feature is optional and enabled by default.**
 
 When a granule has an associated `.spatial` file containing geodetic point data (≥3 points), MetGenC will automatically generate an optimized polygon to enclose the data points instead of using the basic point-to-point polygon method. This results in more accurate spatial coverage with fewer vertices.
@@ -502,37 +534,6 @@ spatial_polygon_max_vertices = 100
 - ❌ Polygon generation fails (automatic fallback)
 
 This enhancement is backward compatible - existing workflows continue unchanged, and polygon generation only activates for appropriate `.spatial` file scenarios.
-
-##### Example: Use of `granule_regex` 
-
-Given the `granule_regex`:
-
-```
-granule_regex = (NSIDC0081_SEAICE_PS_)(?P<granuleid>[NS]{1}\d{2}km_\d{8})(_v2.0_)(?:F\d{2}_)?(DUCk)
-```
-
-And two granules and their browse files:
-
-```
-NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_DUCk.nc
-NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F16_DUCk_brws.png
-NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F17_DUCk_brws.png
-NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F18_DUCk_brws.png
-NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc
-NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F16_DUCk_brws.png
-NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F17_DUCk_brws.png
-NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F18_DUCk_brws.png
-```
-
-- `(?:F\d{2}_)?` will match the `F16_`, `F17_` and `F18_` strings in the browse
-file names, but the match will not be captured due to to the `?:` elements, and will
-not appear in the granule name recorded in the UMM-G and CNM output.
-- `N25km_20211101` and `S25km_20211102` will match the named capture group `granuleid`.
-Each of those strings uniquely identify all files associated with a given granule.
-- `NSIDC0081_SEAICE_PS_`, `_v2.0_` and `DUCk` will be combined with the `granuleid`
-text to form the granule name recorded in the UMM-G and CNM output (in the case of
-single-file granules, the file extension will be added to the granule name).
-
 
 ---
 
