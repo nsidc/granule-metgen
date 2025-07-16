@@ -20,6 +20,9 @@ export EARTHDATA_USERNAME=your-EDL-username
 export EARTHDATA_PASSWORD=your-EDL-password
 ```
 
+Be sure to be on the NSIDC VPN or on an internal network before running unless you don't
+require the integration tests to download data from the test data staging site.
+
 ### Commands
 ```bash
 # Install dependencies (one time)
@@ -44,7 +47,7 @@ metgenc-integration-tests snexduck --force-download
 ## Available Collections
 
 - `IRTIT3DUCk` - NetCDF thermal imagery data
-- `IRWIS2DUCk` - CSV weather station data  
+- `IRWIS2DUCk` - CSV weather station data
 - `LVISF2` - LiDAR text files
 - `NSIDC-0081DUCk` - Sea ice concentration NetCDF
 - `NSIDC-0630DUCk` - Brightness temperature NetCDF
