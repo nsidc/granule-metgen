@@ -1,3 +1,9 @@
+Container = LeadingAttribute
+LeadingAttributeName = test_leading_attribute
+LeadingAttributeValue = test_leading_attribute_value
 Container = AdditionalAttributes
 AdditionalAttributeName = first_attribute
 ParameterValue=first_value
+Container = TrailingAttribute
+TrailingAttributeName = test_trailing_attribute
+TrailingAttributeValue = test_trailing_attribute_value

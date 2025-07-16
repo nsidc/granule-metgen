@@ -68,7 +68,9 @@ def premet_values(premet_path: str) -> dict:
     with open(premet_path) as premet_file:
         for line in premet_file:
             key, val = parse_premet_entry(line)
-            if re.match("Container", key):
+            if re.match("Container", key) and re.match(
+                constants.UMMG_ADDITIONAL_ATTRIBUTES, val
+            ):
                 _, namevalue = parse_premet_entry(next(premet_file))
                 _, attvalue = parse_premet_entry(next(premet_file))
                 additional_atts.append({"Name": namevalue, "Values": [attvalue]})
