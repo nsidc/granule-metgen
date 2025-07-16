@@ -1,12 +1,10 @@
-## UNRELEASED
-
-* Add an integration test suite for all collections. See the [integration test README](tests/integration/README.md)
-
-## v1.9.0rc1
+## v1.9.0rc2
 
 * Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
 * Fix UMM-G `RangeDateTimes` template error.
 * Refine search for `AdditionalAttribute` values in `premet` files.
+* Add an integration test suite for all collections. See the [integration test README](tests/integration/README.md)
+* Fix a bug which caused incorrect output file locations in some cases
 
 ## v1.8.0
 
