@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Add an integration test suite for all collections. See the [integration test README](tests/integration/README.md)
+
 ## v1.9.0rc1
 
 * Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
