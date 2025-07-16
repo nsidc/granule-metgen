@@ -727,7 +727,8 @@ def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
         return ""
 
     if len(data_file_paths) > 1:
-        m = re.search(granule_regex, a_file_path)
+        basename = os.path.basename(a_file_path)
+        m = re.search(granule_regex, basename)
         return "".join(m.groups()) if m else ""
     else:
         return os.path.basename(a_file_path)
