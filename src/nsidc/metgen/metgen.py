@@ -722,15 +722,33 @@ def matched_ancillary_file(granule_key: str, file_list: list[Path]) -> str:
 
 
 def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
+    logger = logging.getLogger(constants.ROOT_LOGGER)
     a_file_path = first(data_file_paths)
     if a_file_path is None:
         return ""
 
+    # Debug logging
+    logger.debug(f"derived_granule_name debug:")
+    logger.debug(f"  - a_file_path: {a_file_path}")
+    logger.debug(f"  - os.path.basename(a_file_path): {os.path.basename(a_file_path)}")
+    logger.debug(f"  - granule_regex: {granule_regex}")
+    logger.debug(f"  - number of data_file_paths: {len(data_file_paths)}")
+    logger.debug(f"  - all data_file_paths: {data_file_paths}")
+
     if len(data_file_paths) > 1:
-        m = re.search(granule_regex, a_file_path)
-        return "".join(m.groups()) if m else ""
+        basename = os.path.basename(a_file_path)
+        m = re.search(granule_regex, basename)
+        logger.debug(f"  - regex match object: {m}")
+        if m:
+            logger.debug(f"  - match groups: {m.groups()}")
+            logger.debug(f"  - match groupdict: {m.groupdict()}")
+        result = "".join(m.groups()) if m else ""
+        logger.debug(f"  - derived granule name (multiple files): {result}")
+        return result
     else:
-        return os.path.basename(a_file_path)
+        result = os.path.basename(a_file_path)
+        logger.debug(f"  - derived granule name (single file): {result}")
+        return result
 
 
 def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
