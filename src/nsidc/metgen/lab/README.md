@@ -14,16 +14,16 @@ export EARTHDATA_PASSWORD=your-password
 export EARTHDATA_TOKEN=your-bearer-token
 
 # Basic usage - process 5 granules
-python olvis1a_processor.py
+metgenc-lab-olvis1a
 
 # Process a specific number of granules
-python olvis1a_processor.py -n 10
+metgenc-lab-olvis1a -n 10
 
 # Specify output directory
-python olvis1a_processor.py -o my_output_dir
+metgenc-lab-olvis1a -o my_output_dir
 
 # Combine options
-python olvis1a_processor.py -n 10 -o my_output
+metgenc-lab-olvis1a -n 10 -o my_output
 ```
 
 ## Authentication
