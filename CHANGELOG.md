@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Adds an experimental script that generates premet & spatial files for OLVIS1A granules
+
 ## v1.9.0rc2
 
 * Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
