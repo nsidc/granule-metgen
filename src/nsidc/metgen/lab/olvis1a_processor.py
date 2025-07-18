@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 OLVIS1A Granule Processor
 
@@ -36,22 +35,16 @@ class OLVIS1AProcessor:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
-        print(f"Using CMR environment: prod ({self.CMR_URL})")
-        print(f"Collection: {self.COLLECTION}")
-        print(f"Version: {self.VERSION}")
-        print(f"Provider: {self.PROVIDER}")
+        print(f"OLVIS1A Processor: {self.COLLECTION} v{self.VERSION} from {self.PROVIDER}")
 
         # Get credentials from environment
         self.username = os.getenv("EARTHDATA_USERNAME")
         self.password = os.getenv("EARTHDATA_PASSWORD")
         self.bearer_token = os.getenv("EARTHDATA_TOKEN")
 
-        if self.bearer_token:
-            print("Using Bearer token authentication")
-        elif not self.username or not self.password:
-            print("Warning: No Earthdata Login credentials found in environment.")
-            print("Set EARTHDATA_USERNAME and EARTHDATA_PASSWORD environment variables.")
-            print("Or set EARTHDATA_TOKEN for Bearer token authentication.")
+        if not self.bearer_token and (not self.username or not self.password):
+            print("Warning: No authentication credentials found.")
+            print("Set EARTHDATA_TOKEN or EARTHDATA_USERNAME/PASSWORD.")
 
         self.cmr_client = CMRClient(base_url=self.CMR_URL)
 
@@ -146,9 +139,7 @@ class OLVIS1AProcessor:
             umm_json = self.cmr_client.get_umm_json(concept_id)
 
             # Extract data URLs
-            print(f"  Extracting data URLs from UMM-G metadata...")
             data_urls = UMMGParser.extract_data_urls(umm_json)
-            print(f"  Found {len(data_urls)} total URLs")
                 
             # Look for OLVIS1A image files
             data_url = UMMGParser.find_data_file(
@@ -172,7 +163,6 @@ class OLVIS1AProcessor:
                 return
 
             # Get coordinates from UMM-G metadata
-            print(f"  Extracting coordinates from UMM-G metadata...")
             lon, lat = self.extract_coordinates_from_ummg(umm_json)
 
             if lon is None or len(lon) == 0:
@@ -182,7 +172,7 @@ class OLVIS1AProcessor:
             print(f"  Generated {len(lon)} coordinate points")
 
             # Generate premet file
-            self.generate_premet_file(data_file, umm_json, granule_ur)
+            self.generate_premet_file(data_file, umm_json)
 
             # Generate spatial file
             self.generate_spatial_file(data_file, lon, lat)
@@ -191,8 +181,6 @@ class OLVIS1AProcessor:
 
         except Exception as e:
             print(f"  Error processing granule: {e}")
-            import traceback
-            traceback.print_exc()
 
     def download_data_file(self, url, output_dir):
         """
@@ -219,23 +207,12 @@ class OLVIS1AProcessor:
         try:
             print(f"  Downloading: {filename}")
             
-            # Create a new session for this download
-            download_session = requests.Session()
-            
-            # Add authentication
-            if self.bearer_token:
-                download_session.headers.update({"Authorization": f"Bearer {self.bearer_token}"})
-            elif self.username and self.password:
-                download_session.auth = (self.username, self.password)
-            
-            # Download with redirects
-            response = download_session.get(url, stream=True, allow_redirects=True)
-            
-            print(f"  Response status: {response.status_code}")
+            # Download with redirects using the existing session
+            response = self.session.get(url, stream=True, allow_redirects=True)
             
             # Check if we ended up at an OAuth page
             if "urs.earthdata.nasa.gov" in response.url and "oauth" in response.url:
-                print(f"  OAuth redirect detected. Manual authentication required.")
+                print(f"  Authentication required. Please set EARTHDATA_TOKEN or EARTHDATA_USERNAME/PASSWORD.")
                 return None
             
             response.raise_for_status()
@@ -327,7 +304,7 @@ class OLVIS1AProcessor:
             print(f"    Error extracting coordinates: {e}")
             return None, None
 
-    def generate_premet_file(self, data_file, umm_json, granule_ur):
+    def generate_premet_file(self, data_file, umm_json):
         """
         Generate premet file for granule.
 
@@ -337,15 +314,12 @@ class OLVIS1AProcessor:
             Data file path
         umm_json : dict
             UMM-G metadata
-        granule_ur : str
-            Granule UR
         """
         # Create premet directory
         premet_dir = self.output_dir / "premet"
         premet_dir.mkdir(exist_ok=True)
 
         # Extract metadata from UMM-G
-        print(f"  Extracting temporal metadata for premet file...")
         
         # Handle both direct UMM-G and wrapped format
         if "umm" in umm_json and "TemporalExtent" not in umm_json:
@@ -375,7 +349,7 @@ class OLVIS1AProcessor:
             try:
                 begin_dt = datetime.fromisoformat(beginning_datetime.rstrip("Z"))
                 begin_date = begin_dt.strftime("%Y-%m-%d")
-                begin_time = begin_dt.strftime("%H:%M:%S.%f")[:-3]
+                begin_time = begin_dt.strftime("%H:%M:%S.%f")[:-3]  # milliseconds
             except Exception as e:
                 print(f"    Error parsing beginning datetime: {e}")
                 begin_date = ""
@@ -388,7 +362,7 @@ class OLVIS1AProcessor:
             try:
                 end_dt = datetime.fromisoformat(ending_datetime.rstrip("Z"))
                 end_date = end_dt.strftime("%Y-%m-%d")
-                end_time = end_dt.strftime("%H:%M:%S.%f")[:-3]
+                end_time = end_dt.strftime("%H:%M:%S.%f")[:-3]  # milliseconds
             except Exception as e:
                 print(f"    Error parsing ending datetime: {e}")
                 end_date = begin_date  # Use begin_date as fallback
