@@ -35,7 +35,9 @@ class OLVIS1AProcessor:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
-        print(f"OLVIS1A Processor: {self.COLLECTION} v{self.VERSION} from {self.PROVIDER}")
+        print(
+            f"OLVIS1A Processor: {self.COLLECTION} v{self.VERSION} from {self.PROVIDER}"
+        )
 
         # Get credentials from environment
         self.username = os.getenv("EARTHDATA_USERNAME")
@@ -51,19 +53,21 @@ class OLVIS1AProcessor:
         # Create session for downloads
         self.session = requests.Session()
         if self.bearer_token:
-            self.session.headers.update({"Authorization": f"Bearer {self.bearer_token}"})
+            self.session.headers.update(
+                {"Authorization": f"Bearer {self.bearer_token}"}
+            )
         elif self.username and self.password:
             self.session.auth = (self.username, self.password)
 
     def get_sequential_granules(self, count=10):
         """
         Get granules sequentially from CMR.
-        
+
         Parameters:
         -----------
         count : int
             Number of granules to retrieve
-            
+
         Returns:
         --------
         list : List of granule entries
@@ -75,19 +79,19 @@ class OLVIS1AProcessor:
                 "version": self.VERSION,
                 "provider": self.PROVIDER,
                 "page_size": count,
-                "sort_key": "-start_date"  # Most recent first
+                "sort_key": "-start_date",  # Most recent first
             }
-            
+
             print(f"Querying CMR for {count} granules...")
             response = self.cmr_client.session.get(endpoint, params=params)
             response.raise_for_status()
-            
+
             data = response.json()
             granules = data.get("feed", {}).get("entry", [])
-            
+
             print(f"Found {len(granules)} granules")
             return granules
-            
+
         except Exception as e:
             print(f"Error querying CMR: {e}")
             return []
@@ -140,11 +144,10 @@ class OLVIS1AProcessor:
 
             # Extract data URLs
             data_urls = UMMGParser.extract_data_urls(umm_json)
-                
+
             # Look for OLVIS1A image files
             data_url = UMMGParser.find_data_file(
-                data_urls,
-                extensions=[".JPG", ".jpg", ".jpeg", ".JPEG"]
+                data_urls, extensions=[".JPG", ".jpg", ".jpeg", ".JPEG"]
             )
 
             if not data_url:
@@ -166,7 +169,7 @@ class OLVIS1AProcessor:
             lon, lat = self.extract_coordinates_from_ummg(umm_json)
 
             if lon is None or len(lon) == 0:
-                print(f"  Error: Could not extract coordinates from metadata")
+                print("  Error: Could not extract coordinates from metadata")
                 return
 
             print(f"  Generated {len(lon)} coordinate points")
@@ -206,15 +209,17 @@ class OLVIS1AProcessor:
 
         try:
             print(f"  Downloading: {filename}")
-            
+
             # Download with redirects using the existing session
             response = self.session.get(url, stream=True, allow_redirects=True)
-            
+
             # Check if we ended up at an OAuth page
             if "urs.earthdata.nasa.gov" in response.url and "oauth" in response.url:
-                print(f"  Authentication required. Please set EARTHDATA_TOKEN or EARTHDATA_USERNAME/PASSWORD.")
+                print(
+                    "  Authentication required. Please set EARTHDATA_TOKEN or EARTHDATA_USERNAME/PASSWORD."
+                )
                 return None
-            
+
             response.raise_for_status()
 
             with open(output_path, "wb") as f:
@@ -227,7 +232,9 @@ class OLVIS1AProcessor:
         except Exception as e:
             print(f"  Error downloading file: {e}")
             if "401" in str(e) or "Unauthorized" in str(e):
-                print("  Authentication failed. Check EARTHDATA_USERNAME and EARTHDATA_PASSWORD.")
+                print(
+                    "  Authentication failed. Check EARTHDATA_USERNAME and EARTHDATA_PASSWORD."
+                )
             elif "403" in str(e) or "Forbidden" in str(e):
                 print("  Access forbidden. Check data access permissions.")
             return None
@@ -235,12 +242,12 @@ class OLVIS1AProcessor:
     def extract_coordinates_from_ummg(self, umm_json):
         """
         Extract coordinates from UMM-G metadata.
-        
+
         Parameters:
         -----------
         umm_json : dict
             UMM-G metadata
-            
+
         Returns:
         --------
         tuple : (lon_array, lat_array) or (None, None)
@@ -249,57 +256,59 @@ class OLVIS1AProcessor:
             # Handle both direct UMM-G and wrapped format
             if "umm" in umm_json:
                 umm_json = umm_json["umm"]
-            
+
             spatial_extent = umm_json.get("SpatialExtent", {})
             horizontal_extent = spatial_extent.get("HorizontalSpatialDomain", {})
             geometry = horizontal_extent.get("Geometry", {})
-            
+
             # Try GPolygons first
             gpolygons = geometry.get("GPolygons", [])
             if gpolygons:
                 # Use first polygon
                 boundary = gpolygons[0].get("Boundary", {})
                 points = boundary.get("Points", [])
-                
+
                 if len(points) >= 3:
                     # Extract coordinates from polygon
                     lons = [p["Longitude"] for p in points]
                     lats = [p["Latitude"] for p in points]
-                    
+
                     print(f"    Found polygon with {len(points)} vertices")
                     return np.array(lons), np.array(lats)
-            
+
             # Try BoundingRectangles
             bounding_rects = geometry.get("BoundingRectangles", [])
             if bounding_rects:
                 rect = bounding_rects[0]
                 west = rect.get("WestBoundingCoordinate")
-                east = rect.get("EastBoundingCoordinate") 
+                east = rect.get("EastBoundingCoordinate")
                 north = rect.get("NorthBoundingCoordinate")
                 south = rect.get("SouthBoundingCoordinate")
-                
+
                 if all(v is not None for v in [west, east, north, south]):
-                    print(f"    Found bounding box: [{west:.4f}, {south:.4f}] to [{east:.4f}, {north:.4f}]")
-                    
+                    print(
+                        f"    Found bounding box: [{west:.4f}, {south:.4f}] to [{east:.4f}, {north:.4f}]"
+                    )
+
                     # Create corner points of the bounding rectangle
                     lons = [west, east, east, west, west]  # Close the polygon
                     lats = [south, south, north, north, south]
-                    
+
                     return np.array(lons), np.array(lats)
-            
+
             # Try Points
             points = geometry.get("Points", [])
             if points:
                 lons = [p["Longitude"] for p in points]
                 lats = [p["Latitude"] for p in points]
-                
+
                 if lons and lats:
                     print(f"    Found {len(points)} individual points")
                     return np.array(lons), np.array(lats)
-            
+
             print("    No spatial geometry found in UMM-G metadata")
             return None, None
-            
+
         except Exception as e:
             print(f"    Error extracting coordinates: {e}")
             return None, None
@@ -320,23 +329,23 @@ class OLVIS1AProcessor:
         premet_dir.mkdir(exist_ok=True)
 
         # Extract metadata from UMM-G
-        
+
         # Handle both direct UMM-G and wrapped format
         if "umm" in umm_json and "TemporalExtent" not in umm_json:
             umm_json = umm_json["umm"]
-        
+
         temporal_extent = umm_json.get("TemporalExtent", {})
-        
+
         # Try different temporal data structures
         beginning_datetime = ""
         ending_datetime = ""
-        
+
         # Try RangeDateTime first
         range_datetime = temporal_extent.get("RangeDateTime", {})
         if range_datetime:
             beginning_datetime = range_datetime.get("BeginningDateTime", "")
             ending_datetime = range_datetime.get("EndingDateTime", "")
-        
+
         # Try SingleDateTime if RangeDateTime is empty
         if not beginning_datetime:
             single_datetime = temporal_extent.get("SingleDateTime", "")
@@ -447,15 +456,17 @@ def main():
         description="Download and process OLVIS1A granules"
     )
     parser.add_argument(
-        "-n", "--number",
+        "-n",
+        "--number",
         type=int,
         default=5,
-        help="Number of granules to process (default: 5)"
+        help="Number of granules to process (default: 5)",
     )
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         default="olvis1a_output",
-        help="Output directory (default: olvis1a_output)"
+        help="Output directory (default: olvis1a_output)",
     )
 
     args = parser.parse_args()
