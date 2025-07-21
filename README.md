@@ -157,7 +157,7 @@ and files with your values.
 MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials
 to retrieve collection metadata. If authentication fails,
 collection metadata will not be accessible to help compensate for metadata elements
-missing from science files or a data set's configuration (`.ini`) file.
+missing from science files or a data set's configuration (.ini) file.
 
 Always export the following variables to your environment before running
 `metgenc process` (there's more on what this entails to come):
@@ -171,7 +171,7 @@ ingesting to.
 
 If collection metadata are unavailable either due to an authentication failure
 or because the collection information doesn't yet exist in CMR, MetGenC will
-continue processing with the information available from the `.ini` file and the
+continue processing with the information available from the .ini file and the
 science files.
 
 ## Before Running MetGenC: Tips and Assumptions
@@ -228,7 +228,7 @@ secret_key     ****************cJ+5              env
   that variable is the same in every science file).
 
 ### MetGenC .ini File Assumtions
-* A `pixel_size` attribute and value is needed in an `.ini` file when gridded science files don't include a GeoTransform attribute in the grid mapping variable. The value specified should be a number, i.e., no units (m, km) need to be specified since they're assumed to be the same as the units of those defined by the spatial coordinate variables in the data set's science files.
+* A `pixel_size` attribute and value is needed in an .ini file when gridded science files don't include a GeoTransform attribute in the grid mapping variable. The value specified should be a number, i.e., no units (m, km) need to be specified since they're assumed to be the same as the units of those defined by the spatial coordinate variables in the data set's science files.
   * e.g., `pixel_size = 25`
 * Date/time strings can be parsed using `datetime.fromisoformat`
 * The checksum_type must be SHA256
@@ -241,7 +241,7 @@ secret_key     ****************cJ+5              env
 - **R** recommended
 - **S** suggested
 
-| Attribute in use (location)   | ACDD | CF Conventions | NSIDC Guidelines | Note    |
+| Attribute in use (location)   | ACDD | CF Conventions | NSIDC Guidelines | Notes   |
 | ----------------------------- | ---- | -------------- | ---------------- | ------- |
 | date_modified (global)        | S    |                | R                | 1, OC   |
 | time_coverage_start (global)  | R    |                | R                | 2, OC, P   |
@@ -252,28 +252,42 @@ secret_key     ****************cJ+5              env
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 6       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
 
-Note column key:
-- OC = Optional configuration attributes (or elements of them) that may be represented in an `.ini` file.
-- P = Premet file attributes that may be specified in a `premet` file; when used, a `premet_dir` path must be defined in the `.ini` file.
-See [Optional Configuration Elements](#optional-configuration-elements)
-- 1 = Used to populate the production date and time values in UMM-G output.
-- 2 = Used to populate the time begin and end UMM-G values.
-- 3 = A grid mapping variable is required if the horizontal spatial coordinates are not
+Notes column key:
+
+ OC = Optional configuration attributes (or elements of them) that may be represented
+   in an .ini file. See [Optional Configuration Elements](#optional-configuration-elements)
+
+ P = Premet file attributes that may be specified in a premet file; when used, a
+  `premet_dir`path must be defined in the .ini file.
+  
+ 1 = Used to populate the production date and time values in UMM-G output; OC .ini
+  attribte remains `date_modified` = \<value\>.
+  
+ 2 = Used to populate the time begin and end UMM-G values; OC .ini attribute for
+  time_coverage_start is `time_start_regex` = \<value\>, and for time_coverage_end the
+  .ini attribute is `time_coverage_duration` = \<value\>.
+ 
+ 3 = A grid mapping variable is required if the horizontal spatial coordinates are not
    longitude and latitude and the intent of the data provider is to geolocate
    the data. `grid_mapping` and `grid_mapping_name` allow programmatic identification of
    the variable holding information about the horizontal coordinate reference system.
-- 4 = The `crs_wkt` ("well known text") value is handed to the
+   
+ 4 = The `crs_wkt` ("well known text") value is handed to the
    `CRS` and `Transformer` modules in `pyproj` to conveniently deal
    with the reprojection of (y,x) values to EPSG 4326 (lon, lat) values.
-- 5 = The `GeoTransform` value provides the pixel size per data value, which is then used
+
+ 5 = The `GeoTransform` value provides the pixel size per data value, which is then used
    to calculate the padding added to x and y values to create a GPolygon enclosing all
-   of the data.
-- 6 = The values of the coordinate variable identified by the `standard_name` attribute
+   of the data; OC .ini attribute is `pixel_size` = <value>.
+   
+ 6 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_x_coordinate` are reprojected and thinned to create a
    GPolygon, bounding box, etc.
-- 7 = The values of the coordinate variable identified by the `standard_name` attribute
+   
+ 7 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding box, etc.
+   
 
 | Attributes not currently used | ACDD | CF Conventions | NSIDC Guidelines |
 | ----------------------------- | ---- | -------------- | ---------------- |
@@ -345,7 +359,7 @@ BR = bounding rectangle.
 | .spatial | > 2 | cartesian | yes | | No cartesian-associated geometry for point cloud. |
 | science file (NSIDC/CF-compliant netCDF) | NA | cartesian | no | BR | min/max lon/lat points for BR expected to be included in global attributes. |
 | science file (NSIDC/CF-compliant) | 1 or > 2 | geodetic | no | | Error if only two points. GPolygon calculated from grid perimeter. |
-| science file, non-NSIDC/CF-compliant netCDF or other format | NA | either | no | As specified by `.ini` file. | Configuration file must include a `spatial_dir` value (a path to the directory with valid `.spatial` or `.spo` files), or `collection_geometry_override=True` entry (which must be defined as a single point or a single bounding rectangle). |
+| science file, non-NSIDC/CF-compliant netCDF or other format | NA | either | no | As specified by .ini file. | Configuration file must include a `spatial_dir` value (a path to the directory with valid `.spatial` or `.spo` files), or `collection_geometry_override=True` entry (which must be defined as a single point or a single bounding rectangle). |
 | collection spatial metadata geometry = cartesian with one BR | NA | cartesian | no | BR as described in collection metadata. | |
 | collection spatial metadata geometry = cartesian with one BR | NA | geodetic | yes | | Collection geometry and GSRCS must both be cartesian. |
 | collection spatial metadata geometry = cartesian with two or more BR | NA | cartesian | yes | | Two-part bounding rectangle is not a valid granule-level geometry. |
@@ -378,14 +392,14 @@ Show MetGenC's help text:
 
 ### init
 
-The **init** command can be used to generate a metgenc configuration (i.e., `.ini`) file for
+The **init** command can be used to generate a metgenc configuration (i.e., .ini) file for
 your data set, or edit an existing .ini file.
 * You can skip this step if you've already acquired or made an .ini file and prefer editing it
   manually (any text editor will work).
 * An existing configuration file can also be copied, renamed, and used with a different
   data set, just be sure to update paths, regex values, etc that are data set-specific!
 * The .ini file's checksum_type should always be set to SHA256.
-* If creating a new .ini, remember to include `.ini` trailing the name you choose.
+* If creating a new .ini, remember to include .ini trailing the name you choose.
 
 ```
 metgenc init --help
