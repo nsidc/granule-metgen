@@ -7,10 +7,26 @@ import pytest
 from shapely.geometry import Point, Polygon
 
 from nsidc.metgen.spatial import create_flightline_polygon
+from nsidc.metgen.spatial.polygon_generator import (
+    _calculate_distance,
+    _filter_polygon_points_by_tolerance,
+)
 
 
 class TestPolygonGenerator:
     """Test suite for polygon generation."""
+
+    def test_calculate_distance(self):
+        """Test the distance calculation function."""
+        # Test exact distances
+        assert _calculate_distance((0, 0), (0, 0)) == 0
+        assert _calculate_distance((0, 0), (1, 0)) == 1
+        assert _calculate_distance((0, 0), (0, 1)) == 1
+        assert abs(_calculate_distance((0, 0), (1, 1)) - np.sqrt(2)) < 1e-10
+
+        # Test that it's symmetric
+        p1, p2 = (1, 2), (4, 6)
+        assert _calculate_distance(p1, p2) == _calculate_distance(p2, p1)
 
     @pytest.fixture
     def simple_flightline(self):
@@ -311,3 +327,133 @@ class TestPolygonGenerator:
             < 0.01
         )
         assert abs(metadata1["polygon_area"] - metadata2["polygon_area"]) < 1e-10
+
+    def test_tolerance_filtering(self):
+        """Test that tolerance filtering works correctly on polygons."""
+        # Create a polygon with some vertices too close together
+        coords = [
+            (0.0, 0.0),
+            (0.001, 0.0),  # Far enough from previous
+            (0.00105, 0.0),  # Too close to previous (distance ~0.00005)
+            (0.002, 0.0),  # Far enough
+            (0.002, 0.001),  # Far enough
+            (0.001, 0.001),  # Far enough
+            (0.0, 0.001),  # Far enough
+            (0.0, 0.0),  # Close the polygon
+        ]
+        polygon = Polygon(coords[:-1])  # Shapely will auto-close
+
+        # Test with default tolerance
+        filtered_polygon = _filter_polygon_points_by_tolerance(
+            polygon, tolerance=0.0001
+        )
+
+        # Should have removed the point that was too close
+        assert len(filtered_polygon.exterior.coords) < len(polygon.exterior.coords)
+
+        # Verify all remaining points meet tolerance requirement
+        filtered_coords = list(filtered_polygon.exterior.coords)[
+            :-1
+        ]  # Exclude closing point
+        for i in range(len(filtered_coords)):
+            for j in range(i + 1, len(filtered_coords)):
+                distance = _calculate_distance(filtered_coords[i], filtered_coords[j])
+                assert distance >= 0.0001 - 1e-10  # Allow tiny numerical error
+
+    def test_polygon_with_tolerance(self):
+        """Test polygon generation with tolerance filtering."""
+        # Create flightline with some very close points
+        lon = np.array(
+            [
+                -120.0,
+                -120.00005,
+                -120.0001,
+                -120.001,  # Close points at start
+                -119.9,
+                -119.8,
+                -119.7,
+                -119.6,  # Main flightline
+                -119.5,
+                -119.49995,
+                -119.4999,  # Close points at end
+            ]
+        )
+        lat = np.array(
+            [
+                35.0,
+                35.00005,
+                35.0001,
+                35.001,  # Close points at start
+                35.1,
+                35.2,
+                35.3,
+                35.4,  # Main flightline
+                35.5,
+                35.50005,
+                35.5001,  # Close points at end
+            ]
+        )
+
+        # Generate polygon with default tolerance
+        polygon, metadata = create_flightline_polygon(
+            lon, lat, cartesian_tolerance=0.0001
+        )
+
+        # Tolerance filtering happens on the polygon vertices, not input points
+        # So we check if any vertices were filtered
+        if "tolerance_filtered" in metadata:
+            assert (
+                metadata["pre_tolerance_vertices"] > metadata["post_tolerance_vertices"]
+            )
+            assert metadata["cartesian_tolerance"] == 0.0001
+
+        # Polygon should still be valid
+        assert isinstance(polygon, Polygon)
+        assert polygon.is_valid
+
+    def test_different_tolerance_values(self):
+        """Test with different tolerance values."""
+        # Create a dense circular pattern that will result in many close vertices
+        t = np.linspace(0, 2 * np.pi, 200)
+        lon = -120 + 0.01 * np.cos(t)
+        lat = 35 + 0.01 * np.sin(t)
+
+        # Test with different tolerances
+        tolerances = [0.00001, 0.0001, 0.001, 0.01]
+        vertex_counts = []
+
+        for tol in tolerances:
+            polygon, metadata = create_flightline_polygon(
+                lon, lat, cartesian_tolerance=tol
+            )
+            vertex_counts.append(metadata["vertices"])
+
+        # Larger tolerances should generally result in fewer vertices
+        # (though not strictly monotonic due to algorithm complexity)
+        assert (
+            vertex_counts[-1] <= vertex_counts[0]
+        )  # Largest tolerance has fewest vertices
+
+    def test_tolerance_preserves_shape(self):
+        """Test that tolerance filtering preserves overall shape."""
+        # Create a circular flightline
+        t = np.linspace(0, 2 * np.pi, 1000)
+        lon = -120 + 0.5 * np.cos(t)
+        lat = 35 + 0.5 * np.sin(t)
+
+        # Add some noise to create close points
+        lon += np.random.normal(0, 0.00002, len(lon))
+        lat += np.random.normal(0, 0.00002, len(lat))
+
+        # Generate polygon with tolerance
+        polygon, metadata = create_flightline_polygon(
+            lon, lat, cartesian_tolerance=0.0001
+        )
+
+        # Check that shape is preserved (roughly circular)
+        centroid = polygon.centroid
+        assert abs(centroid.x - (-120)) < 0.1
+        assert abs(centroid.y - 35) < 0.1
+
+        # Coverage should still be good
+        assert metadata["final_data_coverage"] >= 0.90

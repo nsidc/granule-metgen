@@ -47,6 +47,7 @@ def expected_keys():
             "spatial_polygon_enabled",
             "spatial_polygon_target_coverage",
             "spatial_polygon_max_vertices",
+            "spatial_polygon_cartesian_tolerance",
         ]
     )
 
@@ -384,5 +385,62 @@ def test_spatial_polygon_max_vertices_validation_too_high(m1, m2, m3, cfg_parser
         config.validate(cfg)
     assert (
         "The spatial polygon max vertices must be between 10 and 1000."
+        in exc_info.value.errors
+    )
+
+
+def test_spatial_polygon_cartesian_tolerance_defaults(cfg_parser):
+    """Test that spatial polygon cartesian tolerance has correct default."""
+    cfg = config.configuration(cfg_parser, {})
+    assert cfg.spatial_polygon_cartesian_tolerance == 0.0001
+
+
+def test_spatial_polygon_cartesian_tolerance_from_ini(cfg_parser):
+    """Test reading spatial polygon cartesian tolerance from ini file."""
+    cfg_parser["Spatial"] = {
+        "spatial_polygon_cartesian_tolerance": "0.001",
+    }
+    cfg = config.configuration(cfg_parser, {})
+    assert cfg.spatial_polygon_cartesian_tolerance == 0.001
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_spatial_polygon_cartesian_tolerance_validation_valid(m1, m2, m3, cfg_parser):
+    """Test validation of valid spatial polygon cartesian tolerance values."""
+    cfg_parser["Spatial"] = {"spatial_polygon_cartesian_tolerance": "0.001"}
+    cfg = config.configuration(cfg_parser, {})
+    assert config.validate(cfg) is True
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_spatial_polygon_cartesian_tolerance_validation_too_low(m1, m2, m3, cfg_parser):
+    """Test validation rejects spatial polygon cartesian tolerance below 0.00001."""
+    cfg_parser["Spatial"] = {"spatial_polygon_cartesian_tolerance": "0.000001"}
+    cfg = config.configuration(cfg_parser, {})
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+    assert (
+        "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees."
+        in exc_info.value.errors
+    )
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_spatial_polygon_cartesian_tolerance_validation_too_high(
+    m1, m2, m3, cfg_parser
+):
+    """Test validation rejects spatial polygon cartesian tolerance above 0.01."""
+    cfg_parser["Spatial"] = {"spatial_polygon_cartesian_tolerance": "0.02"}
+    cfg = config.configuration(cfg_parser, {})
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+    assert (
+        "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees."
         in exc_info.value.errors
     )

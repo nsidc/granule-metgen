@@ -1125,10 +1125,9 @@ def populate_spatial(
             # Create configured polygon generator using partial application
             generate_polygon = partial(
                 create_flightline_polygon,
-                target_coverage=configuration.spatial_polygon_target_coverage
-                or constants.DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE,
-                max_vertices=configuration.spatial_polygon_max_vertices
-                or constants.DEFAULT_SPATIAL_POLYGON_MAX_VERTICES,
+                target_coverage=configuration.spatial_polygon_target_coverage,
+                max_vertices=configuration.spatial_polygon_max_vertices,
+                cartesian_tolerance=configuration.spatial_polygon_cartesian_tolerance,
             )
 
             # Extract lon/lat arrays from spatial_values

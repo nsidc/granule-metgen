@@ -8,6 +8,7 @@ effective approach that achieves better results with less complexity.
 Includes backward-compatible PolygonGenerator class wrapper.
 """
 
+import logging
 import time
 
 import numpy as np
@@ -15,13 +16,98 @@ from concave_hull import concave_hull
 from shapely.geometry import Point, Polygon
 from shapely.validation import make_valid
 
+logger = logging.getLogger(__name__)
 
-def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
+
+def _calculate_distance(p1, p2):
+    """Calculate Euclidean distance between two points."""
+    return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+
+def _filter_polygon_points_by_tolerance(polygon, tolerance=0.0001):
+    """
+    Filter polygon points to ensure minimum spacing according to CMR tolerance requirements.
+
+    This function operates on an ordered polygon boundary to ensure no two vertices
+    are closer than the specified tolerance.
+
+    Parameters:
+    -----------
+    polygon : shapely.geometry.Polygon
+        Polygon whose vertices need filtering
+    tolerance : float
+        Minimum required distance between points in degrees (default: 0.0001)
+
+    Returns:
+    --------
+    shapely.geometry.Polygon : Filtered polygon with tolerance-compliant vertices
+    """
+    if not hasattr(polygon, "exterior") or len(polygon.exterior.coords) <= 4:
+        return polygon
+
+    # Get the coordinates (excluding the last point which duplicates the first)
+    coords = list(polygon.exterior.coords)[:-1]
+
+    if len(coords) <= 3:  # Minimum for a valid polygon
+        return polygon
+
+    # Start with the first point
+    filtered_coords = [coords[0]]
+
+    # Track indices to remove for a second pass
+    points_to_check = list(range(1, len(coords)))
+
+    # First pass: filter points that are too close to previously accepted points
+    i = 0
+    while i < len(points_to_check):
+        point_idx = points_to_check[i]
+        point = coords[point_idx]
+
+        # Check distance to all previously accepted points
+        too_close = False
+        for accepted_point in filtered_coords:
+            if _calculate_distance(point, accepted_point) < tolerance:
+                too_close = True
+                break
+
+        if too_close:
+            # Remove this point from consideration
+            points_to_check.pop(i)
+        else:
+            # Accept this point
+            filtered_coords.append(point)
+            points_to_check.pop(i)
+
+    # Ensure we have enough points for a valid polygon
+    if len(filtered_coords) < 3:
+        logger.warning(
+            f"Tolerance filtering would result in degenerate polygon "
+            f"({len(filtered_coords)} points), keeping original"
+        )
+        return polygon
+
+    # Close the polygon by adding the first point at the end
+    filtered_coords.append(filtered_coords[0])
+
+    try:
+        filtered_polygon = Polygon(filtered_coords)
+        if filtered_polygon.is_valid:
+            return filtered_polygon
+        else:
+            return make_valid(filtered_polygon)
+    except Exception as e:
+        logger.error(f"Failed to create filtered polygon: {e}")
+        return polygon
+
+
+def create_flightline_polygon(
+    lon, lat, target_coverage=0.98, max_vertices=100, cartesian_tolerance=0.0001
+):
     """
     Create a polygon representing the flightline coverage using concave hull.
 
     This function uses a simple, reliable approach with the concave_hull library
-    and configurable quality parameters.
+    and configurable quality parameters, ensuring all points meet CMR tolerance requirements.
 
     Parameters:
     -----------
@@ -33,11 +119,14 @@ def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
         Target data coverage percentage (default: 0.98)
     max_vertices : int, optional
         Maximum number of vertices in final polygon (default: 100)
+    cartesian_tolerance : float, optional
+        Minimum spacing between points in degrees (default: 0.0001)
+        This ensures CMR validation passes
 
     Returns:
     --------
     tuple: (polygon, metadata)
-        - polygon: Shapely Polygon object
+        - polygon: Shapely Polygon object with tolerance-compliant vertices
         - metadata: Dictionary with generation details
     """
     start_time = time.time()
@@ -50,18 +139,18 @@ def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
         "generation_time_seconds": 0,
     }
 
-    print(f"\n[StandardPolygonGenerator] Processing {len(lon)} points")
+    logger.info(f"Processing {len(lon)} points")
 
     # For very small datasets, use more conservative parameters
     is_small_dataset = len(lon) < 100
     if is_small_dataset:
-        print(
-            f"  Small dataset detected ({len(lon)} points) - using conservative parameters"
+        logger.info(
+            f"Small dataset detected ({len(lon)} points) - using conservative parameters"
         )
 
     # Handle edge cases
     if len(lon) < 3:
-        print("  Insufficient points for polygon, creating simple buffer")
+        logger.warning("Insufficient points for polygon, creating simple buffer")
         # Create a simple line buffer for very few points
         from shapely.geometry import LineString, Point
 
@@ -103,15 +192,15 @@ def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
 
         points = points[sorted(list(combined_indices))]
 
-        print(
-            f"  Smart subsampled from {original_point_count} to {len(points)} points (preserving boundaries)"
+        logger.info(
+            f"Smart subsampled from {original_point_count} to {len(points)} points (preserving boundaries)"
         )
         metadata["subsampling_used"] = True
         metadata["subsampling_method"] = "boundary_preserving"
         metadata["original_point_count"] = original_point_count
         metadata["subsampled_point_count"] = len(points)
 
-    print("  Generating concave hull...")
+    logger.debug("Generating concave hull...")
 
     try:
         # Calculate appropriate length threshold based on data spread
@@ -127,13 +216,13 @@ def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
             # Use 1.5% of average range as length threshold (reduced for better coverage)
             length_threshold = max(avg_range * 0.015, 0.0005)
 
-        print(f"  Length threshold: {length_threshold:.6f} degrees")
+        logger.debug(f"Length threshold: {length_threshold:.6f} degrees")
 
         # Generate concave hull
         hull_points = concave_hull(points, length_threshold=length_threshold)
 
         if len(hull_points) < 3:
-            print("  Concave hull failed, falling back to convex hull")
+            logger.warning("Concave hull failed, falling back to convex hull")
             from shapely.geometry import MultiPoint
 
             multipoint = MultiPoint(points)
@@ -165,7 +254,7 @@ def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
                     metadata["simplify_tolerance"] = tolerance
 
     except Exception as e:
-        print(f"  Concave hull failed ({e}), falling back to convex hull")
+        logger.warning(f"Concave hull failed ({e}), falling back to convex hull")
         from shapely.geometry import MultiPoint
 
         multipoint = MultiPoint(points)
@@ -186,6 +275,27 @@ def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
         # Normalize longitude coordinates back to [-180, 180] range if needed
         polygon = _normalize_polygon_coordinates(polygon)
 
+        # Apply tolerance filtering to ensure CMR compliance
+        pre_filter_vertices = (
+            len(polygon.exterior.coords) - 1 if hasattr(polygon, "exterior") else 0
+        )
+        polygon = _filter_polygon_points_by_tolerance(
+            polygon, tolerance=cartesian_tolerance
+        )
+        post_filter_vertices = (
+            len(polygon.exterior.coords) - 1 if hasattr(polygon, "exterior") else 0
+        )
+
+        if post_filter_vertices < pre_filter_vertices:
+            logger.info(
+                f"Tolerance filtering: {pre_filter_vertices} -> {post_filter_vertices} vertices "
+                f"(tolerance: {cartesian_tolerance}°)"
+            )
+            metadata["tolerance_filtered"] = True
+            metadata["pre_tolerance_vertices"] = pre_filter_vertices
+            metadata["post_tolerance_vertices"] = post_filter_vertices
+            metadata["cartesian_tolerance"] = cartesian_tolerance
+
         # Calculate coverage with original points for validation
         original_points = np.column_stack((original_lon, original_lat))
         coverage = _calculate_data_coverage(polygon, original_points)
@@ -193,8 +303,8 @@ def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
 
         # Apply buffering if coverage is below target
         if coverage < target_coverage:
-            print(
-                f"  Initial coverage {coverage:.1%} < {target_coverage:.0%}, applying buffer enhancement..."
+            logger.info(
+                f"Initial coverage {coverage:.1%} < {target_coverage:.0%}, applying buffer enhancement..."
             )
             buffered_polygon = _buffer_enhance_coverage(
                 polygon, original_points, target_coverage=target_coverage
@@ -216,8 +326,8 @@ def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
                     buffered_area / original_area if original_area > 0 else 1.0
                 )
 
-                print(
-                    f"  Buffered: {buffered_coverage:.1%} coverage, {buffered_vertices} vertices, {area_increase:.1f}x area"
+                logger.debug(
+                    f"Buffered: {buffered_coverage:.1%} coverage, {buffered_vertices} vertices, {area_increase:.1f}x area"
                 )
 
                 # More conservative acceptance criteria - avoid excessive area growth
@@ -253,14 +363,14 @@ def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
                     metadata["post_buffer_vertices"] = buffered_vertices
                     metadata["area_increase_ratio"] = area_increase
                 else:
-                    print(
-                        f"    Rejected buffering: area increase {area_increase:.1f}x too large or insufficient improvement"
+                    logger.debug(
+                        f"Rejected buffering: area increase {area_increase:.1f}x too large or insufficient improvement"
                     )
 
                     # Emergency fallback: if original coverage is really bad, accept any reasonable improvement
                     if coverage < 0.85 and buffered_coverage > coverage + 0.15:
-                        print(
-                            "    Emergency fallback: accepting due to very low initial coverage"
+                        logger.info(
+                            "Emergency fallback: accepting due to very low initial coverage"
                         )
                         polygon = buffered_polygon
                         coverage = buffered_coverage
@@ -289,11 +399,11 @@ def create_flightline_polygon(lon, lat, target_coverage=0.98, max_vertices=100):
     generation_time = end_time - start_time
     metadata["generation_time_seconds"] = generation_time
 
-    print(f"  Complete: Generated in {generation_time:.2f}s")
-    print(f"  Method: {metadata['method']}")
-    print(f"  Vertices: {metadata['vertices']}")
+    logger.info(f"Complete: Generated in {generation_time:.2f}s")
+    logger.info(f"Method: {metadata['method']}")
+    logger.info(f"Vertices: {metadata['vertices']}")
     if "final_data_coverage" in metadata:
-        print(f"  Final Data Coverage: {metadata['final_data_coverage']:.1%}")
+        logger.info(f"Final Data Coverage: {metadata['final_data_coverage']:.1%}")
 
     return polygon, metadata
 
@@ -428,7 +538,7 @@ def _buffer_enhance_coverage(polygon, data_points, target_coverage=0.98):
         return None
 
     except Exception as e:
-        print(f"  Buffer enhancement failed: {e}")
+        logger.error(f"Buffer enhancement failed: {e}")
         return None
 
 
@@ -503,7 +613,7 @@ def _smooth_buffered_polygon(polygon, data_points):
             return polygon
 
     except Exception as e:
-        print(f"  Smoothing failed: {e}")
+        logger.error(f"Smoothing failed: {e}")
         return polygon
 
 
@@ -537,7 +647,7 @@ def _handle_antimeridian_crossing(lon):
 
     # If longitude range > 180°, likely antimeridian crossing
     if lon_range > 180:
-        print(f"  Antimeridian crossing detected (range: {lon_range:.1f}°)")
+        logger.info(f"Antimeridian crossing detected (range: {lon_range:.1f}°)")
 
         # Find the largest gap between consecutive longitudes
         lon_sorted_idx = np.argsort(lon)
@@ -559,15 +669,15 @@ def _handle_antimeridian_crossing(lon):
             adjusted_lon[lon < split_lon] += 360
 
             new_range = np.ptp(adjusted_lon)
-            print(
-                f"  Adjusted longitude range: {new_range:.1f}° (split at {split_lon:.1f}°)"
+            logger.debug(
+                f"Adjusted longitude range: {new_range:.1f}° (split at {split_lon:.1f}°)"
             )
 
             return adjusted_lon
         else:
             # Large range but no clear crossing point - might be global data
-            print(
-                f"  Large longitude range ({lon_range:.1f}°) but no clear antimeridian crossing"
+            logger.warning(
+                f"Large longitude range ({lon_range:.1f}°) but no clear antimeridian crossing"
             )
             return lon
 
@@ -622,5 +732,5 @@ def _normalize_polygon_coordinates(polygon):
         return make_valid(normalized_polygon)
 
     except Exception as e:
-        print(f"  Coordinate normalization failed: {e}")
+        logger.error(f"Coordinate normalization failed: {e}")
         return polygon
