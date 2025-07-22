@@ -15,6 +15,7 @@ import numpy as np
 from concave_hull import concave_hull
 from shapely.geometry import Point, Polygon
 from shapely.validation import make_valid
+from shapely import set_precision
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,9 @@ def _filter_polygon_points_by_tolerance(polygon, tolerance=0.0001):
     """
     Filter polygon points to ensure minimum spacing according to CMR tolerance requirements.
 
-    This function operates on an ordered polygon boundary to ensure no two vertices
-    are closer than the specified tolerance.
+    Uses Shapely's set_precision to snap points to a grid, which automatically
+    merges vertices that are closer than the tolerance. This ensures that no two
+    successive points in the polygon boundary are within the tolerance distance.
 
     Parameters:
     -----------
@@ -45,58 +47,30 @@ def _filter_polygon_points_by_tolerance(polygon, tolerance=0.0001):
     if not hasattr(polygon, "exterior") or len(polygon.exterior.coords) <= 4:
         return polygon
 
-    # Get the coordinates (excluding the last point which duplicates the first)
-    coords = list(polygon.exterior.coords)[:-1]
-
-    if len(coords) <= 3:  # Minimum for a valid polygon
-        return polygon
-
-    # Start with the first point
-    filtered_coords = [coords[0]]
-
-    # Track indices to remove for a second pass
-    points_to_check = list(range(1, len(coords)))
-
-    # First pass: filter points that are too close to previously accepted points
-    i = 0
-    while i < len(points_to_check):
-        point_idx = points_to_check[i]
-        point = coords[point_idx]
-
-        # Check distance to all previously accepted points
-        too_close = False
-        for accepted_point in filtered_coords:
-            if _calculate_distance(point, accepted_point) < tolerance:
-                too_close = True
-                break
-
-        if too_close:
-            # Remove this point from consideration
-            points_to_check.pop(i)
-        else:
-            # Accept this point
-            filtered_coords.append(point)
-            points_to_check.pop(i)
-
-    # Ensure we have enough points for a valid polygon
-    if len(filtered_coords) < 3:
-        logger.warning(
-            f"Tolerance filtering would result in degenerate polygon "
-            f"({len(filtered_coords)} points), keeping original"
-        )
-        return polygon
-
-    # Close the polygon by adding the first point at the end
-    filtered_coords.append(filtered_coords[0])
-
     try:
-        filtered_polygon = Polygon(filtered_coords)
-        if filtered_polygon.is_valid:
+        # Use set_precision to snap to a grid with spacing equal to tolerance
+        # This automatically merges points that are within tolerance of each other
+        # mode='pointwise' ensures individual vertices are snapped independently
+        filtered_polygon = set_precision(polygon, grid_size=tolerance, mode="pointwise")
+
+        # Ensure the result is valid
+        if not filtered_polygon.is_valid:
+            filtered_polygon = make_valid(filtered_polygon)
+
+        # Check if we still have enough vertices for a valid polygon
+        if (
+            hasattr(filtered_polygon, "exterior")
+            and len(filtered_polygon.exterior.coords) >= 4
+        ):
             return filtered_polygon
         else:
-            return make_valid(filtered_polygon)
+            logger.warning(
+                f"Tolerance filtering resulted in degenerate polygon, keeping original"
+            )
+            return polygon
+
     except Exception as e:
-        logger.error(f"Failed to create filtered polygon: {e}")
+        logger.error(f"Failed to filter polygon by tolerance: {e}")
         return polygon
 
 

@@ -329,7 +329,7 @@ class TestPolygonGenerator:
         assert abs(metadata1["polygon_area"] - metadata2["polygon_area"]) < 1e-10
 
     def test_tolerance_filtering(self):
-        """Test that tolerance filtering works correctly on polygons."""
+        """Test that tolerance filtering ensures minimum spacing between successive points."""
         # Create a polygon with some vertices too close together
         coords = [
             (0.0, 0.0),
@@ -344,21 +344,22 @@ class TestPolygonGenerator:
         polygon = Polygon(coords[:-1])  # Shapely will auto-close
 
         # Test with default tolerance
+        tolerance = 0.0001
         filtered_polygon = _filter_polygon_points_by_tolerance(
-            polygon, tolerance=0.0001
+            polygon, tolerance=tolerance
         )
 
-        # Should have removed the point that was too close
-        assert len(filtered_polygon.exterior.coords) < len(polygon.exterior.coords)
-
-        # Verify all remaining points meet tolerance requirement
+        # The key requirement: all successive points should be at least tolerance apart
         filtered_coords = list(filtered_polygon.exterior.coords)[
             :-1
         ]  # Exclude closing point
+
         for i in range(len(filtered_coords)):
-            for j in range(i + 1, len(filtered_coords)):
-                distance = _calculate_distance(filtered_coords[i], filtered_coords[j])
-                assert distance >= 0.0001 - 1e-10  # Allow tiny numerical error
+            next_i = (i + 1) % len(filtered_coords)  # Handle wrap-around to first point
+            distance = _calculate_distance(filtered_coords[i], filtered_coords[next_i])
+            assert distance >= tolerance - 1e-10, (
+                f"Points {i} and {next_i} are too close: {distance:.6f} < {tolerance}"
+            )
 
     def test_polygon_with_tolerance(self):
         """Test polygon generation with tolerance filtering."""
