@@ -15,6 +15,7 @@ import numpy as np
 from concave_hull import concave_hull
 from shapely import set_precision
 from shapely.geometry import Point, Polygon
+from shapely.geometry.polygon import orient
 from shapely.validation import make_valid
 
 logger = logging.getLogger(__name__)
@@ -374,6 +375,10 @@ def create_flightline_polygon(
     if "final_data_coverage" in metadata:
         logger.info(f"Final Data Coverage: {metadata['final_data_coverage']:.1%}")
 
+    # Final step: ensure counter-clockwise orientation for CMR compliance
+    if polygon is not None:
+        polygon = _ensure_counter_clockwise(polygon)
+
     return polygon, metadata
 
 
@@ -702,4 +707,36 @@ def _normalize_polygon_coordinates(polygon):
 
     except Exception as e:
         logger.error(f"Coordinate normalization failed: {e}")
+        return polygon
+
+
+def _ensure_counter_clockwise(polygon):
+    """
+    Ensure polygon has counter-clockwise winding order as required by CMR.
+
+    The Common Metadata Repository (CMR) requires that polygon points be
+    specified in counter-clockwise order. This function checks the orientation
+    and corrects it if necessary.
+
+    Parameters:
+    -----------
+    polygon : shapely.geometry.Polygon
+        Polygon to check and potentially reorient
+
+    Returns:
+    --------
+    shapely.geometry.Polygon : Polygon with counter-clockwise exterior ring
+    """
+    try:
+        if not hasattr(polygon, "exterior"):
+            return polygon
+
+        # Use shapely's orient function to ensure counter-clockwise orientation
+        # sign=1.0 ensures counter-clockwise exterior, clockwise holes
+        oriented_polygon = orient(polygon, sign=1.0)
+
+        return oriented_polygon
+
+    except Exception as e:
+        logger.error(f"Failed to ensure counter-clockwise orientation: {e}")
         return polygon

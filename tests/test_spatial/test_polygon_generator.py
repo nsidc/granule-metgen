@@ -445,3 +445,60 @@ class TestPolygonGenerator:
 
         # Coverage should still be good
         assert metadata["final_data_coverage"] >= 0.90
+
+    @pytest.mark.parametrize(
+        "lon,lat,description",
+        [
+            # Simple square
+            (
+                np.array([-120, -119, -119, -120, -120]),
+                np.array([35, 35, 36, 36, 35]),
+                "simple square",
+            ),
+            # Triangle
+            (
+                np.array([-120, -119, -119.5, -120]),
+                np.array([35, 35, 36, 35]),
+                "triangle",
+            ),
+            # L-shape
+            (
+                np.array([-120, -119, -119, -119.5, -119.5, -120, -120]),
+                np.array([35, 35, 35.5, 35.5, 36, 36, 35]),
+                "L-shape",
+            ),
+            # Clockwise input circle
+            (
+                np.array(
+                    [-120 + 0.1 * np.cos(t) for t in np.linspace(0, 2 * np.pi, 20)]
+                ),
+                np.array([35 + 0.1 * np.sin(t) for t in np.linspace(0, 2 * np.pi, 20)]),
+                "clockwise circle",
+            ),
+            # Counter-clockwise input circle
+            (
+                np.array(
+                    [-120 + 0.1 * np.cos(t) for t in np.linspace(0, -2 * np.pi, 20)]
+                ),
+                np.array(
+                    [35 + 0.1 * np.sin(t) for t in np.linspace(0, -2 * np.pi, 20)]
+                ),
+                "counter-clockwise circle",
+            ),
+        ],
+    )
+    def test_generated_polygon_is_counter_clockwise(self, lon, lat, description):
+        """Test that all generated polygons have counter-clockwise orientation.
+
+        CMR requires polygons to be oriented counter-clockwise. This test verifies
+        that our polygon generator produces correctly oriented polygons regardless
+        of input point ordering.
+        """
+        polygon, _ = create_flightline_polygon(lon, lat)
+
+        # Check if the exterior ring is counter-clockwise using is_ccw property
+        is_ccw = polygon.exterior.is_ccw
+
+        assert is_ccw, (
+            f"Polygon for {description} has clockwise orientation. CMR requires counter-clockwise."
+        )
