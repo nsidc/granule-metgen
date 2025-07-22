@@ -13,9 +13,9 @@ import time
 
 import numpy as np
 from concave_hull import concave_hull
+from shapely import set_precision
 from shapely.geometry import Point, Polygon
 from shapely.validation import make_valid
-from shapely import set_precision
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ def _filter_polygon_points_by_tolerance(polygon, tolerance=0.0001):
             return filtered_polygon
         else:
             logger.warning(
-                f"Tolerance filtering resulted in degenerate polygon, keeping original"
+                "Tolerance filtering resulted in degenerate polygon, keeping original"
             )
             return polygon
 
