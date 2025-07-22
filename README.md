@@ -233,7 +233,7 @@ secret_key     ****************cJ+5              env
 * Date/time strings can be parsed using `datetime.fromisoformat`
 * The checksum_type must be SHA256
 
-### NetCDF Attributes MetGenC Relies upon to generate UMM-G json files
+### NetCDF Attributes MetGenC Relies upon to Generate UMM-G json Files
 
 - **Required** required
 - **RequiredC** conditionally required
@@ -241,7 +241,7 @@ secret_key     ****************cJ+5              env
 - **R** recommended
 - **S** suggested
 
-| Attribute in use (location)   | ACDD | CF Conventions | NSIDC Guidelines | Notes   |
+| Attribute used by MetGenC (location in netCDF file)   | ACDD | CF Conventions | NSIDC Guidelines | Notes   |
 | ----------------------------- | ---- | -------------- | ---------------- | ------- |
 | date_modified (global)        | S    |                | R                | 1, OC   |
 | time_coverage_start (global)  | R    |                | R                | 2, OC, P   |
@@ -289,7 +289,7 @@ Notes column key:
    GPolygon, bounding box, etc.
    
 
-| Attributes not currently used | ACDD | CF Conventions | NSIDC Guidelines |
+| netCDF file attributes not currently used by MetGenC | ACDD | CF Conventions | NSIDC Guidelines |
 | ----------------------------- | ---- | -------------- | ---------------- |
 | Conventions (global)          | R+   | Required       | R                |
 | standard_name (data variable) | R+   | R+             |                  |
@@ -417,32 +417,39 @@ Example running **init**
     $ metgenc init -c ./init/<name of config file to create or modify>.ini
 
 #### Optional Configuration Elements
-Some attribute values may be read from the `ini` file if the values
-can't be gleaned from or don't exist in the science file(s). This 
-approach assumes the attribute values are the same for all granules. 
-These values must be manually added to the `ini` file.
+Some attribute values may be read from the .ini file if the values
+can't be gleaned from or don't exist in the science file(s), but are
+known for the data set. The utilization of these is typical for data sets
+comprising non-CF/non-NSIDC-compliant science files, and (almost certainly)
+all data sets not comprising netCDF files. This approach assumes the 
+attribute values are the same for all granules seeing as there's only one 
+.ini file for a given data set. These values must be manually added 
+to the .ini file, as none of them are prompted for in the `metgenc init`
+functionality.
 
 See this project's GitHub file, `fixtures/test.ini` for examples.
 
-| `ini` element          | `ini` section | (NetCDF) Attribute  | Note |
+| .ini element          | .ini section | (NetCDF) Attribute  | Note |
 | -----------------------|-------------- | ------------------- | ---- |
-| date_modified          | Collection    | date_modified       |      |
-| time_start_regex       | Collection    | time_coverage_start | 1    |
-| time_coverage_duration | Collection    | time_coverage_end   | 2    |
-| pixel_size             | Collection    | GeoTransform        |      |
+| date_modified          | Collection    | date_modified       | 1    |
+| time_start_regex       | Collection    | time_coverage_start | 2    |
+| time_coverage_duration | Collection    | time_coverage_end   | 3    |
+| pixel_size             | Collection    | GeoTransform        | 4    |
 
-
-1. Matched against file name to determine time coverage start value. Must match using
+1. For ease, set this to be the year-month-day MetGenC is run (e.g., date_modified =
+2025-07-22); including a precise time value is unnecessary (we're breaking from how SIPSMetgen
+rolled here!).
+2. Matched against file name to determine time coverage start value. Must match using
 the named group `(?P<time_coverage_start>)`.
-2. Duration value applied to `time_coverage_start` to determine `time_coverage_end`. Must
+3. Duration value applied to `time_coverage_start` to determine `time_coverage_end`. Must
 be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
-- None of the above elements are prompted for in the `metgenc init` functionality.
+4. Rarely applicable for science files that aren't netCDF (.txt, .csv, .jpg, .tif, etc.). 
 
 #### Granule and Browse RegEx
 To identify browse files and declare a file name pattern when necessary
 for grouping files in a granule and/or browse with files in a granule, two 
-further `ini` elements are available: 
-| `ini` element | `ini` section | Note |
+further .ini elements are available: 
+| .ini element | .ini section | Note |
 | ------------- | ------------- | ---- |
 | browse_regex  | Collection    | 1    |
 | granule_regex | Collection    | 2    |
@@ -481,10 +488,10 @@ text to form the granule name recorded in the UMM-G and CNM output (in the case 
 single-file granules, the file extension will be added to the granule name).
 
 #### When Premet and Spatial files are to be used
-When necessary, the following two `ini` elements can be used to define paths
+When necessary, the following two .ini elements can be used to define paths
 to the directories containing `premet` and `spatial` files. The user will be
 prompted for these values when running `metgenc init`.
-| `ini` element | `ini` section |
+| .ini element | .ini section |
 | ------------- | ------------- |
 | premet_dir    | Source        |
 | spatial_dir   | Source        |
@@ -500,7 +507,7 @@ extents to be set to that of the collection. The user will be prompted
 for the `collection_geometry_override` value when running `metgenc init`.
 The default value is `False`; setting it to `True` signals MetGenC to 
 use the collection's spatial extent for each granule.
-| `ini` element                | `ini` section |
+| .ini element                | .ini section |
 | ---------------------------- | ------------- |
 | collection_geometry_override | Source        |
 
@@ -509,13 +516,13 @@ the [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-tab
 
 #### Setting Collection Temporal Extent as Granule Temporal Extent
 RARELY APPLICABLE (if ever)!!, but analogous to the above flag, another
-`ini` flag is available to indicate that the collection temporal extent
+.ini flag is available to indicate that the collection temporal extent
 should be used to populate the granule-level temporal metadata. The user
 will be prompted for a `collection_temporal_override` value when running
 `metgenc init`. The default value is `False`; setting it to `True` 
 signals MetGenC to use the collection's temporal extent for each granule.
 
-| `ini` element                 | `ini` section |
+| .ini element                 | .ini section |
 | ----------------------------- | --------------|
 | collection_temporal_override  | Source        |
 
@@ -526,7 +533,7 @@ When a granule has an associated `.spatial` file containing geodetic point data 
 
 **Configuration Parameters:**
 
-| `ini` section | `ini` element                    | Type    | Default | Description |
+| .ini section | .ini element                    | Type    | Default | Description |
 | ------------- | -------------------------------- | ------- | ------- | ----------- |
 | Spatial       | spatial_polygon_enabled          | boolean | true    | Enable/disable polygon generation for .spatial files |
 | Spatial       | spatial_polygon_target_coverage  | float   | 0.98    | Target data coverage percentage (0.80-1.0) |
