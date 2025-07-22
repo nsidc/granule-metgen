@@ -7,26 +7,11 @@ import pytest
 from shapely.geometry import Point, Polygon
 
 from nsidc.metgen.spatial import create_flightline_polygon
-from nsidc.metgen.spatial.polygon_generator import (
-    _calculate_distance,
-    _filter_polygon_points_by_tolerance,
-)
+from nsidc.metgen.spatial.polygon_generator import _filter_polygon_points_by_tolerance
 
 
 class TestPolygonGenerator:
     """Test suite for polygon generation."""
-
-    def test_calculate_distance(self):
-        """Test the distance calculation function."""
-        # Test exact distances
-        assert _calculate_distance((0, 0), (0, 0)) == 0
-        assert _calculate_distance((0, 0), (1, 0)) == 1
-        assert _calculate_distance((0, 0), (0, 1)) == 1
-        assert abs(_calculate_distance((0, 0), (1, 1)) - np.sqrt(2)) < 1e-10
-
-        # Test that it's symmetric
-        p1, p2 = (1, 2), (4, 6)
-        assert _calculate_distance(p1, p2) == _calculate_distance(p2, p1)
 
     @pytest.fixture
     def simple_flightline(self):
@@ -356,7 +341,9 @@ class TestPolygonGenerator:
 
         for i in range(len(filtered_coords)):
             next_i = (i + 1) % len(filtered_coords)  # Handle wrap-around to first point
-            distance = _calculate_distance(filtered_coords[i], filtered_coords[next_i])
+            p1 = Point(filtered_coords[i])
+            p2 = Point(filtered_coords[next_i])
+            distance = p1.distance(p2)
             assert distance >= tolerance - 1e-10, (
                 f"Points {i} and {next_i} are too close: {distance:.6f} < {tolerance}"
             )

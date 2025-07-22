@@ -20,11 +20,6 @@ from shapely.validation import make_valid
 logger = logging.getLogger(__name__)
 
 
-def _calculate_distance(p1, p2):
-    """Calculate Euclidean distance between two points."""
-    return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
-
-
 def _filter_polygon_points_by_tolerance(polygon, tolerance=0.0001):
     """
     Filter polygon points to ensure minimum spacing according to CMR tolerance requirements.
