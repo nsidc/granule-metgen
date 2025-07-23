@@ -1,6 +1,7 @@
 ## UNRELEASED
 
 * Adds the ability for the operator to override the default minimum distance tolerance between points
+* Fixes a regression where the flightline polygon would sometimes be mistakenly oriented clockwise
 
 ## v1.9.0rc2
 
