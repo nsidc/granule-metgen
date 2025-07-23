@@ -5,14 +5,12 @@ This module contains utilities extracted from the original cmr_client module
 that are not replaced by earthaccess functionality.
 """
 
-import json
 import re
 import warnings
-from datetime import datetime
 
 import geopandas as gpd
 import numpy as np
-from shapely.geometry import Point, Polygon, mapping
+from shapely.geometry import Point
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 

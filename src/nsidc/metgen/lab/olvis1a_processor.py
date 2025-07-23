@@ -4,15 +4,11 @@ OLVIS1A Granule Processor
 This script downloads OLVIS1A granules and generates premet and spatial files.
 """
 
-import os
 from datetime import datetime
 from pathlib import Path
 
 import earthaccess
 import numpy as np
-import requests
-
-from nsidc.metgen.lab.spatial_utils import UMMGParser
 
 
 class OLVIS1AProcessor:
@@ -128,13 +124,12 @@ class OLVIS1AProcessor:
         """
         # Extract granule info from earthaccess result
         granule_ur = granule_result.get("meta", {}).get("native-id", "Unknown")
-        concept_id = granule_result.get("meta", {}).get("concept-id", "")
 
         print(f"Granule: {granule_ur}")
 
         try:
             # Get UMM-G metadata using earthaccess result
-            print(f"  Getting UMM-G metadata...")
+            print("  Getting UMM-G metadata...")
             umm_json = granule_result.get("umm", {})
 
             # Get data links directly from earthaccess result

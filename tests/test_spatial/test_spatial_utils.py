@@ -11,7 +11,6 @@ from nsidc.metgen.lab import (
     sanitize_granule_ur,
 )
 
-
 # CMRClient tests removed - functionality replaced by earthaccess
 # The following tests have been removed as they test the deprecated CMRClient class:
 # - test_client_initialization
