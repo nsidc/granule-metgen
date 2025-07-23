@@ -138,7 +138,7 @@ addopts = [
 
 [tool.poetry.scripts]
 metgenc = 'nsidc.metgen.cli:cli'
-metgenc-polygons = 'nsidc.metgen.spatial_cli:cli'
+metgenc-polygons = 'nsidc.metgen.lab.spatial_cli:cli'
 metgenc-env = { reference = "scripts/metgenc-env.sh", type= "file" }
 metgenc-integration-tests = 'tests.integration.run_integration_tests:main'
 metgenc-lab-olvis1a = 'nsidc.metgen.lab.olvis1a_processor:main'
