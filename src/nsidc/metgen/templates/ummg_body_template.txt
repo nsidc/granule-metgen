@@ -13,6 +13,7 @@
   },
   "TemporalExtent": $temporal_extent,
   $additional_attributes
+  $platforms
   "DataGranule": {
     "DayNightFlag": "Unspecified",
     "Identifiers": [

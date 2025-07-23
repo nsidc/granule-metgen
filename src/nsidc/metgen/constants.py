@@ -54,8 +54,22 @@ GRANULE_SPATIAL_REP = "GranuleSpatialRepresentation"
 CARTESIAN = "CARTESIAN"
 GEODETIC = "GEODETIC"
 
-# UMM-G keys
+# Premet keys for additional attributes and platform/instrument/sensor information
+PREMET_ADDITIONAL_ATTRIBUTES = "AdditionalAttributes"
+PREMET_ASSOCIATED_PLATFORM = "AssociatedPlatformInstrumentSensor"
+
+PREMET_KEYS = {
+    PREMET_ADDITIONAL_ATTRIBUTES: ["AdditionalAttributeName", "ParameterValue"],
+    PREMET_ASSOCIATED_PLATFORM: [
+        "AssociatedPlatformShortName",
+        "AssociatedInstrumentShortName",
+        "AssociatedSensorShortName",
+    ],
+}
+
+# UMM-G keys for additional attributes and platforms
 UMMG_ADDITIONAL_ATTRIBUTES = "AdditionalAttributes"
+UMMG_PLATFORM = "Platforms"
 
 # Location of spatial and temporal information in collection metadata retrieved from CMR
 GRANULE_SPATIAL_REP_PATH = ["SpatialExtent", GRANULE_SPATIAL_REP]
