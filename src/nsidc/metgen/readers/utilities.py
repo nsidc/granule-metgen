@@ -49,7 +49,7 @@ def find_key_aliases(aliases: list, datetime_parts: dict) -> str:
 def premet_values(premet_path: str) -> dict:
     """
     Read premet file and return a dict containing temporal information and
-    any included additional attributes.
+    any included additional attributes and/or platform information.
     """
     pdict = {}
 
@@ -65,15 +65,18 @@ def premet_values(premet_path: str) -> dict:
         return None
 
     additional_atts = []
+    platform_details = []
     with open(premet_path) as premet_file:
         for line in premet_file:
             key, val = parse_premet_entry(line)
-            if re.match("Container", key) and re.match(
-                constants.UMMG_ADDITIONAL_ATTRIBUTES, val
-            ):
-                _, namevalue = parse_premet_entry(next(premet_file))
-                _, attvalue = parse_premet_entry(next(premet_file))
-                additional_atts.append({"Name": namevalue, "Values": [attvalue]})
+            if re.match("Container", key):
+                match val:
+                    case constants.PREMET_ADDITIONAL_ATTRIBUTES:
+                        additional_atts.append(parse_additional_attributes(premet_file))
+
+                    case constants.PREMET_ASSOCIATED_PLATFORM:
+                        platform_details.append(parse_platform_details(premet_file))
+
             else:
                 pdict[key] = val
 
@@ -81,7 +84,51 @@ def premet_values(premet_path: str) -> dict:
     if additional_atts:
         pdict[constants.UMMG_ADDITIONAL_ATTRIBUTES] = additional_atts
 
+    # Include any platform information
+    if platform_details:
+        pdict[constants.UMMG_PLATFORM] = platform_details
+
     return pdict
+
+
+def parse_additional_attributes(premet_file):
+    # next two lines in the premet file represent the attribute name and value
+    attribute_keys = constants.PREMET_KEYS[constants.PREMET_ADDITIONAL_ATTRIBUTES]
+
+    namekey, namevalue = parse_premet_entry(next(premet_file))
+    attkey, attvalue = parse_premet_entry(next(premet_file))
+
+    check_premet_keys(
+        constants.PREMET_ADDITIONAL_ATTRIBUTES, [namekey, attkey], attribute_keys
+    )
+
+    return {"Name": namevalue, "Values": [attvalue]}
+
+
+def parse_platform_details(premet_file):
+    # next three lines in the premet file represent platform, instrument, and sensor
+    platform_keys = constants.PREMET_KEYS[constants.PREMET_ASSOCIATED_PLATFORM]
+
+    pkey, platform = parse_premet_entry(next(premet_file))
+    ikey, instrument = parse_premet_entry(next(premet_file))
+    skey, sensor = parse_premet_entry(next(premet_file))
+    check_premet_keys(
+        constants.PREMET_ASSOCIATED_PLATFORM, [pkey, ikey, skey], platform_keys
+    )
+
+    return {
+        "ShortName": platform,
+        "Instruments": [
+            {"ShortName": instrument, "ComposedOf": [{"ShortName": sensor}]}
+        ],
+    }
+
+
+def check_premet_keys(entry_type, parsed, expected):
+    if set(parsed) != set(expected):
+        raise Exception(
+            f"{entry_type} keys in the premet file are invalid. Expected {expected}."
+        )
 
 
 def parse_premet_entry(pline: str):
