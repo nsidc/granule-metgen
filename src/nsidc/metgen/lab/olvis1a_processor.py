@@ -8,10 +8,11 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+import earthaccess
 import numpy as np
 import requests
 
-from nsidc.metgen.spatial.cmr_client import CMRClient, UMMGParser
+from nsidc.metgen.lab.spatial_utils import UMMGParser
 
 
 class OLVIS1AProcessor:
@@ -39,25 +40,23 @@ class OLVIS1AProcessor:
             f"OLVIS1A Processor: {self.COLLECTION} v{self.VERSION} from {self.PROVIDER}"
         )
 
-        # Get credentials from environment
-        self.username = os.getenv("EARTHDATA_USERNAME")
-        self.password = os.getenv("EARTHDATA_PASSWORD")
-        self.bearer_token = os.getenv("EARTHDATA_TOKEN")
+        # Authenticate with earthaccess
+        try:
+            # Try environment authentication first, then netrc
+            auth = earthaccess.login(strategy="environment")
+            if not auth:
+                auth = earthaccess.login(strategy="netrc")
 
-        if not self.bearer_token and (not self.username or not self.password):
-            print("Warning: No authentication credentials found.")
-            print("Set EARTHDATA_TOKEN or EARTHDATA_USERNAME/PASSWORD.")
+            if auth:
+                print("Earthdata login succeeded.")
+            else:
+                print("Warning: Earthdata login failed.")
+                print("Set EARTHDATA_USERNAME/PASSWORD or configure .netrc")
+        except Exception as e:
+            print(f"Warning: Could not authenticate with Earthdata: {e}")
 
-        self.cmr_client = CMRClient(base_url=self.CMR_URL)
-
-        # Create session for downloads
-        self.session = requests.Session()
-        if self.bearer_token:
-            self.session.headers.update(
-                {"Authorization": f"Bearer {self.bearer_token}"}
-            )
-        elif self.username and self.password:
-            self.session.auth = (self.username, self.password)
+        # Create session for downloads using earthaccess session
+        self.session = earthaccess.get_requests_https_session()
 
     def get_sequential_granules(self, count=10):
         """
@@ -70,27 +69,22 @@ class OLVIS1AProcessor:
 
         Returns:
         --------
-        list : List of granule entries
+        list : List of granule results
         """
         try:
-            endpoint = f"{self.cmr_client.base_url}/search/granules.json"
-            params = {
-                "short_name": self.COLLECTION,
-                "version": self.VERSION,
-                "provider": self.PROVIDER,
-                "page_size": count,
-                "sort_key": "-start_date",  # Most recent first
-            }
-
             print(f"Querying CMR for {count} granules...")
-            response = self.cmr_client.session.get(endpoint, params=params)
-            response.raise_for_status()
 
-            data = response.json()
-            granules = data.get("feed", {}).get("entry", [])
+            # Use earthaccess to search for granules
+            results = earthaccess.search_data(
+                short_name=self.COLLECTION,
+                version=self.VERSION,
+                provider=self.PROVIDER,
+                count=count,
+                sort_key="-start_date",  # Most recent first
+            )
 
-            print(f"Found {len(granules)} granules")
-            return granules
+            print(f"Found {len(results)} granules")
+            return results
 
         except Exception as e:
             print(f"Error querying CMR: {e}")
@@ -123,32 +117,36 @@ class OLVIS1AProcessor:
             print("-" * 60)
             self.process_single_granule(granule)
 
-    def process_single_granule(self, granule_entry):
+    def process_single_granule(self, granule_result):
         """
         Process a single granule.
 
         Parameters:
         -----------
-        granule_entry : dict
-            CMR granule entry
+        granule_result : earthaccess.results.DataGranule
+            Earthaccess granule result
         """
-        granule_ur = granule_entry.get("title", "Unknown")
-        concept_id = granule_entry.get("id", "")
+        # Extract granule info from earthaccess result
+        granule_ur = granule_result.get("meta", {}).get("native-id", "Unknown")
+        concept_id = granule_result.get("meta", {}).get("concept-id", "")
 
         print(f"Granule: {granule_ur}")
 
         try:
-            # Get UMM-G metadata
-            print(f"  Getting UMM-G metadata for concept ID: {concept_id}")
-            umm_json = self.cmr_client.get_umm_json(concept_id)
+            # Get UMM-G metadata using earthaccess result
+            print(f"  Getting UMM-G metadata...")
+            umm_json = granule_result.get("umm", {})
 
-            # Extract data URLs
-            data_urls = UMMGParser.extract_data_urls(umm_json)
+            # Get data links directly from earthaccess result
+            data_links = granule_result.data_links(access="external")
 
-            # Look for OLVIS1A image files
-            data_url = UMMGParser.find_data_file(
-                data_urls, extensions=[".JPG", ".jpg", ".jpeg", ".JPEG"]
-            )
+            # Filter for image files
+            image_extensions = [".JPG", ".jpg", ".jpeg", ".JPEG"]
+            data_url = None
+            for link in data_links:
+                if any(link.lower().endswith(ext.lower()) for ext in image_extensions):
+                    data_url = link
+                    break
 
             if not data_url:
                 print(f"  Warning: No JPG image file found for {granule_ur}")

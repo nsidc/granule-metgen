@@ -10,17 +10,17 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+import earthaccess
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import requests
 from shapely.geometry import Point
 
-from .cmr_client import CMRClient, PolygonComparator, UMMGParser, sanitize_granule_ur
+# Import from spatial package
+from nsidc.metgen.spatial.polygon_generator import create_flightline_polygon
 
-# Import our modules
-from .polygon_generator import create_flightline_polygon
+from .spatial_utils import PolygonComparator, UMMGParser, sanitize_granule_ur
 
 
 class PolygonComparisonDriver:
@@ -35,17 +35,29 @@ class PolygonComparisonDriver:
         output_dir : str
             Directory for output files
         token : str, optional
-            Bearer token for CMR/Earthdata authentication
+            Bearer token for CMR/Earthdata authentication (legacy, earthaccess handles auth)
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
-        self.cmr_client = CMRClient(token=token)
+        # Authenticate with earthaccess
+        try:
+            auth = earthaccess.login(strategy="environment")
+            if not auth:
+                auth = earthaccess.login(strategy="netrc")
+            if auth:
+                print("[PolygonDriver] Earthdata login succeeded.")
+            else:
+                print("[PolygonDriver] Warning: Earthdata login failed.")
+        except Exception as e:
+            print(f"[PolygonDriver] Warning: Could not authenticate: {e}")
+
         print(
             "[PolygonDriver] Using optimized polygon generation (concave hull + smart buffering)"
         )
 
-        self.token = token
+        # Create session for downloads
+        self.session = earthaccess.get_requests_https_session()
 
     def process_collection(
         self,
@@ -77,11 +89,23 @@ class PolygonComparisonDriver:
         collection_dir = self.output_dir / sanitize_granule_ur(short_name)
         collection_dir.mkdir(exist_ok=True)
 
-        # Get random granules
+        # Get random granules using earthaccess
         try:
-            granules = self.cmr_client.get_random_granules(
-                short_name, provider=provider, count=n_granules
+            # Search for more granules than needed to randomly sample
+            results = earthaccess.search_data(
+                short_name=short_name,
+                provider=provider,
+                count=min(n_granules * 5, 200),  # Get more to randomly sample from
             )
+
+            if len(results) > n_granules:
+                import random
+
+                random.seed(42)  # For reproducibility
+                granules = random.sample(results, n_granules)
+            else:
+                granules = results
+
         except Exception as e:
             print(f"[PolygonDriver] Error querying CMR: {e}")
             import traceback
@@ -143,25 +167,19 @@ class PolygonComparisonDriver:
         collection_dir = self.output_dir / sanitize_granule_ur(short_name)
         collection_dir.mkdir(exist_ok=True)
 
-        # Query CMR for the specific granule by producerGranuleId
+        # Query CMR for the specific granule using earthaccess
         try:
-            print(f"Searching CMR for producerGranuleId: {granule_ur}")
+            print(f"Searching CMR for granule: {granule_ur}")
 
-            # Use CMR's producerGranuleId parameter for direct search
-            endpoint = f"{self.cmr_client.base_url}/search/granules.json"
-            params = {
-                "short_name": short_name,
-                "producer_granule_id": granule_ur,
-                "page_size": 10,
-            }
-            if provider:
-                params["provider"] = provider
+            # Search by producer granule ID
+            results = earthaccess.search_data(
+                short_name=short_name,
+                producer_granule_id=granule_ur,
+                provider=provider,
+                count=10,
+            )
 
-            response = self.cmr_client.session.get(endpoint, params=params)
-            response.raise_for_status()
-
-            data = response.json()
-            entries = data.get("feed", {}).get("entry", [])
+            entries = results
 
             if not entries:
                 print(
@@ -175,7 +193,9 @@ class PolygonComparisonDriver:
                 )
 
             target_granule = entries[0]
-            print(f"Found granule: {target_granule.get('title', 'Unknown')}")
+            # Get granule UR from earthaccess result
+            found_ur = target_granule.get("meta", {}).get("native-id", "Unknown")
+            print(f"Found granule: {found_ur}")
 
             # Process the granule
             result = self.process_granule(
@@ -203,8 +223,8 @@ class PolygonComparisonDriver:
 
         Parameters:
         -----------
-        granule_entry : dict
-            CMR granule entry
+        granule_entry : earthaccess.results.DataGranule or dict
+            Earthaccess granule result or CMR granule entry
         output_dir : Path
             Output directory
         data_extensions : list
@@ -214,8 +234,15 @@ class PolygonComparisonDriver:
         --------
         dict or None : Processing results
         """
-        granule_ur = granule_entry.get("title", "Unknown")
-        concept_id = granule_entry.get("id", "")
+        # Handle both earthaccess results and legacy dict format
+        if hasattr(granule_entry, "get"):
+            # Earthaccess result
+            granule_ur = granule_entry.get("meta", {}).get("native-id", "Unknown")
+            concept_id = granule_entry.get("meta", {}).get("concept-id", "")
+        else:
+            # Legacy dict format
+            granule_ur = granule_entry.get("title", "Unknown")
+            concept_id = granule_entry.get("id", "")
 
         print(f"\n[PolygonDriver] Processing: {granule_ur}")
 
@@ -225,7 +252,19 @@ class PolygonComparisonDriver:
 
         try:
             # Get UMM-G metadata
-            umm_json = self.cmr_client.get_umm_json(concept_id)
+            if hasattr(granule_entry, "get") and "umm" in granule_entry:
+                # Earthaccess result already has UMM-G
+                umm_json = granule_entry.get("umm", {})
+            else:
+                # Legacy: need to fetch UMM-G separately
+                print(f"[PolygonDriver] Fetching UMM-G for concept ID: {concept_id}")
+                # Use earthaccess to get the granule by concept ID
+                results = earthaccess.search_data(concept_id=concept_id, count=1)
+                if results:
+                    umm_json = results[0].get("umm", {})
+                else:
+                    print(f"[PolygonDriver] Failed to get UMM-G for {granule_ur}")
+                    return None
 
             # Extract CMR polygon
             cmr_geojson = UMMGParser.extract_polygons(umm_json, granule_ur)
@@ -242,8 +281,21 @@ class PolygonComparisonDriver:
                 json.dump(cmr_geojson, f, indent=2)
 
             # Extract data URLs
-            data_urls = UMMGParser.extract_data_urls(umm_json)
-            data_url = UMMGParser.find_data_file(data_urls, data_extensions)
+            if hasattr(granule_entry, "data_links"):
+                # Earthaccess result - use data_links method
+                data_links = granule_entry.data_links(access="external")
+                # Find matching extension
+                data_url = None
+                for link in data_links:
+                    if any(
+                        link.lower().endswith(ext.lower()) for ext in data_extensions
+                    ):
+                        data_url = link
+                        break
+            else:
+                # Legacy - use UMMGParser
+                data_urls = UMMGParser.extract_data_urls(umm_json)
+                data_url = UMMGParser.find_data_file(data_urls, data_extensions)
 
             if not data_url:
                 print(f"[PolygonDriver] Warning: No data file found for {granule_ur}")
@@ -364,34 +416,18 @@ class PolygonComparisonDriver:
         try:
             print(f"[PolygonDriver] Downloading: {filename}")
 
-            # Try authenticated download first
-            if self.token and ("earthdata.nasa.gov" in url or "nsidc.org" in url):
-                print("  Attempting authenticated download...")
+            # Use earthaccess session which handles authentication
+            response = self.session.get(url, stream=True, allow_redirects=True)
 
-                headers = {"Authorization": f"Bearer {self.token}"}
-                response = requests.get(url, stream=True, headers=headers)
+            # Check if we ended up at an OAuth page
+            if "urs.earthdata.nasa.gov" in response.url and "oauth" in response.url:
+                print(
+                    "  Authentication required. Please ensure Earthdata login succeeded."
+                )
+                print("[PolygonDriver] Creating dummy data file for demonstration...")
+                self._create_dummy_data_file(output_path)
+                return output_path
 
-                if response.status_code == 200:
-                    with open(output_path, "wb") as f:
-                        for chunk in response.iter_content(chunk_size=8192):
-                            f.write(chunk)
-                    print(
-                        f"  Successfully downloaded {output_path.stat().st_size / 1024:.1f} KB"
-                    )
-                    return output_path
-                else:
-                    print(f"  Download failed with status {response.status_code}")
-                    print(
-                        "[PolygonDriver] Creating dummy data file for demonstration..."
-                    )
-                    self._create_dummy_data_file(output_path)
-                    return output_path
-
-            headers = {}
-            if self.token:
-                headers["Authorization"] = f"Bearer {self.token}"
-
-            response = requests.get(url, stream=True, headers=headers)
             response.raise_for_status()
 
             with open(output_path, "wb") as f:

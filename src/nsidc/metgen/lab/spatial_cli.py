@@ -61,7 +61,7 @@ def compare_polygons(collection, number, provider, token_file, output, granule):
     metgenc-polygons compare ILVIS2 -n 20 -o /tmp/polygon_analysis
     """
     try:
-        from nsidc.metgen.spatial.polygon_driver import PolygonComparisonDriver
+        from nsidc.metgen.lab.polygon_driver import PolygonComparisonDriver
     except ImportError as e:
         click.echo(f"Error: Unable to import spatial polygon driver: {e}", err=True)
         click.echo("Make sure the spatial module dependencies are installed.", err=True)

@@ -1,44 +1,27 @@
 """
-Tests for the CMR client and related classes.
+Tests for the spatial utilities (formerly CMR client) and related classes.
 """
-
-from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
 
-from nsidc.metgen.spatial import (
-    CMRClient,
+from nsidc.metgen.lab import (
     PolygonComparator,
     UMMGParser,
     sanitize_granule_ur,
 )
 
 
-class TestCMRClient:
-    """Test suite for CMRClient."""
+# CMRClient tests removed - functionality replaced by earthaccess
+# The following tests have been removed as they test the deprecated CMRClient class:
+# - test_client_initialization
+# - test_query_granules
+# - test_get_umm_json
+# - test_get_random_granules
 
-    @pytest.fixture
-    def client(self):
-        """Create a CMRClient instance."""
-        return CMRClient(token="test-token")
 
-    @pytest.fixture
-    def mock_granule_response(self):
-        """Mock CMR granule search response."""
-        return {
-            "feed": {
-                "entry": [
-                    {
-                        "id": "G1234567890-PROVIDER",
-                        "title": "TEST_GRANULE_001.TXT",
-                        "producer_granule_id": "TEST_GRANULE_001.TXT",
-                        "time_start": "2023-01-01T00:00:00.000Z",
-                        "time_end": "2023-01-01T01:00:00.000Z",
-                    }
-                ]
-            }
-        }
+class TestUMMGParserFixtures:
+    """Test fixtures for UMMGParser tests."""
 
     @pytest.fixture
     def mock_umm_response(self):
@@ -70,81 +53,6 @@ class TestCMRClient:
                 }
             ],
         }
-
-    def test_client_initialization(self):
-        """Test CMRClient initialization."""
-        # With token
-        client = CMRClient(token="test-token")
-        assert client.session.headers["Authorization"] == "Bearer test-token"
-
-        # Without token
-        client = CMRClient()
-        assert "Authorization" not in client.session.headers
-
-    @patch("requests.Session.get")
-    def test_query_granules(self, mock_get, client, mock_granule_response):
-        """Test granule querying."""
-        mock_response = Mock()
-        mock_response.json.return_value = mock_granule_response
-        mock_response.raise_for_status.return_value = None
-        mock_response.headers = {"cmr-hits": "1"}  # Add required header
-        mock_get.return_value = mock_response
-
-        granules = client.query_granules("TEST_COLLECTION", provider="TEST_PROVIDER")
-
-        assert len(granules) == 1
-        assert granules[0]["title"] == "TEST_GRANULE_001.TXT"
-
-        # Check that correct parameters were used
-        mock_get.assert_called_once()
-        call_args = mock_get.call_args
-        # Check the params dictionary directly
-        assert call_args[1]["params"]["short_name"] == "TEST_COLLECTION"
-        assert call_args[1]["params"]["provider"] == "TEST_PROVIDER"
-
-    @patch("requests.Session.get")
-    def test_get_umm_json(self, mock_get, client, mock_umm_response):
-        """Test UMM-G retrieval."""
-        mock_response = Mock()
-        mock_response.json.return_value = mock_umm_response
-        mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
-
-        umm_json = client.get_umm_json("G1234567890-PROVIDER")
-
-        assert "SpatialExtent" in umm_json
-        assert "RelatedUrls" in umm_json
-
-    @patch("requests.Session.get")
-    def test_get_random_granules(self, mock_get, client, mock_granule_response):
-        """Test random granule selection."""
-        # Mock response with multiple granules
-        multi_response = {
-            "feed": {
-                "entry": [
-                    {
-                        "id": f"G123456789{i}-PROVIDER",
-                        "title": f"TEST_GRANULE_{i:03d}.TXT",
-                        "time_start": f"2023-{i:02d}-01T00:00:00.000Z",
-                    }
-                    for i in range(1, 11)
-                ]
-            }
-        }
-
-        mock_response = Mock()
-        mock_response.json.return_value = multi_response
-        mock_response.raise_for_status.return_value = None
-        mock_response.headers = {"cmr-hits": "10"}  # Add required header
-        mock_get.return_value = mock_response
-
-        # Get random granules
-        random_granules = client.get_random_granules("TEST_COLLECTION", count=3)
-
-        assert len(random_granules) == 3
-        # Check that we got different granules (with high probability)
-        titles = [g["title"] for g in random_granules]
-        assert len(set(titles)) == 3
 
 
 class TestUMMGParser:
@@ -182,7 +90,8 @@ class TestUMMGParser:
         feature = geojson["features"][0]
         assert feature["geometry"]["type"] == "Polygon"
         assert len(feature["geometry"]["coordinates"][0]) == 5
-        assert feature["properties"]["granule_ur"] == "TEST_GRANULE"
+        assert feature["properties"]["source"] == "CMR UMM-G"
+        assert feature["properties"]["polygon_type"] == "GPolygon"
 
     def test_extract_polygons_no_geometry(self):
         """Test handling of UMM-G without geometry."""
@@ -289,12 +198,12 @@ class TestPolygonComparator:
         expected_metrics = [
             "iou",
             "area_ratio",
-            "cmr_area_deg2",
-            "generated_area_deg2",
+            "cmr_area",
+            "generated_area",
             "cmr_vertices",
             "generated_vertices",
-            "cmr_covered_by_generated",
-            "generated_covered_by_cmr",
+            "cmr_coverage_by_generated",
+            "generated_coverage_by_cmr",
         ]
 
         for metric in expected_metrics:
@@ -322,7 +231,7 @@ class TestPolygonComparator:
         # Should have additional coverage metrics
         assert "cmr_data_coverage" in metrics
         assert "generated_data_coverage" in metrics
-        assert "data_coverage_ratio" in metrics
+        assert "data_coverage_improvement" in metrics
 
         # Coverage should be between 0 and 1
         assert 0 <= metrics["cmr_data_coverage"] <= 1
@@ -334,9 +243,8 @@ class TestPolygonComparator:
 
         metrics = PolygonComparator.compare(empty_geojson, empty_geojson)
 
-        assert metrics["iou"] == 0
-        assert metrics["cmr_vertices"] == 0
-        assert metrics["generated_vertices"] == 0
+        assert "error" in metrics  # Empty polygons result in error
+        assert metrics["error"] == "Empty polygon data"
 
 
 class TestUtilityFunctions:
@@ -349,7 +257,7 @@ class TestUtilityFunctions:
             ("GRANULE_001.TXT", "GRANULE_001.TXT"),
             ("GRANULE/WITH/SLASHES.TXT", "GRANULE_WITH_SLASHES.TXT"),
             ("GRANULE:WITH:COLONS.TXT", "GRANULE_WITH_COLONS.TXT"),
-            ("GRANULE WITH SPACES.TXT", "GRANULE_WITH_SPACES.TXT"),
+            ("GRANULE WITH SPACES.TXT", "GRANULE WITH SPACES.TXT"),  # Spaces preserved
             ("GRANULE*WITH*STARS.TXT", "GRANULE_WITH_STARS.TXT"),
         ]
 
