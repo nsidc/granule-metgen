@@ -49,6 +49,7 @@ class Config:
     spatial_polygon_enabled: Optional[bool] = False
     spatial_polygon_target_coverage: Optional[float] = None
     spatial_polygon_max_vertices: Optional[int] = None
+    spatial_polygon_cartesian_tolerance: Optional[float] = None
 
     def show(self):
         # TODO: add section headings in the right spot
@@ -146,6 +147,7 @@ def configuration(
         "spatial_polygon_enabled": constants.DEFAULT_SPATIAL_POLYGON_ENABLED,
         "spatial_polygon_target_coverage": constants.DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE,
         "spatial_polygon_max_vertices": constants.DEFAULT_SPATIAL_POLYGON_MAX_VERTICES,
+        "spatial_polygon_cartesian_tolerance": constants.DEFAULT_SPATIAL_POLYGON_CARTESIAN_TOLERANCE,
     }
     try:
         return Config(
@@ -308,6 +310,14 @@ def configuration(
                 config_parser,
                 overrides,
             ),
+            _get_configuration_value(
+                environment,
+                "Spatial",
+                "spatial_polygon_cartesian_tolerance",
+                float,
+                config_parser,
+                overrides,
+            ),
         )
     except Exception as e:
         raise Exception("Unable to read the configuration file", e)
@@ -372,6 +382,13 @@ def validate(configuration):
             "spatial_polygon_max_vertices",
             lambda vertices: 10 <= vertices <= 1000,
             "The spatial polygon max vertices must be between 10 and 1000.",
+        ],
+        [
+            "spatial_polygon_cartesian_tolerance",
+            lambda tolerance: 0.00001 <= tolerance <= 0.01
+            if tolerance is not None
+            else True,
+            "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees.",
         ],
     ]
     errors = [

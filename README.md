@@ -408,6 +408,7 @@ When a granule has an associated `.spatial` file containing geodetic point data 
 | Spatial       | spatial_polygon_enabled          | boolean | true    | Enable/disable polygon generation for .spatial files |
 | Spatial       | spatial_polygon_target_coverage  | float   | 0.98    | Target data coverage percentage (0.80-1.0) |
 | Spatial       | spatial_polygon_max_vertices     | integer | 100     | Maximum vertices in generated polygon (10-1000) |
+| Spatial       | spatial_polygon_cartesian_tolerance | float | 0.0001  | Minimum distance between polygon points in degrees (0.00001-0.01) |
 
 **Example Configuration:**
 ```ini
@@ -415,6 +416,7 @@ When a granule has an associated `.spatial` file containing geodetic point data 
 spatial_polygon_enabled = true
 spatial_polygon_target_coverage = 0.98
 spatial_polygon_max_vertices = 100
+spatial_polygon_cartesian_tolerance = 0.0001  # degrees
 ```
 
 **When Polygon Generation is Applied:**
@@ -428,6 +430,9 @@ spatial_polygon_max_vertices = 100
 - ❌ Granule spatial representation is `CARTESIAN`
 - ❌ Insufficient points (<3) for polygon generation
 - ❌ Polygon generation fails (automatic fallback)
+
+**Tolerance Requirements:**
+The `spatial_polygon_cartesian_tolerance` parameter ensures that generated polygons meet NASA CMR validation requirements. The CMR system requires that each point in a polygon must have a unique spatial location - if two points are closer than the tolerance threshold in both latitude and longitude, they are considered the same point and the polygon becomes invalid. MetGenC automatically filters points during polygon generation to ensure this requirement is met.
 
 This enhancement is backward compatible - existing workflows continue unchanged, and polygon generation only activates for appropriate `.spatial` file scenarios.
 
