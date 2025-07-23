@@ -183,6 +183,22 @@ def test_two_additional_attributes():
     assert len(premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]) == 2
 
 
+def test_one_platform():
+    premet_content = utilities.premet_values("./fixtures/premet/platform_only.premet")
+    assert premet_content[constants.UMMG_PLATFORM] == [
+        {
+            "ShortName": "P-3B",
+            "Instruments": [
+                {
+                    "ShortName": "LVIS-Camera",
+                    "ComposedOf": [{"ShortName": "LVIS-Camera"}],
+                }
+            ],
+        }
+    ]
+    assert constants.UMMG_ADDITIONAL_ATTRIBUTES not in premet_content
+
+
 @patch("builtins.open", new_callable=mock_open, read_data="-105.253 40.0126")
 def test_reads_raw_points(mock):
     assert utilities.raw_points("a_spatial_path") == [

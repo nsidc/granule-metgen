@@ -898,10 +898,10 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     )
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
     summary["additional_attributes"] = populate_additional_attributes(
-        constants.UMMG_ADDITIONAL_ATTRIBUTES, premet_content
+        premet_content, constants.UMMG_ADDITIONAL_ATTRIBUTES
     )
     summary["platforms"] = populate_additional_attributes(
-        constants.UMMG_PLATFORM, premet_content
+        premet_content, constants.UMMG_PLATFORM
     )
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
 
