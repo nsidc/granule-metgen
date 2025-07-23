@@ -15,12 +15,6 @@ def test_data_dir():
 
 
 @pytest.fixture
-def mock_edl_token():
-    """Create a mock EDL token."""
-    return "mock-edl-bearer-token-for-testing"
-
-
-@pytest.fixture
 def sample_coordinates():
     """Generate various sample coordinate sets for testing."""
     return {

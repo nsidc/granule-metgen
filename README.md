@@ -705,9 +705,9 @@ Compare 10 random granules from LVISF2 collection:
 
     $ metgenc-polygons compare LVISF2 -n 10 --provider NSIDC_CPRD
 
-Compare a specific granule with authentication:
+Compare a specific granule:
 
-    $ metgenc-polygons compare LVISF2 --granule "GRANULE_NAME" --token-file ~/.edl_token
+    $ metgenc-polygons compare LVISF2 --granule "GRANULE_NAME"
 
 Validate a polygon file and check data coverage:
 

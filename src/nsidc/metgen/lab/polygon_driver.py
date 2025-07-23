@@ -26,7 +26,7 @@ from .spatial_utils import PolygonComparator, UMMGParser, sanitize_granule_ur
 class PolygonComparisonDriver:
     """Driver for automated polygon comparison with CMR."""
 
-    def __init__(self, output_dir="polygon_comparisons", token=None):
+    def __init__(self, output_dir="polygon_comparisons"):
         """
         Initialize the driver.
 
@@ -34,8 +34,6 @@ class PolygonComparisonDriver:
         -----------
         output_dir : str
             Directory for output files
-        token : str, optional
-            Bearer token for CMR/Earthdata authentication (legacy, earthaccess handles auth)
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
