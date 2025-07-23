@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Adds the ability for the operator to override the default minimum distance tolerance between points
+
 ## v1.9.0rc2
 
 * Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
