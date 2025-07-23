@@ -209,7 +209,7 @@ class OLVIS1AProcessor:
             # Check if we ended up at an OAuth page
             if "urs.earthdata.nasa.gov" in response.url and "oauth" in response.url:
                 print(
-                    "  Authentication required. Please set EARTHDATA_TOKEN or EARTHDATA_USERNAME/PASSWORD."
+                    "  Authentication required. Please set EARTHDATA_USERNAME and EARTHDATA_PASSWORD."
                 )
                 return None
 

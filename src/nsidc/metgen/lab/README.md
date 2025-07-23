@@ -6,12 +6,8 @@ This script downloads OLVIS1A granules sequentially and generates premet and spa
 
 ```bash
 # Set authentication credentials (required for downloading data)
-# Option 1: Basic auth with username/password
 export EARTHDATA_USERNAME=your-username
 export EARTHDATA_PASSWORD=your-password
-
-# Option 2: Bearer token authentication (recommended)
-export EARTHDATA_TOKEN=your-bearer-token
 
 # Basic usage - process 5 granules
 metgenc-lab-olvis1a
@@ -28,16 +24,10 @@ metgenc-lab-olvis1a -n 10 -o my_output
 
 ## Authentication
 
-The processor supports two authentication methods:
-
-1. **Bearer Token (Recommended)**
-   - Generate a token at https://urs.earthdata.nasa.gov/users/tokens
-   - Set environment variable: `export EARTHDATA_TOKEN="your-token-here"`
-
-2. **Basic Authentication**
-   - Set environment variables:
-     - `export EARTHDATA_USERNAME=your-username`
-     - `export EARTHDATA_PASSWORD=your-password`
+The processor uses Earthdata Login username and password authentication:
+- Set environment variables:
+  - `export EARTHDATA_USERNAME=your-username`
+  - `export EARTHDATA_PASSWORD=your-password`
 
 ## Configuration
 
@@ -86,5 +76,5 @@ The processor retrieves granules sequentially from CMR:
 ## Requirements
 
 - Python packages: numpy, requests
-- Earthdata Login credentials or Bearer token (for downloading data)
+- Earthdata Login credentials (username and password) for downloading data
 - Network access to NASA CMR and data repositories

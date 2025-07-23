@@ -38,10 +38,9 @@ def cli():
 @click.argument("collection")
 @click.option("-n", "--number", default=5, help="Number of granules to process")
 @click.option("-p", "--provider", help="Data provider (e.g., NSIDC_CPRD)")
-@click.option("--token-file", help="Path to EDL bearer token file")
 @click.option("-o", "--output", default="polygon_comparisons", help="Output directory")
 @click.option("--granule", help="Process specific granule instead of random selection")
-def compare_polygons(collection, number, provider, token_file, output, granule):
+def compare_polygons(collection, number, provider, output, granule):
     """Compare generated polygons with CMR polygons for a collection.
 
     COLLECTION: The collection short name (e.g., LVISF2, ILVIS2)
@@ -53,8 +52,8 @@ def compare_polygons(collection, number, provider, token_file, output, granule):
     metgenc-polygons compare LVISF2 -n 10 --provider NSIDC_CPRD
 
     \b
-    # Compare specific granule with authentication
-    metgenc-polygons compare LVISF2 --granule "GRANULE_NAME" --token-file ~/.edl_token
+    # Compare specific granule
+    metgenc-polygons compare LVISF2 --granule "GRANULE_NAME"
 
     \b
     # Use custom output directory
@@ -67,25 +66,14 @@ def compare_polygons(collection, number, provider, token_file, output, granule):
         click.echo("Make sure the spatial module dependencies are installed.", err=True)
         sys.exit(1)
 
-    # Load authentication token if provided
-    token = None
-    if token_file:
-        token_path = Path(token_file).expanduser()
-        try:
-            with open(token_path, "r") as f:
-                token = f.read().strip()
-            click.echo(f"Loaded EDL bearer token from {token_path}")
-        except Exception as e:
-            click.echo(
-                f"Warning: Could not read token file {token_path}: {e}", err=True
-            )
+    # Authentication is handled by earthaccess
 
     # Create output directory
     output_dir = Path(output)
     output_dir.mkdir(exist_ok=True)
 
     # Create driver with configuration
-    driver = PolygonComparisonDriver(output_dir=str(output_dir), token=token)
+    driver = PolygonComparisonDriver(output_dir=str(output_dir))
 
     click.echo(f"Starting polygon comparison for collection: {collection}")
     click.echo(f"Output directory: {output_dir.absolute()}")
