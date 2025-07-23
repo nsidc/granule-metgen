@@ -47,6 +47,31 @@ def not_a_polygon():
     return [{"lat": 40, "lon": 100}, {"lat": 45, "lon": 105}]
 
 
+@pytest.fixture
+def premet_first_att():
+    return {"Name": "first_attribute", "Values": ["first_value"]}
+
+
+@pytest.fixture
+def premet_second_att():
+    return {"Name": "second_attribute", "Values": ["second_value"]}
+
+
+@pytest.fixture
+def premet_platform():
+    return [
+        {
+            "ShortName": "P-3B",
+            "Instruments": [
+                {
+                    "ShortName": "LVIS-Camera",
+                    "ComposedOf": [{"ShortName": "LVIS-Camera"}],
+                }
+            ],
+        }
+    ]
+
+
 @pytest.mark.parametrize(
     "input,expected",
     [
@@ -165,38 +190,31 @@ def test_premet_temporal_formatting():
     assert isinstance(result[0], dict)
 
 
-def test_one_additional_attribute():
+def test_one_additional_attribute(premet_first_att):
     premet_content = utilities.premet_values("./fixtures/premet/one_attribute.premet")
-    assert premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES] == [
-        {"Name": "first_attribute", "Values": ["first_value"]}
-    ]
+    assert premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES] == [premet_first_att]
 
 
-def test_two_additional_attributes():
+def test_two_additional_attributes(premet_first_att, premet_second_att):
     premet_content = utilities.premet_values("./fixtures/premet/two_attributes.premet")
-    assert {"Name": "first_attribute", "Values": ["first_value"]} in premet_content[
-        constants.UMMG_ADDITIONAL_ATTRIBUTES
-    ]
-    assert {"Name": "second_attribute", "Values": ["second_value"]} in premet_content[
-        constants.UMMG_ADDITIONAL_ATTRIBUTES
-    ]
+    assert premet_first_att in premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]
+    assert premet_second_att in premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]
     assert len(premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]) == 2
 
 
-def test_one_platform():
+def test_one_platform(premet_platform):
     premet_content = utilities.premet_values("./fixtures/premet/platform_only.premet")
-    assert premet_content[constants.UMMG_PLATFORM] == [
-        {
-            "ShortName": "P-3B",
-            "Instruments": [
-                {
-                    "ShortName": "LVIS-Camera",
-                    "ComposedOf": [{"ShortName": "LVIS-Camera"}],
-                }
-            ],
-        }
-    ]
+    assert premet_content[constants.UMMG_PLATFORM] == premet_platform
     assert constants.UMMG_ADDITIONAL_ATTRIBUTES not in premet_content
+
+
+def test_attribue_with_platform(premet_platform, premet_first_att, premet_second_att):
+    premet_content = utilities.premet_values(
+        "./fixtures/premet/platform_and_attribute.premet"
+    )
+    assert premet_content[constants.UMMG_PLATFORM] == premet_platform
+    assert premet_first_att in premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]
+    assert premet_second_att in premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]
 
 
 @patch("builtins.open", new_callable=mock_open, read_data="-105.253 40.0126")

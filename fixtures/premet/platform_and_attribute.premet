@@ -1,0 +1,10 @@
+Container= AdditionalAttributes
+AdditionalAttributeName=first_attribute
+ParameterValue=first_value
+Container=AssociatedPlatformInstrumentSensor
+AssociatedPlatformShortName=P-3B
+AssociatedInstrumentShortName=LVIS-Camera
+AssociatedSensorShortName=LVIS-Camera
+Container= AdditionalAttributes
+AdditionalAttributeName= second_attribute
+ParameterValue =second_value
