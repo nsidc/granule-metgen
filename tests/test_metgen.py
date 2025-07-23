@@ -446,11 +446,17 @@ def test_no_premet_content():
 
 
 def test_no_matching_premet_key():
-    assert metgen.populate_additional_attributes({"MyKey": "MyValue"}, "UnmatchedKey") == ""
+    assert (
+        metgen.populate_additional_attributes({"MyKey": "MyValue"}, "UnmatchedKey")
+        == ""
+    )
 
 
 def test_a_matching_premet_key():
-    assert metgen.populate_additional_attributes({"MyKey": "MyValue"}, "MyKey") == '"MyKey": "MyValue",'
+    assert (
+        metgen.populate_additional_attributes({"MyKey": "MyValue"}, "MyKey")
+        == '"MyKey": "MyValue",'
+    )
 
 
 def test_no_attempt_to_match_empty_ancillary_files():
