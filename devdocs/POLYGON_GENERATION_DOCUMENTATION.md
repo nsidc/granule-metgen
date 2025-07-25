@@ -51,7 +51,7 @@ Consolidates all polygon generation methods and optimization algorithms.
 **Core Class:**
 ```python
 class PolygonGenerator:
-    def create_flightline_polygon(self, lon, lat, method='adaptive_beam', 
+    def create_flightline_polygon(self, lon, lat, method='adaptive_beam',
                                  buffer_distance=None, sample_size=None,
                                  alpha=None, concave_alpha=None,
                                  connect_regions=True, connection_buffer_multiplier=3.0,
@@ -72,11 +72,11 @@ Provides all CMR-specific functionality.
   - Authentication via bearer tokens
   - Granule querying with temporal sampling
   - UMM-G metadata retrieval
-  
+
 - **UMMGParser**: Extracts data from UMM-G JSON
   - Polygon extraction from spatial extent
   - Data URL parsing for file downloads
-  
+
 - **PolygonComparator**: Comprehensive polygon comparison
   - IoU (Intersection over Union) calculation
   - Area ratio comparison
@@ -339,7 +339,7 @@ min_coverage = 0.90
 Add polygon comparison command:
 ```python
 @click.command()
-@click.option('--compare-cmr', is_flag=True, 
+@click.option('--compare-cmr', is_flag=True,
               help='Compare generated polygon with CMR')
 def process_granule(compare_cmr):
     if compare_cmr:
