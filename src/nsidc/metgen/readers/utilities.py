@@ -2,7 +2,7 @@ import re
 from datetime import timezone
 
 from dateutil.parser import parse
-from funcy import first, last, lkeep
+from funcy import distinct, first, last, lkeep
 
 from nsidc.metgen import constants
 
@@ -32,7 +32,9 @@ def temporal_from_premet(pdict: dict) -> list:
         ]
     )
 
-    return [ensure_iso_datetime(td) for td in lkeep([" ".join(begin), " ".join(end)])]
+    datetimes = lkeep([" ".join(begin), " ".join(end)])
+
+    return [ensure_iso_datetime(dt) for dt in distinct(datetimes)]
 
 
 def find_key_aliases(aliases: list, datetime_parts: dict) -> str:
