@@ -467,16 +467,16 @@ def main():
 Examples:
   # Test a single collection
   %(prog)s irtit3duck
-  
+
   # Test all collections
   %(prog)s all
-  
+
   # Test with different environment
   %(prog)s snexduck -e sit
-  
+
   # Keep test files for debugging
   %(prog)s modscg --keep-files
-  
+
   # Force re-download of sample data
   %(prog)s snexduck --force-download
 """,
