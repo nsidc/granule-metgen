@@ -2,6 +2,8 @@
 
 * Retrieve platform/instrument/sensor information if it exists in the premet
   file and include it in UMM-G output. (Issue-227)
+* Treat equivalent begin and end date/times in `premet` files as a single time
+  value. (Issue-221)
 
 ## v1.9.0rc3
 
