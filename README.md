@@ -520,12 +520,16 @@ If MetGenC processing fails, check the error message in the metgenc.log and chec
 the [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table).
 
 #### Setting Collection Temporal Extent as Granule Temporal Extent
-RARELY APPLICABLE (if ever)!!, but analogous to the above flag, another
-.ini flag is available to indicate that the collection temporal extent
-should be used to populate the granule-level temporal metadata. The user
-will be prompted for a `collection_temporal_override` value when running
-`metgenc init`. The default value is `False`; setting it to `True` 
-signals MetGenC to use the collection's temporal extent for each granule.
+RARELY APPLICABLE (if ever)!! An operator may set an .ini flag to indicate
+that a collection's temporal extent should be used to populate every granule
+via granule-level ummg json to be the same TemporalExtent (SingleDateTime or 
+BeginningDateTime and EndingDateTime) as what's defined for the collection. 
+In other words, every granule in a collection would display the same start 
+and end times in EDSC. In most collections, this is likely ill-advised use case.
+The operator will be prompted for a `collection_temporal_override` 
+value when running `metgenc init`. The default value is `False` and should likely
+always be accepted; setting it to `True` is what would signal MetGenC to set each
+granule to the collection's TemporalExtent.
 
 | .ini element                 | .ini section |
 | ----------------------------- | --------------|
