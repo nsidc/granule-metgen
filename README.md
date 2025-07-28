@@ -24,8 +24,11 @@
       - [Setting Collection Temporal Extent as Granule Temporal Extent](#setting-collection-temporal-extent-as-granule-temporal-extent)
         * [Spatial Polygon Generation](#spatial-polygon-generation)
     + [info](#info)
+      - [Example running info](#example-running-info)
     + [process](#process)
+      - [Examples running process](#examples-running-process)
     + [validate](#validate)
+      - [Example running validate](#example-running-validate)
     + [Pretty-print a json file in your shell](#pretty-print-a-json-file-in-your-shell)
   * [Troubleshooting](#troubleshooting)
   * [For Developers](#for-developers)
@@ -498,7 +501,8 @@ prompted for these values when running `metgenc init`.
 | spatial_dir   | Source        |
 
 If MetGenC processing fails, check the error message in the metgenc.log and check
-the [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table).
+the [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table)
+to see if the reason behind the error is clear.
 
 #### Setting Collection Spatial Extent as Granule Spatial Extent
 In cases of data sets where granule spatial information is not available
@@ -579,7 +583,7 @@ Options:
   --help             Show this message and exit.
 ```
 
-Example running **info**
+####Example running **info**
 
 ```
 metgenc info -c init/0081DUCkBRWS.ini
@@ -652,7 +656,7 @@ directory. This promotes you having the ability to validate and visually QC thei
 * When run without the dry run option, metgenc will transfer cnm messages to AWS, kicking off end-to-end ingest of
 data and UMM-G files to CUAT.
 
-Examples running **process**
+####Examples running **process**
 
 The following is an example of using the dry run option (-d) to generate UMM-G and write cnm as files (-wc) for three granules (-n 3):
 
@@ -690,7 +694,7 @@ Options:
   --help             Show this message and exit.
 ```
 
-Example running **validate**
+####Example running **validate**
 
     $ metgenc validate -c init/modscg.ini -t ummg (adding the -t ummg option will validate all UMM-G files; -t cnm will validate all cnm files that have been written locally)
     $ metgenc validate -c init/modscg.ini (without the -t option specified, just all locally written cnm files will be validated)
