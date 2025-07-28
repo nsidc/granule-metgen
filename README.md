@@ -22,7 +22,7 @@
       - [When Premet and Spatial Files Are to be Used](#when-premet-and-spatial-files-are-to-be-used)
       - [Setting Collection Spatial Extent as Granule Spatial Extent](#setting-collection-spatial-extent-as-granule-spatial-extent)
       - [Setting Collection Temporal Extent as Granule Temporal Extent](#setting-collection-temporal-extent-as-granule-temporal-extent)
-        * [Spatial Polygon Generation](#spatial-polygon-generation)
+      - [Spatial Polygon Generation](#spatial-polygon-generation)
     + [info](#info)
       - [Example running info](#example-running-info)
     + [process](#process)
@@ -531,7 +531,7 @@ signals MetGenC to use the collection's temporal extent for each granule.
 | ----------------------------- | --------------|
 | collection_temporal_override  | Source        |
 
-##### Spatial Polygon Generation
+#### Spatial Polygon Generation
 MetGenC includes optimized polygon generation capabilities for creating spatial coverage polygons from point data, particularly useful for LIDAR flightline data. **This feature is optional and enabled by default.**
 
 When a granule has an associated `.spatial` file containing geodetic point data (≥3 points), MetGenC will automatically generate an optimized polygon to enclose the data points instead of using the basic point-to-point polygon method. This results in more accurate spatial coverage with fewer vertices.
