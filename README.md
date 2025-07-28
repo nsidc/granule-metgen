@@ -583,7 +583,7 @@ Options:
   --help             Show this message and exit.
 ```
 
-####Example running info
+#### Example running info
 
 ```
 metgenc info -c init/0081DUCkBRWS.ini
@@ -656,7 +656,7 @@ directory. This promotes you having the ability to validate and visually QC thei
 * When run without the dry run option, metgenc will transfer cnm messages to AWS, kicking off end-to-end ingest of
 data and UMM-G files to CUAT.
 
-####Examples running process
+#### Examples running process
 
 The following is an example of using the dry run option (-d) to generate UMM-G and write cnm as files (-wc) for three granules (-n 3):
 
@@ -694,7 +694,7 @@ Options:
   --help             Show this message and exit.
 ```
 
-####Example running validate
+#### Example running validate
 
     $ metgenc validate -c init/modscg.ini -t ummg (adding the -t ummg option will validate all UMM-G files; -t cnm will validate all cnm files that have been written locally)
     $ metgenc validate -c init/modscg.ini (without the -t option specified, just all locally written cnm files will be validated)
