@@ -255,7 +255,8 @@ secret_key     ****************cJ+5              env
 Notes column key:
 
  OC = Optional configuration attributes (or elements of them) that may be represented
-   in an .ini file. See [Optional Configuration Elements](#optional-configuration-elements)
+   in an .ini file in order to allow "nearly" compliant netCDF files to be run with MetGenC
+   without premet/spatial files. See [Optional Configuration Elements](#optional-configuration-elements)
 
  P = Premet file attributes that may be specified in a premet file; when used, a
   `premet_dir`path must be defined in the .ini file.
@@ -418,14 +419,14 @@ Example running **init**
 
 #### Optional Configuration Elements
 Some attribute values may be read from the .ini file if the values
-can't be gleaned from or don't exist in the science file(s), but are
-known for the data set. The utilization of these is typical for data sets
-comprising non-CF/non-NSIDC-compliant science files, and (almost certainly)
-all data sets not comprising netCDF files. This approach assumes the 
-attribute values are the same for all granules seeing as there's only one 
-.ini file for a given data set. These values must be manually added 
-to the .ini file, as none of them are prompted for in the `metgenc init`
-functionality.
+can't be gleaned from—or don't exist in—the science file(s), but whose 
+values are known for the data set. Use of these elements can be typical 
+for data sets comprising non-CF/non-NSIDC-compliant netCDF science files,
+as well as non-netCDF data sets comprising .tif, .csv, .h5, etc. This  
+approach assumes the attribute values are the same for all granules considering  
+there's only one .ini file for a given data set. The element values must 
+be manually added to the .ini file, as none of them are prompted for in the
+`metgenc init` functionality.
 
 See this project's GitHub file, `fixtures/test.ini` for examples.
 
