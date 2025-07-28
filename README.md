@@ -19,7 +19,7 @@
       - [Optional Configuration Elements](#optional-configuration-elements)
       - [Granule and Browse RegEx](#granule-and-browse-regex)
         * [Example: Use of granule_regex](#example-use-of-granule_regex)
-      - [When Premet and Spatial Files Are to be Used](#when-premet-and-spatial-files-are-to-be-used)
+      - [Using Premet and Spatial Files](#using-premet-and-spatial-files)
       - [Setting Collection Spatial Extent as Granule Spatial Extent](#setting-collection-spatial-extent-as-granule-spatial-extent)
       - [Setting Collection Temporal Extent as Granule Temporal Extent](#setting-collection-temporal-extent-as-granule-temporal-extent)
       - [Spatial Polygon Generation](#spatial-polygon-generation)
@@ -28,6 +28,7 @@
       - [Example running info](#example-running-info)
     + [process](#process)
       - [Examples running process](#examples-running-process)
+      - [Troubleshooting metgenc process command runs](#troubleshooting-metgenc-process-command-runs)
     + [validate](#validate)
       - [Example running validate](#example-running-validate)
     + [Pretty-print a json file in your shell](#pretty-print-a-json-file-in-your-shell)
@@ -287,11 +288,11 @@ Notes column key:
    
  6 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_x_coordinate` are reprojected and thinned to create a
-   GPolygon, bounding box, etc.
+   GPolygon, bounding rectangle, etc.
    
  7 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
-   GPolygon, bounding box, etc.
+   GPolygon, bounding rectangle, etc.
    
 
 | netCDF file attributes not currently used by MetGenC | ACDD | CF Conventions | NSIDC Guidelines |
@@ -339,10 +340,6 @@ a `collection_geometry_override=True` attribute/value pair can be added to the .
 Setting `collection_geometry_override=False` in the .ini file will make MetGenC look to the
 science files or premet/spatial files for the granule-level spatial representation geometry
 to use.
-
-For data sets with flightline-type data collection where the contents of .spatial files
-are meant to represent point clouds, the .ini file will need the attribute/value pair
-`spatial_polygon_enabled=true` added.
 
 ### Geometry Rules
 |Granule Spatial Representation Geometry | Granule Spatial Representation Coordinate System (GSRCS) |
@@ -464,6 +461,7 @@ further .ini elements are available:
 | browse_regex  | Collection    | 1    |
 | granule_regex | Collection    | 2    |
 
+Note column:
 1. The file name pattern identifying a browse file. The default is `_brws`. This element is
  prompted for as one of the `metgenc init` prompts.
 2. The file name pattern identifying related files. Must  capture all text
@@ -497,7 +495,7 @@ Each of those strings uniquely identify all files associated with a given granul
 text to form the granule name recorded in the UMM-G and CNM output (in the case of
 single-file granules, the file extension will be added to the granule name).
 
-#### When Premet and Spatial files are to be used
+#### Using Premet and Spatial files
 When necessary, the following two .ini elements can be used to define paths
 to the directories containing `premet` and `spatial` files. The user will be
 prompted for these values when running `metgenc init`.
@@ -505,10 +503,6 @@ prompted for these values when running `metgenc init`.
 | ------------- | ------------- |
 | premet_dir    | Source        |
 | spatial_dir   | Source        |
-
-If MetGenC processing fails, check the error message in the metgenc.log and check
-the [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table)
-to see if the reason behind the error is clear.
 
 #### Setting Collection Spatial Extent as Granule Spatial Extent
 In cases of data sets where granule spatial information is not available
@@ -521,9 +515,6 @@ use the collection's spatial extent for each granule.
 | .ini element                | .ini section |
 | ---------------------------- | ------------- |
 | collection_geometry_override | Source        |
-
-If MetGenC processing fails, check the error message in the metgenc.log and check
-the [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table).
 
 #### Setting Collection Temporal Extent as Granule Temporal Extent
 RARELY APPLICABLE (if ever)!! An operator may set an .ini flag to indicate
@@ -542,7 +533,7 @@ granule to the collection's TemporalExtent.
 | collection_temporal_override  | Source        |
 
 #### Spatial Polygon Generation
-MetGenC includes optimized polygon generation capabilities for creating spatial coverage polygons from point data, particularly useful for LIDAR flightline data. **This feature is optional and enabled by default.**
+MetGenC includes optimized polygon generation capabilities for creating spatial coverage polygons from point data, particularly useful for LIDAR flightline data. **This feature is optional but enabled by default.** To disable or to change values, the .ini file for the collection needs to be edited.
 
 When a granule has an associated `.spatial` file containing geodetic point data (≥3 points), MetGenC will automatically generate an optimized polygon to enclose the data points instead of using the basic point-to-point polygon method. This results in more accurate spatial coverage with fewer vertices.
 
@@ -555,13 +546,20 @@ When a granule has an associated `.spatial` file containing geodetic point data 
 | Spatial       | spatial_polygon_max_vertices     | integer | 100     | Maximum vertices in generated polygon (10-1000) |
 | Spatial       | spatial_polygon_cartesian_tolerance | float | .0001  | Default is CMR's claimed default, can be set to a larger number to decrease vertex precision (and correct GPolygonSpatialErrors, ideally | 
 
+
 ##### Example Spatial Polygon Generation Configuration
+Example showing content added to an .ini file, having edited the CMR default vertex tolerance (distance between two vertices) to generalize the coordinate precision of vertices defining the GPoly in ummg json files generated:
 ```ini
 [Spatial]
 spatial_polygon_enabled = true
 spatial_polygon_target_coverage = 0.98
 spatial_polygon_max_vertices = 100
-spatial_polygon_cartesian_tolerance = .0001
+spatial_polygon_cartesian_tolerance = .005
+```
+Example showing the key pair added to an .ini file to disable spatial polygon generation:
+```ini
+[Spatial]
+spatial_polygon_enabled = false
 ```
 
 **When Polygon Generation is Applied:**
@@ -668,8 +666,11 @@ directory. This promotes you having the ability to validate and visually QC thei
 * When run without the dry run option, metgenc will transfer cnm messages to AWS, kicking off end-to-end ingest of
 data and UMM-G files to CUAT.
 
-#### Examples running process
+When MetGenC is run on the VM, it must be run at the root of the vm's virtual environment, `metgenc`.
 
+If running `metgenc process` fails, check for an error message in the metgenc.log to begin troubleshooting.
+
+#### Examples running process
 The following is an example of using the dry run option (-d) to generate UMM-G and write cnm as files (-wc) for three granules (-n 3):
 
     $ metgenc process -c ./init/test.ini -d -n 3 -wc
@@ -678,13 +679,23 @@ This next example would run end-to-end ingest of all granules (assuming < 100000
 and their UMM-G files into the CUAT environment:
 
     $ metgenc process -c ./init/test.ini -e uat
+Note: Before running **process** to ingest granules to CUAT (i.e., you've not set it to dry run mode),
+**as a courtesy to Cumulus devs and ops folks, post Slack messages to NSIDC's `#Cumulus` and `cloud-ingest-ops`
+channels, and post a quick "done" note when you're done ingest testing.**
 
-Notes: Before running **process** to ingest granules to CUAT (i.e., not run in dry run mode):
-* **As a courtesy to Cumulus devs and ops folks, post Slack messages to NSIDC's `#Cumulus` and `cloud-ingest-ops`
-  channels, and post a quick "done" note when you're done ingest testing.**
-* You'll need to have sourced (or source now), your AWS profile by running `source metgenc-env.sh cumulus-uat`
+
+#### Troubleshooting metgenc process command runs
+* You'll need to have sourced (or source before you run it), your AWS profile by running `source metgenc-env.sh cumulus-uat`
   where `cumulus-uat` reflects the profile name specified in your AWS credential and config files.
   If you can't remember whether you've sourced your AWS profile, run `aws configure list` at the prompt.
+
+If you run `$ metgenc process -c ./init/\<some .ini file\>` to test end-to-end ingest, but you get a flurry of errors,
+see if sourcing your AWS credentials (`source metgenc-env.sh cumulus-uat`) solves the problem! Forgetting
+to set up communications between MetGenC and AWS is easy to do, but thankfully, easy to fix.
+
+* When MetGenC is run on the VM, it must be run at the root of the vm's virtual environment, `metgenc`.
+
+* If running `metgenc process` fails, check for an error message in the metgenc.log (metgenc/metgenc.log) to aid your troubleshooting.
 
 ---
 
@@ -723,12 +734,7 @@ to wade through unformatted json chaos:
 e.g., `cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "."` will
 pretty-print the contents of that json file in your shell!
 
-## Troubleshooting
-
-If you run `$ metgenc process -c ./init/test.ini` to test end-to-end ingest, but you get a flurry of errors,
-see if sourcing your AWS credentials (`source metgenc-env.sh cumulus-uat`) solves the problem! Forgetting
-to set up communications between MetGenC and AWS is easy to do, but thankfully, easy to fix.
-
+If running `metgenc validate` fails, check for an error message in the metgenc.log to begin troubleshooting.
 
 ## For Developers
 ### Contributing
