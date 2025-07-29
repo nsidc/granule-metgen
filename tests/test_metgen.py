@@ -217,6 +217,7 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc.spatial"],
             (
                 "aaa_gid1_bbb.nc",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 set(),
                 "",
@@ -229,7 +230,7 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_browse_bbb.png"],
             [],
             ["aaa_gid1_ccc.nc.spatial"],
-            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), "", ""),
+            ("aaa_gid1_bbb.nc", "aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), "", ""),
         ),
         (
             "aaa_gid1_bbb",
@@ -238,6 +239,7 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc.premet"],
             [],
             (
+                "aaa_gid1_bbb.nc",
                 "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 set(),
@@ -253,6 +255,7 @@ def test_granule_name_from_regex(regex):
             [],
             (
                 "aaa_gid1_bbb.nc",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 {"aaa_gid1_bbb_browse.png"},
                 "",
@@ -266,6 +269,7 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc.premet"],
             [],
             (
+                "aaa_gid1_bbb.nc",
                 "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 {"aaa_gid1_bbb_browse.png"},
@@ -281,6 +285,7 @@ def test_granule_name_from_regex(regex):
             [],
             (
                 "aaa_gid1_bbb.nc",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 {"aaa_gid1_bbb_browse.png"},
                 "",
@@ -295,6 +300,7 @@ def test_granule_name_from_regex(regex):
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
                 "",
@@ -309,6 +315,7 @@ def test_granule_name_from_regex(regex):
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
                 "aaa_gid1_bbb.premet",
@@ -323,6 +330,7 @@ def test_granule_name_from_regex(regex):
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
                 "",
@@ -338,6 +346,7 @@ def test_granule_tuple_from_filenames(
         granuleid,
         f"({granuleid})",
         "browse",
+        ".nc",
         [Path(p) for p in data_files + browse_files],
         [Path(p) for p in premet_files],
         [Path(p) for p in spatial_files],
@@ -354,7 +363,14 @@ def test_granule_tuple_from_filenames(
             [],
             [],
             [],
-            ("aaa_gid1_bbb", {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"}, set(), "", ""),
+            (
+                "aaa_gid1_bbb",
+                "aaa_gid1_bbb.nc",
+                {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
+                set(),
+                "",
+                "",
+            ),
         ),
         (
             "gid1",
@@ -364,6 +380,7 @@ def test_granule_tuple_from_filenames(
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_browse_bbb.png"},
                 "aaa_gid1_bbb.premet",
@@ -378,6 +395,7 @@ def test_granule_tuple_from_filenames(
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_xx_bbb.nc",
                 {"aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_browse_bbb.png"},
                 "aaa_gid1_xx_bbb.premet",
@@ -392,6 +410,7 @@ def test_granule_tuple_from_filenames(
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_zz_bbb.nc",
                 {"aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"},
                 {"aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"},
                 "",
@@ -407,6 +426,7 @@ def test_granule_tuple_from_regex(
         granuleid,
         regex,
         "browse",
+        ".nc",
         [Path(p) for p in data_files + browse_files],
         [Path(p) for p in premet_files],
         [Path(p) for p in spatial_files],

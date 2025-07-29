@@ -34,6 +34,7 @@ from funcy import (
     notnone,
     partial,
     rcompose,
+    some,
     take,
 )
 from jsonschema.exceptions import ValidationError
@@ -260,6 +261,7 @@ class Granule:
     browse_filenames: set[str] = dataclasses.field(default_factory=set)
     premet_filename: Maybe[str] = Maybe.empty
     spatial_filename: Maybe[str] = Maybe.empty
+    reference_data_filename: str = dataclasses.field(default_factory=str)
     ummg_filename: Maybe[str] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
@@ -332,9 +334,10 @@ def process(configuration: config.Config) -> None:
             browse_filenames=browse_files,
             premet_filename=premet_file,
             spatial_filename=spatial_file,
+            reference_data_filename=reference_data_file,
             data_reader=data_reader(configuration.auth_id, data_files),
         )
-        for name, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
+        for name, reference_data_file, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
             configuration
         )
     ]
@@ -613,6 +616,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
             granule_key,
             configuration.granule_regex or f"({granule_key})",
             configuration.browse_regex,
+            configuration.reference_file_regex,
             file_list,
             premet_file_list,
             spatial_file_list,
@@ -673,6 +677,7 @@ def granule_tuple(
     granule_key: str,
     granule_regex: str,
     browse_regex: str,
+    reference_file_regex: str,
     file_list: list,
     premet_list: list,
     spatial_list: list,
@@ -684,6 +689,7 @@ def granule_tuple(
         - A string used as the "identifier" (in UMMG output) and "name" (in CNM output).
           This is the granule file name in the case of a single data file granule,
           otherwise the common name elements of all files related to a granule.
+        - The name of the data file to use as the reference file
         - A set of one or more full paths to data file(s)
         - A set of zero or more full paths to associated browse file(s)
         - Path to an associated premet file (may be None or empty string)
@@ -701,11 +707,27 @@ def granule_tuple(
 
     return (
         derived_granule_name(granule_regex, data_file_paths),
+        reference_data_file(reference_file_regex, data_file_paths),
         data_file_paths,
         browse_file_paths,
         matched_ancillary_file(granule_key, premet_list),
         matched_ancillary_file(granule_key, spatial_list),
     )
+
+
+def reference_data_file(regex: str, data_files: set[Path]):
+    if not data_files:
+        return None
+
+    # throw error if no regex and more than one data file?
+    if not regex and len(data_files) > 1:
+        raise Exception
+
+    if not regex:
+        return first(data_files)
+
+    else:
+        return some(lambda v: re.search(regex, v), data_files)
 
 
 def matched_ancillary_file(granule_key: str, file_list: list[Path]) -> str:
