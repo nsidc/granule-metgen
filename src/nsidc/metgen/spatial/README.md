@@ -35,10 +35,9 @@ polygon, metadata = create_flightline_polygon(lon_array, lat_array)
 ## Module Components
 
 - **`polygon_generator.py`** - Core polygon generation function
-- **`cmr_client.py`** - **CMR API integration for comparison tool only**
-- **`polygon_driver.py`** - Automated comparison workflow
+- **`cmr_client.py`** - CMR API integration (used by comparison tool in lab package)
 
-**Important**: The `CMRClient` is designed exclusively for the polygon comparison diagnostic tool (`metgenc-polygons`). It is not used in the main MetGenC workflow and should not be imported for general spatial processing.
+**Note**: The polygon comparison diagnostic tool (`metgenc-lab-polygons`) and its associated components (`polygon_driver.py`, `spatial_cli.py`, `spatial_utils.py`) are located in the lab package as experimental features. See the [lab documentation](../lab/POLYGON_COMPARISON.md) for details.
 
 ## Algorithm Behavior
 

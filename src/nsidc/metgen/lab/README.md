@@ -1,80 +1,41 @@
-# OLVIS1A Processor
+# MetGenC Lab - Experimental Features
 
-This script downloads OLVIS1A granules sequentially and generates premet and spatial files for them.
+This package contains experimental features and tools that are under development or evaluation for potential inclusion in the main MetGenC workflow. These tools are functional but may undergo significant changes.
 
-## Usage
+## Available Experimental Tools
 
-```bash
-# Set authentication credentials (required for downloading data)
-export EARTHDATA_USERNAME=your-username
-export EARTHDATA_PASSWORD=your-password
+### 1. OLVIS1A Processor
+**Command**: `metgenc-lab-olvis1a`
 
-# Basic usage - process 5 granules
-metgenc-lab-olvis1a
+A specialized processor for OLVIS1A (Operation IceBridge LVIS L1A Geolocated Return Energy Waveforms) granules that:
+- Downloads granules from NASA CMR
+- Generates premet files with temporal and collection metadata
+- Creates spatial files with coordinate information
 
-# Process a specific number of granules
-metgenc-lab-olvis1a -n 10
+See [OLVIS1A.md](OLVIS1A.md) for detailed documentation.
 
-# Specify output directory
-metgenc-lab-olvis1a -o my_output_dir
+### 2. Polygon Comparison Tool
+**Command**: `metgenc-lab-polygons`
 
-# Combine options
-metgenc-lab-olvis1a -n 10 -o my_output
-```
+A diagnostic tool for comparing MetGenC-generated polygons with CMR reference polygons:
+- Analyzes polygon generation quality and data coverage
+- Provides visual comparisons and metrics
+- Helps validate and tune polygon generation parameters
 
-## Authentication
+See [POLYGON_COMPARISON.md](POLYGON_COMPARISON.md) for detailed documentation.
 
-The processor uses Earthdata Login username and password authentication:
-- Set environment variables:
-  - `export EARTHDATA_USERNAME=your-username`
-  - `export EARTHDATA_PASSWORD=your-password`
+## Usage Notes
 
-## Configuration
+These tools are provided as-is for experimentation and testing. They may:
+- Have different authentication requirements
+- Use different dependencies than the main MetGenC package
+- Change significantly between releases
+- Eventually be promoted to the main package or removed
 
-The following values are hardcoded constants:
-- Environment: `prod` (https://cmr.earthdata.nasa.gov)
-- Collection: `OLVIS1A`
-- Version: `1`
-- Provider: `NSIDC_ECS`
+## Contributing
 
-## Output Structure
-
-The script creates the following directory structure:
-
-```
-olvis1a_output/
-├── data/          # Downloaded granule data files (JPG images)
-├── premet/        # Generated premet files (.premet)
-└── spatial/       # Generated spatial files (.spatial)
-```
-
-## File Formats
-
-### Premet Files
-Contains metadata in key-value format:
-- Data filename
-- Version ID (001)
-- Begin/end dates and times
-- Collection short name (OLVIS1A)
-- Processing level (1A)
-- Platform/instrument information
-
-### Spatial Files
-Contains longitude/latitude coordinate pairs extracted from UMM-G metadata:
-- One coordinate pair per line
-- Space-separated values
-- 6 decimal places precision
-- Coordinates come from GPolygons, BoundingRectangles, or Points in the metadata
-
-## Granule Selection
-
-The processor retrieves granules sequentially from CMR:
-- Orders by start date (most recent first)
-- Retrieves the requested number of granules
-- No random sampling - always gets the same granules in the same order
-
-## Requirements
-
-- Python packages: numpy, requests
-- Earthdata Login credentials (username and password) for downloading data
-- Network access to NASA CMR and data repositories
+When adding new experimental features to the lab:
+1. Create a dedicated module file
+2. Add appropriate CLI command in the main CLI
+3. Document the feature in a separate markdown file
+4. Update this README with a brief description

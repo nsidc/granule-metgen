@@ -17,8 +17,8 @@ LOGGER = logging.getLogger(constants.ROOT_LOGGER)
 
 
 @click.group(
-    name="metgenc-polygons",
-    epilog="For detailed help on each command, run: metgenc-polygons COMMAND --help",
+    name="metgenc-lab-polygons",
+    epilog="For detailed help on each command, run: metgenc-lab-polygons COMMAND --help",
 )
 @click.version_option(package_name="nsidc-metgenc")
 def cli():
@@ -49,15 +49,15 @@ def compare_polygons(collection, number, provider, output, granule):
 
     \b
     # Compare 10 random LVISF2 granules
-    metgenc-polygons compare LVISF2 -n 10 --provider NSIDC_CPRD
+    metgenc-lab-polygons compare LVISF2 -n 10 --provider NSIDC_CPRD
 
     \b
     # Compare specific granule
-    metgenc-polygons compare LVISF2 --granule "GRANULE_NAME"
+    metgenc-lab-polygons compare LVISF2 --granule "GRANULE_NAME"
 
     \b
     # Use custom output directory
-    metgenc-polygons compare ILVIS2 -n 20 -o /tmp/polygon_analysis
+    metgenc-lab-polygons compare ILVIS2 -n 20 -o /tmp/polygon_analysis
     """
     try:
         from nsidc.metgen.lab.polygon_driver import PolygonComparisonDriver
@@ -129,11 +129,11 @@ def validate_polygon(polygon_file, file_format, check_coverage, points_file):
 
     \b
     # Validate a GeoJSON polygon
-    metgenc-polygons validate my_polygon.geojson
+    metgenc-lab-polygons validate my_polygon.geojson
 
     \b
     # Validate and check coverage against source points
-    metgenc-polygons validate polygon.json --check-coverage --points-file points.csv
+    metgenc-lab-polygons validate polygon.json --check-coverage --points-file points.csv
     """
     try:
         import geopandas as gpd
@@ -248,7 +248,7 @@ def info():
     click.echo("• info     - Show this information")
     click.echo()
     click.echo("For help with a specific command:")
-    click.echo("  metgenc-polygons COMMAND --help")
+    click.echo("  metgenc-lab-polygons COMMAND --help")
 
 
 if __name__ == "__main__":
