@@ -1,18 +1,14 @@
 - [MetGenC](#metgenc)
   * [Level of Support](#level-of-support)
-  * [Requirements](#requirements)
-  * [Installing MetGenC](#installing-metgenc)
-  * [AWS Credentials](#aws-credentials)
-    + [Option 1: Manually Create Configuration Files](#option-1-manually-create-configuration-files)
-    + [Option 2: Use the AWS CLI to Create Configuration Files](#option-2-use-the-aws-cli-to-create-configuration-files)
-  * [CMR Authentication and use of Collection Metadata](#cmr-authentication-and-use-of-collection-metadata)
   * [Before Running MetGenC: Tips and Assumptions](#before-running-metgenc-tips-and-assumptions)
-    + [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
-    + [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
-    + [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
+  * [CMR Authentication and use of Collection Metadata](#cmr-authentication-and-use-of-collection-metadata)
+  * [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
+  * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
+  * [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
     + [Attribute Reference links](#attribute-reference-links)
-    + [Geometry Logic](#geometry-logic)
-      - [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table)
+  * [Geometry Logic](#geometry-logic)
+    + [Geometry Rules](#geometry-rules)
+    + [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table)
   * [Running MetGenC: Its Commands In-depth](#running-metgenc-its-commands-in-depth)
     + [help](#help)
     + [init](#init)
@@ -71,124 +67,14 @@ the repository and submit a pull request.
 See the [LICENSE](LICENSE.md) for details on permissions and warranties. Please contact
 nsidc@nsidc.org for more information.
 
-## Requirements
+## Before Running MetGenC on the VM: Tips and Assumptions
+* from nusnow:
+        $ vssh staging sipsmetgen
 
-To use the `nsidc-metgen` command-line tool, `metgenc`, you must have
-Python version 3.12 installed. To determine the version of Python you have, run
-this at the command-line:
+* CD Into and Activate the venv:
 
-    $ python --version
-
-or
-
-    $ python3 --version
-
-## Installing MetGenC
-
-MetGenC can be installed from [PyPI](https://pypi.org/). First, create a
-Python virtual environment (venv) in a directory of your choice, then activate it. To do this...
-
-On a Mac, open Terminal and run:
-
-    $ python -m venv /Users/afitzger/metgenc (i.e. provide the path and name of the venv where you'll house MetGenC)
-    $ source ~/metgenc/bin/activate (i.e., activates your newly created metgenc venv)
-
-On a Windows machine, open a command prompt, navigate to the desired project directory in which
-you wish to create your venv, then run:
-
-    > python -m venv metgenc (i.e., in this case, a venv named "metgenc" is created within the current directory)
-    > .\<path to venv>\Scripts\activate (i.e., activates your newly created metgenc venv)
-
-cd into the venv directory (e.g., `$ cd metgenc`)
-
-Now install MetGenC into the virtual environment using `pip` (this command _should_ be OS-agnostic):
-
-    $ pip install nsidc-metgenc
-
-## AWS Credentials
-
-In order to process science data and stage it for Cumulus, you must create & setup AWS
-credentials. There are two options to do this:
-
-### Option 1: Manually Create Configuration Files
-
-First, create a directory in your user's home directory to store the AWS configuration:
-
-    $ mkdir -p ~/.aws
-
-In the `~/.aws` directory, create a file named `config` with the contents:
-
-    [profile cumulus-uat]
-    region = us-west-2
-    output = json
-
-In the `~/.aws` directory, create a file named `credentials` with the contents:
-
-    [cumulus-uat]
-    aws_access_key_id = TBD
-    aws_secret_access_key = TBD
-
-The examples above create a [cumulus-uat AWS profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-format-profile).
-If you require access to multiple AWS accounts, each with their own configuration--for example, different accounts for CUAT vs. CPROD--you
-can use the [AWS CLI 'profile' feature to manage settings for each account](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-using-profiles), 
-or you can edit the config and credentials files and just add `profile cumulus-prod` and `cumulus-prod` details, respectively.
-
-
-Finally, restrict the permissions of the directory and files:
-
-    $ chmod -R go-rwx ~/.aws
-
-**Instructions for obtaining an AWS key pair are [covered here](https://github.com/nsidc/granule-metgen/wiki/MetGenC-Ancillary-Resources#22-generate-aws-long-term-access-key).**
-Once generated edit your `~/.aws/credentials` file and replace `TBD` with the public and secret key values.
-
-### Option 2: Use the AWS CLI to Create Configuration Files
-
-You may install (or already have it installed) the AWS Command Line Interface on the
-machine where you are running the tool. Follow the
-[AWS CLI Install instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-for the platform on which you are running.
-
-Once you have the AWS CLI, you can use it to create the `~/.aws` directory and the
-`config` and `credentials` files:
-
-    $ aws configure
-
-You will be prompted to enter your AWS public access and secret key values, along with
-the AWS region and CLI output format. The AWS CLI will create and populate the directory
-and files with your values.
-
-## CMR Authentication and use of Collection Metadata
-
-MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials
-to retrieve collection metadata. If authentication fails,
-collection metadata will not be accessible to help compensate for metadata elements
-missing from science files or a data set's configuration (.ini) file.
-
-Always export the following variables to your environment before running
-`metgenc process` (there's more on what this entails to come):
-
-    $ export EARTHDATA_USERNAME=your-EDL-user-name
-    $ export EARTHDATA_PASSWORD=your-EDL-password
-
-If you have a different user name/password combo for UAT from that of the PROD
-environment, be sure to set the values appropriate for the environment you're
-ingesting to.
-
-If collection metadata are unavailable either due to an authentication failure
-or because the collection information doesn't yet exist in CMR, MetGenC will
-continue processing with the information available from the .ini file and the
-science files.
-
-## Before Running MetGenC: Tips and Assumptions
-
-* Activate your venv:
-
-        $ source ~/<name of your venv>/bin/activate
-
-* Verify the application version:
-
-        $ metgenc --version
-        metgenc, version 1.3.0
+        $ cd metgenc
+        $ source .venv/bin/activate
 
 * Before you run end-to-end ingest, be sure to source your AWS credentials:
 
@@ -220,7 +106,29 @@ secret_key     ****************cJ+5              env
     region                us-west-2              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']
 ```
 
-### Assumptions for netCDF files for MetGenC
+## CMR Authentication and use of Collection Metadata
+
+MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials
+to retrieve collection metadata. If authentication fails,
+collection metadata will not be accessible to help compensate for metadata elements
+missing from science files or a data set's configuration (.ini) file.
+
+Always export the following variables to your environment before running
+`metgenc process` (there's more on what this entails to come):
+
+    $ export EARTHDATA_USERNAME=your-EDL-user-name
+    $ export EARTHDATA_PASSWORD=your-EDL-password
+
+If you have a different user name/password combo for UAT from that of the PROD
+environment, be sure to set the values appropriate for the environment you're
+ingesting to.
+
+If collection metadata are unavailable either due to an authentication failure
+or because the collection information doesn't yet exist in CMR, MetGenC will
+continue processing with the information available from the .ini file and the
+science files.
+
+## Assumptions for netCDF files for MetGenC
 
 * NetCDF files have an extension of `.nc` (per CF conventions).
 * Projected spatial information is available in coordinate variables having
@@ -232,13 +140,13 @@ secret_key     ****************cJ+5              env
   (i.e. only one grid mapping variable is present in a file, and the content of
   that variable is the same in every science file).
 
-### MetGenC .ini File Assumtions
+## MetGenC .ini File Assumtions
 * A `pixel_size` attribute is needed in a data set's .ini file when gridded science files don't include a GeoTransform attribute in the grid mapping variable. The value specified should be just a number—no units (m, km) need to be specified since they're assumed to be the same as the units of those defined by the spatial coordinate variables in the data set's science files.
   * e.g., `pixel_size = 25`
 * Date/time strings can be parsed using `datetime.fromisoformat`
 * The checksum_type must be SHA256
 
-### NetCDF Attributes MetGenC Relies upon to Generate UMM-G json Files
+## NetCDF Attributes MetGenC Relies upon to Generate UMM-G json Files
 
 - **Required** required
 - **RequiredC** conditionally required
@@ -317,7 +225,7 @@ Notes column key:
 * https://cfconventions.org/Data/cf-conventions/cf-conventions-1.11/cf-conventions.html
 * https://nsidc.org/sites/default/files/documents/other/nsidc-guidelines-netcdf-attributes.pdf
 
-### Geometry Logic
+## Geometry Logic
 
 The geometry behind the granule-level spatial representation (point, gpolygon, or bounding 
 rectangle) required for a data set can be implemented by MetGenC via either: file-level metadata
