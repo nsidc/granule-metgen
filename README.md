@@ -17,7 +17,7 @@
     + [help](#help)
     + [init](#init)
       - [Optional Configuration Elements](#optional-configuration-elements)
-      - [Granule and Browse RegEx](#granule-and-browse-regex)
+      - [Granule and Browse regex](#granule-and-browse-regex)
         * [Example: Use of granule_regex](#example-use-of-granule_regex)
       - [Using Premet and Spatial Files](#using-premet-and-spatial-files)
       - [Setting Collection Spatial Extent as Granule Spatial Extent](#setting-collection-spatial-extent-as-granule-spatial-extent)
@@ -233,7 +233,7 @@ secret_key     ****************cJ+5              env
   that variable is the same in every science file).
 
 ### MetGenC .ini File Assumtions
-* A `pixel_size` attribute and value is needed in an .ini file when gridded science files don't include a GeoTransform attribute in the grid mapping variable. The value specified should be a number, i.e., no units (m, km) need to be specified since they're assumed to be the same as the units of those defined by the spatial coordinate variables in the data set's science files.
+* A `pixel_size` attribute is needed in an .ini file when gridded science files don't include a GeoTransform attribute in the grid mapping variable. The value specified should be just a number—no units (m, km) need to be specified since they're assumed to be the same as the units of those defined by the spatial coordinate variables in the data set's science files.
   * e.g., `pixel_size = 25`
 * Date/time strings can be parsed using `datetime.fromisoformat`
 * The checksum_type must be SHA256
@@ -452,7 +452,7 @@ the named group `(?P<time_coverage_start>)`.
 be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
 4. Rarely applicable for science files that aren't netCDF (.txt, .csv, .jpg, .tif, etc.). 
 
-#### Granule and Browse RegEx
+#### Granule and Browse regex
 To identify browse files and declare a file name pattern when necessary
 for grouping files in a granule and/or browse with files in a granule, two 
 further .ini elements are available: 
@@ -689,7 +689,7 @@ channels, and post a quick "done" note when you're done ingest testing.**
   where `cumulus-uat` reflects the profile name specified in your AWS credential and config files.
   If you can't remember whether you've sourced your AWS profile, run `aws configure list` at the prompt.
 
-If you run `$ metgenc process -c ./init/\<some .ini file\>` to test end-to-end ingest, but you get a flurry of errors,
+If you run `$ metgenc process -c ./init/<some .ini file>` to test end-to-end ingest, but you get a flurry of errors,
 see if sourcing your AWS credentials (`source metgenc-env.sh cumulus-uat`) solves the problem! Forgetting
 to set up communications between MetGenC and AWS is easy to do, but thankfully, easy to fix.
 
