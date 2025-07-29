@@ -266,8 +266,10 @@ Notes column key:
  P = Premet file attributes that may be specified in a premet file; when used, a
   `premet_dir`path must be defined in the .ini file.
   
- 1 = Used to populate the production date and time values in UMM-G output; OC .ini
-  attribte remains `date_modified` = \<value\>.
+ 1 = Used to populate the production date and time values in UMM-G output; the OC .ini
+  attribte is also `date_modified` = \<value\>. If a netCDF file doesn't have a date_modified
+  global attribute, but does have a date_created, add date_modified attribute to the
+  data set .ini file and set it's value to that of the file's date_created value.
   
  2 = Used to populate the time begin and end UMM-G values; OC .ini attribute for
   time_coverage_start is `time_start_regex` = \<value\>, and for time_coverage_end the
