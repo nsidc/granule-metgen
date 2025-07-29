@@ -537,7 +537,7 @@ MetGenC includes optimized polygon generation capabilities for creating spatial 
 
 When a granule has an associated `.spatial` file containing geodetic point data (≥3 points), MetGenC will automatically generate an optimized polygon to enclose the data points instead of using the basic point-to-point polygon method. This results in more accurate spatial coverage with fewer vertices.
 
-**This feature is optional but enabled by default within MetGenC. To disable or to change values**, edit the .ini file for the collection and add any or all of the following parameters and the values you'd like them to be. Largely the values shouldn't need to be altered, but should ingest fail for GPolygonSpatial errors, the attribute to add to the .ini file would be the `spatial_polygon_cartesian_tolerance`, and reducing the coordinate precision (e.g., .0001 => .01).
+**This feature is optional but enabled by default within MetGenC. To disable or to change values**, edit the .ini file for the collection and add any or all of the following parameters and the values you'd like them to be. Largely the values shouldn't need to be altered, but should ingest fail for GPolygonSpatial errors, the attribute to add to the .ini file would be the `spatial_polygon_cartesian_tolerance`, and decreasing the coordinate precision (e.g., .0001 => .01).
 
 **Configuration Parameters:**
 
@@ -664,7 +664,7 @@ Options:
 The **process** command can be run either with or without specifying the `-d` / `--dry-run` option.
 * When the dry run option is specified _and_ the `-wc` / `--write-cnm` option is invoked, or your config
 file contains `write_cnm_file = true` (instead of `= false`), CNM files will be written locally to the output/cnm
-directory. This promotes you having the ability to validate and visually QC their content before letting them guide ingest to CUAT.
+directory. This promotes operators having the ability to validate and visually QC their content before letting them guide ingest to CUAT.
 * When run without the dry run option, metgenc will transfer cnm messages to AWS, kicking off end-to-end ingest of
 data and UMM-G files to CUAT.
 
