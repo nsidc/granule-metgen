@@ -17,8 +17,8 @@ LOGGER = logging.getLogger(constants.ROOT_LOGGER)
 
 
 @click.group(
-    name="metgenc-polygons",
-    epilog="For detailed help on each command, run: metgenc-polygons COMMAND --help",
+    name="metgenc-lab-polygons",
+    epilog="For detailed help on each command, run: metgenc-lab-polygons COMMAND --help",
 )
 @click.version_option(package_name="nsidc-metgenc")
 def cli():
@@ -38,10 +38,9 @@ def cli():
 @click.argument("collection")
 @click.option("-n", "--number", default=5, help="Number of granules to process")
 @click.option("-p", "--provider", help="Data provider (e.g., NSIDC_CPRD)")
-@click.option("--token-file", help="Path to EDL bearer token file")
 @click.option("-o", "--output", default="polygon_comparisons", help="Output directory")
 @click.option("--granule", help="Process specific granule instead of random selection")
-def compare_polygons(collection, number, provider, token_file, output, granule):
+def compare_polygons(collection, number, provider, output, granule):
     """Compare generated polygons with CMR polygons for a collection.
 
     COLLECTION: The collection short name (e.g., LVISF2, ILVIS2)
@@ -50,42 +49,31 @@ def compare_polygons(collection, number, provider, token_file, output, granule):
 
     \b
     # Compare 10 random LVISF2 granules
-    metgenc-polygons compare LVISF2 -n 10 --provider NSIDC_CPRD
+    metgenc-lab-polygons compare LVISF2 -n 10 --provider NSIDC_CPRD
 
     \b
-    # Compare specific granule with authentication
-    metgenc-polygons compare LVISF2 --granule "GRANULE_NAME" --token-file ~/.edl_token
+    # Compare specific granule
+    metgenc-lab-polygons compare LVISF2 --granule "GRANULE_NAME"
 
     \b
     # Use custom output directory
-    metgenc-polygons compare ILVIS2 -n 20 -o /tmp/polygon_analysis
+    metgenc-lab-polygons compare ILVIS2 -n 20 -o /tmp/polygon_analysis
     """
     try:
-        from nsidc.metgen.spatial.polygon_driver import PolygonComparisonDriver
+        from nsidc.metgen.lab.polygon_driver import PolygonComparisonDriver
     except ImportError as e:
         click.echo(f"Error: Unable to import spatial polygon driver: {e}", err=True)
         click.echo("Make sure the spatial module dependencies are installed.", err=True)
         sys.exit(1)
 
-    # Load authentication token if provided
-    token = None
-    if token_file:
-        token_path = Path(token_file).expanduser()
-        try:
-            with open(token_path, "r") as f:
-                token = f.read().strip()
-            click.echo(f"Loaded EDL bearer token from {token_path}")
-        except Exception as e:
-            click.echo(
-                f"Warning: Could not read token file {token_path}: {e}", err=True
-            )
+    # Authentication is handled by earthaccess
 
     # Create output directory
     output_dir = Path(output)
     output_dir.mkdir(exist_ok=True)
 
     # Create driver with configuration
-    driver = PolygonComparisonDriver(output_dir=str(output_dir), token=token)
+    driver = PolygonComparisonDriver(output_dir=str(output_dir))
 
     click.echo(f"Starting polygon comparison for collection: {collection}")
     click.echo(f"Output directory: {output_dir.absolute()}")
@@ -94,19 +82,29 @@ def compare_polygons(collection, number, provider, token_file, output, granule):
         if granule:
             # Process specific granule
             click.echo(f"Processing specific granule: {granule}")
-            driver.process_specific_granule(
+            success = driver.process_specific_granule(
                 short_name=collection, granule_ur=granule, provider=provider
             )
+            if not success:
+                raise click.ClickException("Failed to process granule")
         else:
             # Process random granules from collection
             click.echo(f"Processing {number} random granules")
             if provider:
                 click.echo(f"Using provider: {provider}")
-            driver.process_collection(
+            success = driver.process_collection(
                 short_name=collection, provider=provider, n_granules=number
             )
 
-        click.echo(f"✓ Comparison completed! Results saved to: {output_dir.absolute()}")
+            if success:
+                click.echo(
+                    f"✓ Comparison completed! Results saved to: {output_dir.absolute()}"
+                )
+            else:
+                click.echo(
+                    f"⚠ Comparison completed with errors. Check output at: {output_dir.absolute()}"
+                )
+                raise click.ClickException("No granules were successfully processed")
 
     except Exception as e:
         click.echo(f"Error during polygon comparison: {e}", err=True)
@@ -141,11 +139,11 @@ def validate_polygon(polygon_file, file_format, check_coverage, points_file):
 
     \b
     # Validate a GeoJSON polygon
-    metgenc-polygons validate my_polygon.geojson
+    metgenc-lab-polygons validate my_polygon.geojson
 
     \b
     # Validate and check coverage against source points
-    metgenc-polygons validate polygon.json --check-coverage --points-file points.csv
+    metgenc-lab-polygons validate polygon.json --check-coverage --points-file points.csv
     """
     try:
         import geopandas as gpd
@@ -260,7 +258,7 @@ def info():
     click.echo("• info     - Show this information")
     click.echo()
     click.echo("For help with a specific command:")
-    click.echo("  metgenc-polygons COMMAND --help")
+    click.echo("  metgenc-lab-polygons COMMAND --help")
 
 
 if __name__ == "__main__":

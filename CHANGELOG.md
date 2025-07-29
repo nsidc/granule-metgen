@@ -1,5 +1,6 @@
 ## v1.9.0rc3
 
+* Adds an experimental script that generates premet & spatial files for OLVIS1A granules
 * Adds the ability for the operator to override the default minimum distance tolerance between points
 * Fixes a regression where the flightline polygon would sometimes be mistakenly oriented clockwise
 * Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
