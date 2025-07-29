@@ -1,6 +1,6 @@
 - [MetGenC](#metgenc)
   * [Level of Support](#level-of-support)
-  * [Before Running MetGenC: Tips and Assumptions](#before-running-metgenc-tips-and-assumptions)
+  * [Before Running MetGenC on the VM: Tips and Assumptions](#before-running-metgenc-on-the-vm-tips-and-assumptions)
   * [CMR Authentication and use of Collection Metadata](#cmr-authentication-and-use-of-collection-metadata)
   * [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
   * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
