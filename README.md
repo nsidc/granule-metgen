@@ -233,7 +233,7 @@ secret_key     ****************cJ+5              env
   that variable is the same in every science file).
 
 ### MetGenC .ini File Assumtions
-* A `pixel_size` attribute is needed in an .ini file when gridded science files don't include a GeoTransform attribute in the grid mapping variable. The value specified should be just a number—no units (m, km) need to be specified since they're assumed to be the same as the units of those defined by the spatial coordinate variables in the data set's science files.
+* A `pixel_size` attribute is needed in a data set's .ini file when gridded science files don't include a GeoTransform attribute in the grid mapping variable. The value specified should be just a number—no units (m, km) need to be specified since they're assumed to be the same as the units of those defined by the spatial coordinate variables in the data set's science files.
   * e.g., `pixel_size = 25`
 * Date/time strings can be parsed using `datetime.fromisoformat`
 * The checksum_type must be SHA256
