@@ -82,19 +82,25 @@ def compare_polygons(collection, number, provider, output, granule):
         if granule:
             # Process specific granule
             click.echo(f"Processing specific granule: {granule}")
-            driver.process_specific_granule(
+            success = driver.process_specific_granule(
                 short_name=collection, granule_ur=granule, provider=provider
             )
+            if not success:
+                raise click.ClickException("Failed to process granule")
         else:
             # Process random granules from collection
             click.echo(f"Processing {number} random granules")
             if provider:
                 click.echo(f"Using provider: {provider}")
-            driver.process_collection(
+            success = driver.process_collection(
                 short_name=collection, provider=provider, n_granules=number
             )
-
-        click.echo(f"✓ Comparison completed! Results saved to: {output_dir.absolute()}")
+            
+            if success:
+                click.echo(f"✓ Comparison completed! Results saved to: {output_dir.absolute()}")
+            else:
+                click.echo(f"⚠ Comparison completed with errors. Check output at: {output_dir.absolute()}")
+                raise click.ClickException("No granules were successfully processed")
 
     except Exception as e:
         click.echo(f"Error during polygon comparison: {e}", err=True)

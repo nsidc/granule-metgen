@@ -125,6 +125,9 @@ class PolygonComparisonDriver:
 
         # Create collection summary
         self.create_collection_summary(collection_dir, short_name, results)
+        
+        # Return success status
+        return len(results) > 0
 
     def _process_granules_sequential(self, granules, collection_dir, data_extensions):
         """Process granules sequentially (original method)."""
@@ -206,14 +209,17 @@ class PolygonComparisonDriver:
 
                 # Create single-granule summary
                 self.create_collection_summary(collection_dir, short_name, [result])
+                return True
             else:
                 print("\nProcessing failed.")
+                return False
 
         except Exception as e:
             print(f"[PolygonDriver] Error querying CMR: {e}")
             import traceback
 
             traceback.print_exc()
+            return False
 
     def process_granule(self, granule_entry, output_dir, data_extensions):
         """
@@ -1035,8 +1041,8 @@ class PolygonComparisonDriver:
             ["Metric", "CMR Polygon", "New Polygon"],
             [
                 "Area",
-                f"{metrics['cmr_area_deg2']:.6f}°²",
-                f"{metrics['generated_area_deg2']:.6f}°²",
+                f"{metrics['cmr_area']:.6f}°²",
+                f"{metrics['generated_area']:.6f}°²",
             ],
             [
                 "Vertices",
@@ -1175,11 +1181,11 @@ class PolygonComparisonDriver:
                 left_table[(row_idx, 1)].set_facecolor("lightcoral")
             elif (
                 cell_key == "CMR Coverage"
-                and metrics["cmr_covered_by_generated"] >= 0.9
+                and metrics["cmr_coverage_by_generated"] >= 0.9
             ):
                 left_table[(row_idx, 1)].set_facecolor("lightgreen")
             elif (
-                cell_key == "CMR Coverage" and metrics["cmr_covered_by_generated"] < 0.9
+                cell_key == "CMR Coverage" and metrics["cmr_coverage_by_generated"] < 0.9
             ):
                 left_table[(row_idx, 1)].set_facecolor("lightcoral")
             elif cell_key == "Coverage Ratio" and "data_coverage_ratio" in metrics:
@@ -1224,7 +1230,7 @@ class PolygonComparisonDriver:
             r["metrics"].get("generated_data_coverage", 0) for r in results
         ]
         area_ratios = [r["metrics"]["area_ratio"] for r in results]
-        cmr_coverages = [r["metrics"]["cmr_covered_by_generated"] for r in results]
+        cmr_coverages = [r["metrics"]["cmr_coverage_by_generated"] for r in results]
         vertex_counts = [r["metrics"]["generated_vertices"] for r in results]
         generation_times = [
             r["metadata"].get("generation_time_seconds", 0) for r in results
@@ -1292,7 +1298,7 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         for r in results:
             data_cov = r["metrics"].get("generated_data_coverage", 0)
             gen_time = r["metadata"].get("generation_time_seconds", 0)
-            summary_text += f"| {r['granule_ur'][:50]}... | {data_cov:.1%} | {r['metrics']['area_ratio']:.3f} | {r['metrics']['cmr_covered_by_generated']:.1%} | {r['metrics']['generated_vertices']} | {r['data_points']:,} | {gen_time:.3f} |\n"
+            summary_text += f"| {r['granule_ur'][:50]}... | {data_cov:.1%} | {r['metrics']['area_ratio']:.3f} | {r['metrics']['cmr_coverage_by_generated']:.1%} | {r['metrics']['generated_vertices']} | {r['data_points']:,} | {gen_time:.3f} |\n"
 
         # Save summary
         summary_file = output_dir / "collection_summary.md"
