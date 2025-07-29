@@ -1,11 +1,11 @@
-## UNRELEASED
+## v1.10.0rc0
 
 * Retrieve platform/instrument/sensor information if it exists in the premet
   file and include it in UMM-G output. (Issue-227)
 * Treat equivalent begin and end date/times in `premet` files as a single time
   value. (Issue-221)
 
-## v1.9.0rc3
+## v1.10.0rc0
 
 * Adds the ability for the operator to override the default minimum distance tolerance between points
 * Fixes a regression where the flightline polygon would sometimes be mistakenly oriented clockwise
