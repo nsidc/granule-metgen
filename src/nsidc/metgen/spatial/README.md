@@ -58,5 +58,4 @@ The module integrates seamlessly with MetGenC's spatial processing through the e
 
 ## Dependencies
 
-**Core**: `shapely`, `numpy`, `concave-hull`  
-**Comparison tool only**: `geopandas`, `matplotlib`, `requests`
+**Core**: `shapely`, `numpy`, `concave-hull`

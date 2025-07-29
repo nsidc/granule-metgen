@@ -112,4 +112,3 @@ This tool works in conjunction with the spatial module's `create_flightline_poly
 - `geopandas`: Spatial data manipulation
 - `matplotlib`: Visualization generation
 - `shapely`: Polygon geometry operations
-- `requests`: HTTP requests for CMR API

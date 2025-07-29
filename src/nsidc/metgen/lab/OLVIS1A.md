@@ -75,6 +75,5 @@ The processor retrieves granules sequentially from CMR:
 
 ## Requirements
 
-- Python packages: numpy, requests
 - Earthdata Login credentials (username and password) for downloading data
 - Network access to NASA CMR and data repositories
