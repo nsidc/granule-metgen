@@ -546,17 +546,18 @@ When a granule has an associated `.spatial` file containing geodetic point data 
 | Spatial       | spatial_polygon_enabled          | boolean | true    | Enable/disable polygon generation for .spatial files |
 | Spatial       | spatial_polygon_target_coverage  | float   | 0.98    | Target data coverage percentage (0.80-1.0) |
 | Spatial       | spatial_polygon_max_vertices     | integer | 100     | Maximum vertices in generated polygon (10-1000) |
-| Spatial       | spatial_polygon_cartesian_tolerance | float | .0001  | Default is CMR's claimed default, can be set to a larger number to decrease vertex precision (and correct GPolygonSpatialErrors, ideally | 
+| Spatial       | spatial_polygon_cartesian_tolerance | float | 0.0001  | Minimum distance between polygon points in degrees (0.00001-0.01) |
+
 
 
 ##### Example Spatial Polygon Generation Configuration
-Example showing content added to an .ini file, having edited the CMR default vertex tolerance (distance between two vertices) to generalize the coordinate precision of vertices defining the GPoly in ummg json files generated:
+Example showing content added to an .ini file, having edited the CMR default vertex tolerance (distance between two vertices) to decrease the precision of the GPoly coordinate pairs listed in the ummg json files MetGenC generates:
 ```ini
 [Spatial]
 spatial_polygon_enabled = true
 spatial_polygon_target_coverage = 0.98
 spatial_polygon_max_vertices = 100
-spatial_polygon_cartesian_tolerance = .005
+spatial_polygon_cartesian_tolerance = .01
 ```
 Example showing the key pair added to an .ini file to disable spatial polygon generation:
 ```ini
@@ -575,6 +576,9 @@ spatial_polygon_enabled = false
 - ❌ Granule spatial representation is `CARTESIAN`
 - ❌ Insufficient points (<3) for polygon generation
 - ❌ Polygon generation fails (automatic fallback)
+
+**Tolerance Requirements:**
+The `spatial_polygon_cartesian_tolerance` parameter ensures that generated polygons meet NASA CMR validation requirements. The CMR system requires that each point in a polygon must have a unique spatial location - if two points are closer than the tolerance threshold in both latitude and longitude, they are considered the same point and the polygon becomes invalid. MetGenC automatically filters points during polygon generation to ensure this requirement is met.
 
 This enhancement is backward compatible - existing workflows continue unchanged, and polygon generation only activates for appropriate `.spatial` file scenarios.
 

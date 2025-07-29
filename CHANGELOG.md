@@ -1,8 +1,14 @@
-## v1.9.0rc0
+## v1.9.0rc3
 
+* Adds the ability for the operator to override the default minimum distance tolerance between points
+* Fixes a regression where the flightline polygon would sometimes be mistakenly oriented clockwise
 * Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
+* Fix UMM-G `RangeDateTimes` template error.
+* Refine search for `AdditionalAttribute` values in `premet` files.
+* Add an integration test suite for all collections. See the [integration test README](tests/integration/README.md)
+* Fix a bug which caused incorrect output file locations in some cases
 
-## v1.9.0rc0
+## v1.8.0
 
 * Adds a generic reader used when `metgenc` processes granules with an unknown
   file-type. It uses spatial metadata from `spatial` files or collection metadata. (Issue-199)

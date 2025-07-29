@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 import re
 from pathlib import Path
 from unittest.mock import mock_open, patch
@@ -467,9 +468,10 @@ def test_returns_datetime_range():
     result = metgen.populate_temporal(
         [{"BeginningDateTime": "123", "EndingDateTime": "456"}]
     )
-    assert "RangeDateTime" in result
-    assert '"BeginningDateTime": "123"' in result
-    assert '"EndingDateTime": "456"' in result
+    result_json = json.loads(result)
+    assert isinstance(result_json["RangeDateTime"], dict)
+    assert result_json["RangeDateTime"]["BeginningDateTime"] == "123"
+    assert result_json["RangeDateTime"]["EndingDateTime"] == "456"
 
 
 def test_s3_object_path_has_no_leading_slash():

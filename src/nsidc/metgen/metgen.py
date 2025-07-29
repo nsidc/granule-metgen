@@ -727,7 +727,8 @@ def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
         return ""
 
     if len(data_file_paths) > 1:
-        m = re.search(granule_regex, a_file_path)
+        basename = os.path.basename(a_file_path)
+        m = re.search(granule_regex, basename)
         return "".join(m.groups()) if m else ""
     else:
         return os.path.basename(a_file_path)
@@ -1124,10 +1125,9 @@ def populate_spatial(
             # Create configured polygon generator using partial application
             generate_polygon = partial(
                 create_flightline_polygon,
-                target_coverage=configuration.spatial_polygon_target_coverage
-                or constants.DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE,
-                max_vertices=configuration.spatial_polygon_max_vertices
-                or constants.DEFAULT_SPATIAL_POLYGON_MAX_VERTICES,
+                target_coverage=configuration.spatial_polygon_target_coverage,
+                max_vertices=configuration.spatial_polygon_max_vertices,
+                cartesian_tolerance=configuration.spatial_polygon_cartesian_tolerance,
             )
 
             # Extract lon/lat arrays from spatial_values
