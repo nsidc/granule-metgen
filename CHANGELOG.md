@@ -1,4 +1,9 @@
-# UNRELEASED
+## v1.10.0rc0
+
+* Retrieve platform/instrument/sensor information if it exists in the premet
+  file and include it in UMM-G output. (Issue-227)
+* Treat equivalent begin and end date/times in `premet` files as a single time
+  value. (Issue-221)
 
 ## v1.9.0rc3
 
@@ -6,9 +11,9 @@
 * Fixes a regression where the flightline polygon would sometimes be mistakenly oriented clockwise
 * Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
 * Fix UMM-G `RangeDateTimes` template error.
-* Refine search for `AdditionalAttribute` values in `premet` files.
+* Refine search for `AdditionalAttribute` values in `premet` files. (Issue-225)
 * Add an integration test suite for all collections. See the [integration test README](tests/integration/README.md)
-* Fix a bug which caused incorrect output file locations in some cases
+* Fix a bug which caused incorrect output file locations in some cases.
 
 ## v1.8.0
 
