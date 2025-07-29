@@ -125,7 +125,7 @@ class PolygonComparisonDriver:
 
         # Create collection summary
         self.create_collection_summary(collection_dir, short_name, results)
-        
+
         # Return success status
         return len(results) > 0
 
@@ -1185,7 +1185,8 @@ class PolygonComparisonDriver:
             ):
                 left_table[(row_idx, 1)].set_facecolor("lightgreen")
             elif (
-                cell_key == "CMR Coverage" and metrics["cmr_coverage_by_generated"] < 0.9
+                cell_key == "CMR Coverage"
+                and metrics["cmr_coverage_by_generated"] < 0.9
             ):
                 left_table[(row_idx, 1)].set_facecolor("lightcoral")
             elif cell_key == "Coverage Ratio" and "data_coverage_ratio" in metrics:

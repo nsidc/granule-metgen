@@ -95,11 +95,15 @@ def compare_polygons(collection, number, provider, output, granule):
             success = driver.process_collection(
                 short_name=collection, provider=provider, n_granules=number
             )
-            
+
             if success:
-                click.echo(f"✓ Comparison completed! Results saved to: {output_dir.absolute()}")
+                click.echo(
+                    f"✓ Comparison completed! Results saved to: {output_dir.absolute()}"
+                )
             else:
-                click.echo(f"⚠ Comparison completed with errors. Check output at: {output_dir.absolute()}")
+                click.echo(
+                    f"⚠ Comparison completed with errors. Check output at: {output_dir.absolute()}"
+                )
                 raise click.ClickException("No granules were successfully processed")
 
     except Exception as e:
