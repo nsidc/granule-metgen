@@ -474,7 +474,7 @@ def test_no_matching_premet_key():
 
 def test_a_matching_premet_key():
     assert (
-        metgen.populate_additional_attributes({"MyKey": "MyValue"}, "MyKey")
+        metgen.populate_additional_attributes({"MyKey": "MyValue"}, "MyKey").rstrip()
         == '"MyKey": "MyValue",'
     )
 
