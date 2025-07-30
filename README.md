@@ -337,29 +337,31 @@ Some attribute values may be read from the .ini file if the values
 can't be gleaned from—or don't exist in—the science file(s), but whose 
 values are known for the data set. Use of these elements can be typical 
 for data sets comprising non-CF/non-NSIDC-compliant netCDF science files,
-as well as non-netCDF data sets comprising .tif, .csv, .h5, etc. This  
-approach assumes the attribute values are the same for all granules considering  
-there's only one .ini file for a given data set. The element values must 
-be manually added to the .ini file, as none of them are prompted for in the
-`metgenc init` functionality.
+as well as non-netCDF data sets comprising .tif, .csv, .h5, etc. The element
+values must be manually added to the .ini file, as none are prompted for 
+in the `metgenc init` functionality.
 
 See this project's GitHub file, `fixtures/test.ini` for examples.
 
-| .ini element          | .ini section | (NetCDF) Attribute  | Note |
-| -----------------------|-------------- | ------------------- | ---- |
-| date_modified          | Collection    | date_modified       | 1    |
-| time_start_regex       | Collection    | time_coverage_start | 2    |
-| time_coverage_duration | Collection    | time_coverage_end   | 3    |
-| pixel_size             | Collection    | GeoTransform        | 4    |
+| .ini element          | .ini section | Attribute absent from netCDF file the .ini attribute stands in for | Attribute populated in UMMG | Note |
+| -----------------------|-------------- | ------------------- | ---------------------------| ---- |
+| date_modified          | Collection    | date_modified       | ProductionDateTime | 1    |
+| time_start_regex       | Collection    | time_coverage_start | BeginningDateTime | 2    |
+| time_coverage_duration | Collection    | time_coverage_end   | EndingDateTime | 3    |
+| pixel_size             | Collection    | GeoTransform        | n/a | 4    |
 
 1. For ease, set this to be the year-month-day MetGenC is run (e.g., date_modified =
 2025-07-22); including a precise time value is unnecessary (we're breaking from how SIPSMetgen
-rolled here!).
-2. Matched against file name to determine time coverage start value. Must match using
-the named group `(?P<time_coverage_start>)`.
-3. Duration value applied to `time_coverage_start` to determine `time_coverage_end`. Must
-be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
-4. Rarely applicable for science files that aren't netCDF (.txt, .csv, .jpg, .tif, etc.). 
+rolled here!); this value is a constant that will be applied to all granule-level metadata.
+2. This regex is matched against file name to determine `time_coverage_start`, which
+is used to populate granules' ummg BeginningDateTime values. Must match using the named
+group `(?P<time_coverage_start>)`.
+3. A duration value applied to `time_coverage_start` to determine `time_coverage_end`,
+which is used to populate granules' ummg EndingDateTime values; value is a constant that will
+be applied to each time_start_regex value gleaned from the file. Must be a valid
+[ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
+4. Rarely applicable for science files that aren't netCDF (.txt, .csv, .jpg, .tif, etc.); this
+value is a constant that will be applied to all granule-level metadata. 
 
 #### Granule and Browse regex
 For data sets comprising multi-file granules (with or without browse), or single-file
