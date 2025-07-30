@@ -1,6 +1,9 @@
 ## UNRELEASED
 
-* a test change for debugging version bump
+* Allow operator to specify which science (data) file should be scraped for
+  metadata in the case of a granule with multiple science files. (Issue-169)
+* Update version bump configuration to only deal with `UNRELEASED` entries in
+  this (`CHANGELOG.md`) file, and to insert the date of the version bump.
 
 
 ## v1.10.0rc0
