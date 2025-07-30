@@ -95,12 +95,7 @@ replace = 'version = "{new_version}"'
 [[tool.bumpversion.files]]
 filename = "CHANGELOG.md"
 search = "UNRELEASED"
-replace = "v{new_version}"
-
-[[tool.bumpversion.files]]
-filename = "CHANGELOG.md"
-search = "v{current_version}"
-replace = "v{new_version}"
+replace = "v{new_version} ({utcnow:%Y-%m-%d})"
 
 [[tool.bumpversion.files]]
 filename = "docs/source/conf.py"
