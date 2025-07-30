@@ -15,6 +15,7 @@
       - [Optional Configuration Elements](#optional-configuration-elements)
       - [Granule and Browse regex](#granule-and-browse-regex)
         * [Example: Use of granule_regex](#example-use-of-granule_regex)
+      - [When temporal details are only found in file names](#when-temporal-details-are-only-found-in-file-names)
       - [Using Premet and Spatial Files](#using-premet-and-spatial-files)
       - [Setting Collection Spatial Extent as Granule Spatial Extent](#setting-collection-spatial-extent-as-granule-spatial-extent)
       - [Setting Collection Temporal Extent as Granule Temporal Extent](#setting-collection-temporal-extent-as-granule-temporal-extent)
@@ -362,9 +363,12 @@ be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations
 4. Rarely applicable for science files that aren't netCDF (.txt, .csv, .jpg, .tif, etc.). 
 
 #### Granule and Browse regex
-To identify browse files and declare a file name pattern when necessary
-for grouping files in a granule and/or browse with files in a granule, two 
-further .ini elements are available: 
+For data sets comprising multi-file granules (with or without browse), or single-file
+granules with browse, browse_regex and granule_regex are the configuration elements to
+use (neither need to be included in the .ini for collections comprising single-file granules
+without browse). Use of browse_regex facilitates identifying the browse images so they're
+classified as such in the CNM. Use of granule_regex defines a file name pattern to appropriately
+group files by the element common for the multiple files to be grouped within each granule: 
 | .ini element | .ini section | Note |
 | ------------- | ------------- | ---- |
 | browse_regex  | Collection    | 1    |
@@ -403,6 +407,16 @@ Each of those strings uniquely identify all files associated with a given granul
 - `NSIDC0081_SEAICE_PS_`, `_v2.0_` and `DUCk` will be combined with the `granuleid`
 text to form the granule name recorded in the UMM-G and CNM output (in the case of
 single-file granules, the file extension will be added to the granule name).
+
+#### When temporal details are only found in file names
+When a collection contains files that, within the files, no temporal details
+are documented but the file names themselves contain a timestamp, an optional
+configuration element, filename_regex can be used to pull the time from the file
+name and add it to the ummg's TemporalExtent details.
+| .ini element | .ini section | Note |
+| ------------- | ------------- | ---- |
+| filename_regex  | Collection    | 1    |
+
 
 #### Using Premet and Spatial files
 When necessary, the following two .ini elements can be used to define paths
