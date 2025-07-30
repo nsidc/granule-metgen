@@ -15,7 +15,6 @@
       - [Optional Configuration Elements](#optional-configuration-elements)
       - [Granule and Browse regex](#granule-and-browse-regex)
         * [Example: Use of granule_regex](#example-use-of-granule_regex)
-      - [When temporal details are only found in file names](#when-temporal-details-are-only-found-in-file-names)
       - [Using Premet and Spatial Files](#using-premet-and-spatial-files)
       - [Setting Collection Spatial Extent as Granule Spatial Extent](#setting-collection-spatial-extent-as-granule-spatial-extent)
       - [Setting Collection Temporal Extent as Granule Temporal Extent](#setting-collection-temporal-extent-as-granule-temporal-extent)
@@ -407,17 +406,6 @@ Each of those strings uniquely identify all files associated with a given granul
 - `NSIDC0081_SEAICE_PS_`, `_v2.0_` and `DUCk` will be combined with the `granuleid`
 text to form the granule name recorded in the UMM-G and CNM output (in the case of
 single-file granules, the file extension will be added to the granule name).
-
-#### When temporal details are only found in file names
-When a collection contains files that, within the files, no temporal details
-are documented but the file names themselves contain a timestamp, optional
-configuration elements: filename_regex and time_coverage_duration can be used 
-to pull the time from the file name and add it to the ummg's TemporalExtent 
-details and define its coverage duration.
-| .ini element | .ini section | Note |
-| ------------- | ------------- | ---- |
-| filename_regex  | Collection    | 1    |
-| time_coverage_duration  | Collection    | 1    |
 
 #### Using Premet and Spatial files
 When necessary, the following two .ini elements can be used to define paths
