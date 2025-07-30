@@ -35,10 +35,9 @@ polygon, metadata = create_flightline_polygon(lon_array, lat_array)
 ## Module Components
 
 - **`polygon_generator.py`** - Core polygon generation function
-- **`cmr_client.py`** - **CMR API integration for comparison tool only**
-- **`polygon_driver.py`** - Automated comparison workflow
+- **`cmr_client.py`** - CMR API integration (used by comparison tool in lab package)
 
-**Important**: The `CMRClient` is designed exclusively for the polygon comparison diagnostic tool (`metgenc-polygons`). It is not used in the main MetGenC workflow and should not be imported for general spatial processing.
+**Note**: The polygon comparison diagnostic tool (`metgenc-lab-polygons`) and its associated components (`polygon_driver.py`, `spatial_cli.py`, `spatial_utils.py`) are located in the lab package as experimental features. See the [lab documentation](../lab/POLYGON_COMPARISON.md) for details.
 
 ## Algorithm Behavior
 
@@ -55,9 +54,11 @@ polygon, metadata = create_flightline_polygon(lon_array, lat_array)
 
 ## Integration with MetGenC
 
-The module integrates seamlessly with MetGenC's spatial processing through the existing `populate_spatial()` function. When spatial polygon generation is enabled and `.spatial` files are present, the optimized polygon generation automatically replaces the basic point-to-point method.
+The module integrates seamlessly with MetGenC's spatial processing through the
+existing `populate_spatial()` function. When spatial polygon generation is
+enabled and `.spatial` files are present, the optimized polygon generation
+automatically replaces the basic point-to-point method.
 
 ## Dependencies
 
 **Core**: `shapely`, `numpy`, `concave-hull`
-**Comparison tool only**: `geopandas`, `matplotlib`, `requests`

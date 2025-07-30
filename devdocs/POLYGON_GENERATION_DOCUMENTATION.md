@@ -69,7 +69,7 @@ Provides all CMR-specific functionality.
 **Key Classes:**
 
 - **CMRClient**: Handles CMR API interactions
-  - Authentication via bearer tokens
+  - Authentication via earthaccess (username/password)
   - Granule querying with temporal sampling
   - UMM-G metadata retrieval
 
@@ -219,13 +219,10 @@ inside_count = np.sum(points_inside)
 
 ```bash
 # Process random granules from a collection
-python polygon_comparison_driver.py LVISF2 -n 10 --token-file ~/.edl_token
+python polygon_comparison_driver.py LVISF2 -n 10
 
 # Process specific granule
 python polygon_comparison_driver.py LVISF2 -g LVISF2_IS_ARCSIX2024_0815_R2503_066145.TXT
-
-# Without authentication (uses dummy data)
-python polygon_comparison_driver.py ILVIS2 -n 5
 ```
 
 ### Programmatic Usage
@@ -367,9 +364,8 @@ def process_granule(compare_cmr):
 - Process fewer points with sampling
 
 ### Authentication Errors
-- Ensure bearer token is valid
-- Check token file has no extra whitespace
-- Try environment variable: `export CMR_TOKEN=your-token`
+- Ensure EARTHDATA_USERNAME and EARTHDATA_PASSWORD environment variables are set
+- Verify credentials are valid in Earthdata Login
 
 ## Conclusion
 

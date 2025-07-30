@@ -362,9 +362,13 @@ be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations
 4. Rarely applicable for science files that aren't netCDF (.txt, .csv, .jpg, .tif, etc.).
 
 #### Granule and Browse regex
-To identify browse files and declare a file name pattern when necessary
-for grouping files in a granule and/or browse with files in a granule, two
-further .ini elements are available:
+For data sets comprising multi-file granules (with or without browse), or single-file
+granules with browse, browse_regex and granule_regex are the configuration elements to
+use (neither need to be included in the .ini for collections comprising single-file granules
+without browse). Use of browse_regex facilitates identifying the browse images so they're
+classified as such in the CNM. Use of granule_regex defines a file name pattern to appropriately
+group files by the element common for the multiple files to be grouped within each granule:
+
 | .ini element | .ini section | Note |
 | ------------- | ------------- | ---- |
 | browse_regex  | Collection    | 1    |
@@ -718,49 +722,6 @@ Rather than running `ruff` manually from the commandline, it can be
 integrated with the editor of your choice. See the
 [ruff editor integration](https://docs.astral.sh/ruff/editors/) guide.
 
-#### Spatial Polygon Diagnostic Tool
-
-The `metgenc-polygons` command-line tool is a diagnostic utility for developers to investigate and validate the flightline polygons that MetGenC generates for collections. This tool is particularly useful for analyzing polygon quality, comparing generated polygons against CMR reference data, and debugging spatial processing issues.
-
-**Installation:**
-The diagnostic tool is automatically available after installing MetGenC:
-
-    $ poetry install
-    # or
-    $ pip install nsidc-metgenc
-
-**Usage:**
-
-    $ metgenc-polygons --help
-
-**Available Commands:**
-
-* **`compare`** - Compare generated polygons with CMR polygons for collections
-* **`validate`** - Validate polygon files and check data coverage
-* **`info`** - Display tool information and usage
-
-**Examples:**
-
-Compare 10 random granules from LVISF2 collection:
-
-    $ metgenc-polygons compare LVISF2 -n 10 --provider NSIDC_CPRD
-
-Compare a specific granule with authentication:
-
-    $ metgenc-polygons compare LVISF2 --granule "GRANULE_NAME" --token-file ~/.edl_token
-
-Validate a polygon file and check data coverage:
-
-    $ metgenc-polygons validate polygon.geojson --check-coverage --points-file points.csv
-
-**Output:**
-The tool generates comparison reports including:
-- Visual plots comparing generated vs CMR polygons
-- Coverage statistics and polygon quality metrics
-- GeoJSON files of generated polygons for further analysis
-- Summary reports with processing metadata
-
-All output files are saved to the specified output directory (default: `polygon_comparisons/`).
 
 #### Releasing
 
