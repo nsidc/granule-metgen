@@ -5,7 +5,7 @@
   * [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
   * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
   * [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
-  * [Query a netCDF file for presence of MetGenC-Required Attributes](#query-a-netcdf-file-for-presence-of-metgenc-required-attributes)
+    + [Query a netCDF file for presence of MetGenC-Required Attributes](#query-a-netcdf-file-for-presence-of-metgenc-required-attributes)
     + [Attribute Reference links](#attribute-reference-links)
   * [Geometry Logic](#geometry-logic)
     + [Geometry Rules](#geometry-rules)
@@ -204,7 +204,12 @@ Notes column key:
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
-## Query a netCDF file for presence of MetGenC-Required Attributes
+### Query a netCDF file for presence of MetGenC-Required Attributes
+On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
+can run ncdump to check whether a netCDF representative of the collection's files contains the
+MetGenC-required attributes. When not reported, that attribute will have to be accommodated by
+it's associated .ini attribute being added to the .ini file. See [Optional Configuration Elements](#optional-configuration-elements) 
+for full details/descriptions of these.
 ```
 ncdump -h <file name.nc> | grep -e date_modified -e date_created -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
 ```
