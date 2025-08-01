@@ -745,13 +745,10 @@ def reference_data_file(regex: str, data_files: set[Path]):
         )
 
     # Error if regex matches more than one file
-    def reference_file_matcher(v):
-        re.search(regex, v)
-
-    if not one(reference_file_matcher, data_files):
+    if not one(lambda v: re.search(regex, v), data_files):
         raise Exception("reference_file_regex does not match exactly one science file.")
 
-    return some(reference_file_matcher, data_files)
+    return some(lambda v: re.search(regex, v), data_files)
 
 
 def matched_ancillary_file(granule_key: str, file_list: list[Path]) -> str:
