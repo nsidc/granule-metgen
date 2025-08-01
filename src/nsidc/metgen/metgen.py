@@ -32,6 +32,7 @@ from funcy import (
     get_in,
     last,
     notnone,
+    one,
     partial,
     rcompose,
     some,
@@ -734,16 +735,23 @@ def reference_data_file(regex: str, data_files: set[Path]):
     if not data_files:
         return None
 
+    if len(data_files) == 1:
+        return first(data_files)
+
     # Throw error if no regex and more than one data (science) file.
     if not regex and len(data_files) > 1:
         raise Exception(
             "Granule has multiple science files but reference_file_regex is not set."
         )
 
-    if len(data_files) == 1:
-        return first(data_files)
+    # Error if regex matches more than one file
+    def reference_file_matcher(v):
+        re.search(regex, v)
 
-    return some(lambda v: re.search(regex, v), data_files)
+    if not one(reference_file_matcher, data_files):
+        raise Exception("reference_file_regex does not match exactly one science file.")
+
+    return some(reference_file_matcher, data_files)
 
 
 def matched_ancillary_file(granule_key: str, file_list: list[Path]) -> str:

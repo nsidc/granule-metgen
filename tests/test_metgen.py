@@ -156,28 +156,41 @@ def test_size_is_zero_if_no_data_files():
 
 
 @patch("nsidc.metgen.metgen.os.path.getsize", return_value=100)
-def test_gets_single_file_size(single_file_granule):
+def test_gets_single_file_size(mock_size, single_file_granule):
     granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
     granule.data_filenames = {"/just/one/file"}
     assert granule.size() == 100
 
 
 @patch("nsidc.metgen.metgen.os.path.getsize", return_value=100)
-def test_sums_multiple_file_sizes(multi_file_granule):
+def test_sums_multiple_file_sizes(mock_size, multi_file_granule):
     granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
     granule.data_filenames = {"/first/file", "/second/file"}
     assert granule.size() == 200
 
 
-def test_uses_first_file_as_default(multi_file_granule):
-    summary = metgen.metadata_summary(multi_file_granule)
-    assert summary["production_date_time"] == "then"
-    assert summary["temporal"] == "now"
-    assert summary["geometry"] == "big"
+def test_ignores_regex_if_single_data_file():
+    reference_file = metgen.reference_data_file("important_file", {"/first/file"})
+    assert reference_file == "/first/file"
 
 
-def test_uses_reference_data_file():
-    assert True
+def test_finds_reference_data_file_with_regex():
+    reference_file = metgen.reference_data_file(
+        "important_file", {"/first/file", "/second/important_file", "/third/file"}
+    )
+    assert re.match("/second/important_file", reference_file)
+
+
+def test_error_if_multiple_reference_file_matches():
+    with pytest.raises(Exception):
+        metgen.reference_data_file(
+            "important_file", {"/first/important_file", "/second/important_file"}
+        )
+
+
+def test_error_if_no_reference_file_matches():
+    with pytest.raises(Exception):
+        metgen.reference_data_file("important_file", {"/first/file", "/second/file"})
 
 
 def test_no_cartesian_points():
