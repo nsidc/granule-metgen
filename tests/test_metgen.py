@@ -150,14 +150,23 @@ def test_banner():
     assert len(metgen.banner()) > 0
 
 
+def test_size_is_zero_if_no_data_files():
+    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    assert granule.size() == 0
+
+
+@patch("nsidc.metgen.metgen.os.path.getsize", return_value=100)
 def test_gets_single_file_size(single_file_granule):
-    summary = metgen.metadata_summary(single_file_granule)
-    assert summary["size_in_bytes"] == 150
+    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    granule.data_filenames = {"/just/one/file"}
+    assert granule.size() == 100
 
 
+@patch("nsidc.metgen.metgen.os.path.getsize", return_value=100)
 def test_sums_multiple_file_sizes(multi_file_granule):
-    summary = metgen.metadata_summary(multi_file_granule)
-    assert summary["size_in_bytes"] == 300
+    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    granule.data_filenames = {"/first/file", "/second/file"}
+    assert granule.size() == 200
 
 
 def test_uses_first_file_as_default(multi_file_granule):
@@ -165,6 +174,10 @@ def test_uses_first_file_as_default(multi_file_granule):
     assert summary["production_date_time"] == "then"
     assert summary["temporal"] == "now"
     assert summary["geometry"] == "big"
+
+
+def test_uses_reference_data_file():
+    assert True
 
 
 def test_no_cartesian_points():

@@ -164,6 +164,11 @@ def init_config(configuration_file):
         "browse_regex",
         Prompt.ask("Browse regex", default=constants.DEFAULT_BROWSE_REGEX),
     )
+    cfg_parser.set(
+        constants.COLLECTION_SECTION_NAME,
+        "reference_file_regex",
+        Prompt.ask("Reference science file regex"),
+    )
     print()
 
     print()
@@ -269,6 +274,12 @@ class Granule:
     data_reader: Callable[[str, str, str, config.Config], dict] = (
         lambda auth_id, cfg: dict()
     )
+
+    def size(self):
+        if not self.data_filenames:
+            return 0
+
+        return sum(os.path.getsize(data_file) for data_file in self.data_filenames)
 
 
 @dataclasses.dataclass
@@ -716,18 +727,23 @@ def granule_tuple(
 
 
 def reference_data_file(regex: str, data_files: set[Path]):
+    """
+    Identify the file to use as the "reference" file for purposes of
+    extracting granule metadata, in the case of a multi-science-file granule.
+    """
     if not data_files:
         return None
 
-    # throw error if no regex and more than one data file?
+    # Throw error if no regex and more than one data (science) file.
     if not regex and len(data_files) > 1:
-        raise Exception
+        raise Exception(
+            "Granule has multiple science files but reference_file_regex is not set."
+        )
 
-    if not regex:
+    if len(data_files) == 1:
         return first(data_files)
 
-    else:
-        return some(lambda v: re.search(regex, v), data_files)
+    return some(lambda v: re.search(regex, v), data_files)
 
 
 def matched_ancillary_file(granule_key: str, file_list: list[Path]) -> str:
@@ -888,33 +904,29 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         configuration.collection_geometry_override, gsr, granule
     )
 
-    # Populated metadata_details dict looks like:
+    # Populated summary dict looks like:
     # {
-    #   data_file: {
-    #       'size_in_bytes' => integer,
-    #       'production_date_time'  => iso datetime string,
-    #       'temporal' => an array of one (data represent a single point in time)
-    #                     or two (data cover a time range) datetime strings
-    #       'geometry' => an array of {'Longitude': x, 'Latitude': y} dicts
-    #   }
+    #     'size_in_bytes' => integer representing the sum of the sizes of
+    #                        *all* data files associated with the granule,
+    #     'production_date_time'  => iso datetime string,
+    #     'temporal' => an array of one (data represent a single point in time)
+    #                   or two (data cover a time range) datetime strings
+    #     'geometry' => an array of {'Longitude': x, 'Latitude': y} dicts
     # }
-    metadata_details = {}
-    for data_file in granule.data_filenames:
-        metadata_details[data_file] = {
-            "size_in_bytes": os.path.getsize(data_file),
-            "production_date_time": utilities.ensure_iso_datetime(
-                configuration.date_modified
-            ),
-        } | granule.data_reader(
-            data_file,
-            temporal_content,
-            spatial_content,
-            configuration,
-            gsr,
-        )
 
-    # Collapse information about (possibly) multiple files into a granule summary.
-    summary = metadata_summary(metadata_details)
+    summary = {
+        "production_date_time": utilities.ensure_iso_datetime(
+            configuration.date_modified
+        ),
+        "size_in_bytes": granule.size(),
+    } | granule.data_reader(
+        granule.reference_data_filename,
+        temporal_content,
+        spatial_content,
+        configuration,
+        gsr,
+    )
+
     summary["spatial_extent"] = populate_spatial(
         gsr, summary["geometry"], configuration, spatial_content
     )
@@ -1102,19 +1114,6 @@ def s3_object_path(granule, filename):
         }
     )
     return prefix + filename
-
-
-# size is a sum of all associated data file sizes.
-# all other attributes use the values from the first data file entry.
-def metadata_summary(details):
-    default = list(details.values())[0]
-
-    return {
-        "size_in_bytes": sum([x["size_in_bytes"] for x in details.values()]),
-        "production_date_time": default["production_date_time"],
-        "temporal": default["temporal"],
-        "geometry": default["geometry"],
-    }
 
 
 def checksum(file):
