@@ -5,6 +5,7 @@
   * [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
   * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
   * [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
+    + [Query a netCDF file for presence of MetGenC-Required Attributes](#query-a-netcdf-file-for-presence-of-metgenc-required-attributes)
     + [Attribute Reference links](#attribute-reference-links)
   * [Geometry Logic](#geometry-logic)
     + [Geometry Rules](#geometry-rules)
@@ -203,6 +204,16 @@ Notes column key:
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
+### Query a netCDF file for presence of MetGenC-Required Attributes
+On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
+can run ncdump to check whether a netCDF representative of the collection's files contains the
+MetGenC-required attributes. When not reported, that attribute will have to be accommodated by
+its associated .ini attribute being added to the .ini file. See [Optional Configuration Elements](#optional-configuration-elements)
+for full details/descriptions of these.
+```
+ncdump -h <file name.nc> | grep -e date_modified -e date_created -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
+```
+
 
 | netCDF file attributes not currently used by MetGenC | ACDD | CF Conventions | NSIDC Guidelines |
 | ----------------------------- | ---- | -------------- | ---------------- |
@@ -337,29 +348,36 @@ Some attribute values may be read from the .ini file if the values
 can't be gleaned from—or don't exist in—the science file(s), but whose
 values are known for the data set. Use of these elements can be typical
 for data sets comprising non-CF/non-NSIDC-compliant netCDF science files,
-as well as non-netCDF data sets comprising .tif, .csv, .h5, etc. This
-approach assumes the attribute values are the same for all granules considering
-there's only one .ini file for a given data set. The element values must
-be manually added to the .ini file, as none of them are prompted for in the
-`metgenc init` functionality.
+as well as non-netCDF data sets comprising .tif, .csv, .h5, etc. The element
+values must be manually added to the .ini file, as none are prompted for
+in the `metgenc init` functionality.
 
 See this project's GitHub file, `fixtures/test.ini` for examples.
 
-| .ini element          | .ini section | (NetCDF) Attribute  | Note |
-| -----------------------|-------------- | ------------------- | ---- |
-| date_modified          | Collection    | date_modified       | 1    |
-| time_start_regex       | Collection    | time_coverage_start | 2    |
-| time_coverage_duration | Collection    | time_coverage_end   | 3    |
-| pixel_size             | Collection    | GeoTransform        | 4    |
+| .ini element          | .ini section | Attribute absent from netCDF file the .ini attribute stands in for | Attribute populated in UMMG | Note |
+| -----------------------|-------------- | ------------------- | ---------------------------| ---- |
+| date_modified          | Collection    | date_modified       | ProductionDateTime | 1    |
+| time_start_regex       | Collection    | time_coverage_start | BeginningDateTime | 2    |
+| time_coverage_duration | Collection    | time_coverage_end   | EndingDateTime | 3    |
+| pixel_size             | Collection    | GeoTransform        | n/a | 4    |
 
 1. For ease, set this to be the year-month-day MetGenC is run (e.g., date_modified =
-2025-07-22); including a precise time value is unnecessary (we're breaking from how SIPSMetgen
-rolled here!).
-2. Matched against file name to determine time coverage start value. Must match using
-the named group `(?P<time_coverage_start>)`.
-3. Duration value applied to `time_coverage_start` to determine `time_coverage_end`. Must
-be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
-4. Rarely applicable for science files that aren't netCDF (.txt, .csv, .jpg, .tif, etc.).
+2025-07-22); this value is a constant that will be added to all ummg file's ProductionDateTime
+container.
+   * This attribute should be used with "nearly" compliant netCDF files that don't have global
+  attributes containing `date_modified`, and it will need to be used with non-netCDF file types.
+2. This regex attribute leverages a netCDF's file name containing a date to populate ummg files'
+TemporalExtent field attribute, BeginningDateTime. Must match using the named group `(?P<time_coverage_start>)`.
+   * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
+   (csv, tif, etc.) since these should rely on premet files containing temporal details for each file.
+3. The time_coverage_duration attribute value specifies the duration to be applied to the `time_coverage_start`
+value to generate correct EndingDateTime values in ummg files; this value is a constant that will
+be applied to each time_start_regex value gleaned from files. Must be a valid
+[ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
+   * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
+   (csv, tif, etc.) since these should rely on premet files containing temporal details for each file.
+5. Rarely applicable for science files that aren't gridded netCDF (.txt, .csv, .jpg, .tif, etc.); this
+value is a constant that will be applied to all granule-level metadata.
 
 #### Granule and Browse regex
 For data sets comprising multi-file granules (with or without browse), or single-file
