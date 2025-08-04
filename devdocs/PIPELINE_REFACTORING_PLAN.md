@@ -4,6 +4,10 @@
 
 This document outlines a plan to refactor the MetGenC pipeline using a State Monad-inspired pattern to create a composable, testable, and maintainable architecture that separates side-effects from pure computation.
 
+The current MetGenC pipeline is not extensible by users who need to process unsupported file formats or extract metadata in ways not built into the tool. A key goal of this refactoring is to provide a built-in and natural way for users to extend MetGenC by plugging in their own code to read metadata and/or data when the tool doesn't support something out-of-the-box.
+
+**Note**: For detailed code examples and technical implementations, see [PIPELINE_REFACTORING_CODE_EXAMPLES.md](./PIPELINE_REFACTORING_CODE_EXAMPLES.md).
+
 ## Current Pipeline Issues
 
 The current pipeline has several architectural limitations:
@@ -27,6 +31,9 @@ The current pipeline has several architectural limitations:
 
 ## Success Criteria
 
+- [ ] Users can extend MetGenC without modifying source code
+- [ ] Custom readers can be configured for any file format
+- [ ] Extension mechanism is documented and has examples
 - [ ] Pipeline stages are pure functions that return (result, new_state) tuples
 - [ ] All side-effects are deferred until the execution phase
 - [ ] Pipeline can be constructed dynamically based on configuration
@@ -44,6 +51,45 @@ The current pipeline has several architectural limitations:
 4. **Comprehensive Testing**: Test each stage in isolation and integration
 5. **Performance Monitoring**: Track pipeline performance throughout migration
 
+## Architecture Evolution
+
+### Current Architecture (Before)
+
+```mermaid
+graph TD
+    subgraph "Current Monolithic Pipeline"
+        Config[Configuration File] --> Pipeline[Main Pipeline]
+
+        Pipeline --> FileDisc[File Discovery]
+        FileDisc --> ReadOps[Read Operations]
+
+        subgraph "Tightly Coupled Readers"
+            NetCDF[NetCDF Reader<br/>- Read file<br/>- Extract temporal<br/>- Extract spatial<br/>- Extract attributes]
+            CSV[CSV Reader<br/>- Read file<br/>- Extract all metadata]
+            SnowEx[SnowEx Reader<br/>- Read file<br/>- Extract all metadata]
+        end
+
+        ReadOps --> NetCDF
+        ReadOps --> CSV
+        ReadOps --> SnowEx
+
+        NetCDF --> Extract[Extract Metadata]
+        CSV --> Extract
+        SnowEx --> Extract
+
+        Extract --> |"Mutable State"| Process[Process Metadata]
+        Process --> |"Direct Write"| WriteFiles[Write Files]
+        Process --> |"Direct Upload"| AWS[AWS Operations]
+
+        CMRUtil[CMR in Utilities<br/>Mixed with Logic] -.-> Process
+    end
+
+    style Pipeline fill:#ff9999
+    style Extract fill:#ff9999
+    style Process fill:#ff9999
+    style CMRUtil fill:#ff9999
+```
+
 ## New Pipeline Architecture
 
 ### Conceptual Flow
@@ -52,23 +98,23 @@ The current pipeline has several architectural limitations:
 1. Configuration Phase
    ├─ Read configuration (Configuration Reader)
    ├─ Invoke CMR reader for collection metadata
-   └─ Construct pipeline with strategies
 
 2. Pipeline Construction Phase
-   ├─ Select appropriate readers for file types
    ├─ Choose geometry strategy
    ├─ Choose temporal strategy
+   ├─ Select appropriate readers for file types
    └─ Build granule processing pipeline
 
 3. Granule Processing Phase (per granule)
    ├─ Read granule files (science, premet, spatial)
-   ├─ Process metadata using strategies
-   ├─ Specify side-effects (don't execute)
+   ├─ Collect metadata using strategies
+   ├─ Specify operations (w/ side-effects; don't execute)
    └─ Update processing ledger
 
 4. Side-Effect Execution Phase
-   ├─ Group related side-effects
-   ├─ Execute side-effects in batches
+   ├─ Analyze all collected specifications
+   ├─ Determine efficient execution strategy
+   ├─ Execute side-effects (can optimize across granules)
    └─ Record results in ledger
 
 5. Reporting Phase
@@ -78,571 +124,256 @@ The current pipeline has several architectural limitations:
 ### Custom Reader Extension System
 
 MetGenC will support custom readers for unsupported file types through configuration:
+- Define custom readers using the same granular pattern as built-in readers
+- Specify separate readers for temporal, spatial, and attribute metadata
+- Use any external command or script that outputs JSON
+- Support for piping and shell commands
+- Default timeout of 120 seconds for all custom readers
 
-```ini
-[custom_readers]
-# Define custom readers for specific file patterns
-*.hdf5 = /path/to/hdf5_reader.py --format json
-*.custom = python /path/to/custom_reader.py
-*.dat = /usr/local/bin/dat2json
+### Key Architectural Components
 
-[reader_timeouts]
-# Optional timeouts for custom readers (seconds)
-*.hdf5 = 30
-*.custom = 60
-```
+1. **Granular Reader Architecture**: Separate interfaces for temporal, spatial, and attribute readers
+2. **Pipeline State Architecture**: Immutable state threaded through pipeline stages
+3. **Pipeline Stages**: Pure functions that transform data and return new state
+4. **Pipeline Composition**: Orchestration of stages into a complete pipeline
+5. **Side-Effect Execution**: Deferred execution with optimization strategies
 
-### Custom Reader Interface
+## Implementation Strategy - Incremental Extraction and Refactoring
 
-```python
-@dataclass(frozen=True)
-class CustomReaderConfig:
-    """Configuration for a custom reader"""
-    file_pattern: str
-    command: str
-    timeout: int = 120
-    output_format: str = "json"  # json or yaml
-    
-@dataclass(frozen=True) 
-class CustomReaderResult:
-    """Result from custom reader execution"""
-    metadata: Dict[str, Any]
-    stdout: str
-    stderr: str
-    exit_code: int
-    execution_time: float
+### Overview
 
-class CustomReader:
-    """Executes user-defined readers for unsupported file types"""
-    
-    def __init__(self, config: CustomReaderConfig):
-        self.config = config
+This implementation strategy focuses on extracting and refactoring existing code incrementally, prioritizing architectural improvements that enable extensibility while maintaining backward compatibility.
+
+### Phase 1: CMR Reader Extraction
+**Standalone Value**: Testable CMR integration, early collection metadata access
+
+1. **Extract CMR reader** from utilities into standalone module
+2. **Place CMR read after config** but before running any part of the pipeline
+3. **Create CMR metadata dataclass** to hold collection information
+4. **Add CMR caching** to avoid repeated API calls
+5. **Create mock CMR reader** for testing
+
+**Benefit if stopped here**: CMR logic is isolated and testable, collection metadata available for all decisions
+
+### Phase 2: Geometry Strategy Extraction
+**Standalone Value**: Clean separation of geometry processing logic
+
+1. **Extract geometry decision logic** from current pipeline
+2. **Define `GeometryStrategy` interface**
+3. **Create concrete strategies** based on existing logic:
+   - `PointGeometryStrategy`
+   - `BoundingBoxStrategy`
+   - `PolygonStrategy`
+   - `FootprintStrategy`
+4. **Create `GeometryStrategyFactory`** that uses CMR metadata to select strategy
+5. **Replace inline geometry logic** with strategy calls
+
+**Benefit if stopped here**: Geometry processing is modular and easier to extend
+
+### Phase 3: Temporal Strategy Extraction
+**Standalone Value**: Clean separation of temporal processing logic
+
+1. **Extract temporal decision logic** from current pipeline
+2. **Define `TemporalStrategy` interface**
+3. **Create concrete strategies** based on existing logic:
+   - `RangeTemporalStrategy`
+   - `PointInTimeStrategy`
+   - `CyclicTemporalStrategy`
+4. **Create `TemporalStrategyFactory`** that uses CMR metadata to select strategy
+5. **Replace inline temporal logic** with strategy calls
+
+**Benefit if stopped here**: Temporal processing is modular and easier to extend
+
+### Phase 4: Pipeline State Creation
+**Standalone Value**: Organized pipeline with clear data flow
+
+1. **Create `PipelineState`** class containing:
+   - Configuration
+   - CMR metadata (from Phase 1)
+   - Geometry strategy (from Phase 2)
+   - Temporal strategy (from Phase 3)
+   - Reader registry (empty for now)
+   - Processing ledger
+2. **Create new `Pipeline` class** that uses state
+3. **Refactor existing pipeline actions** to use state instead of passing individual parameters
+4. **Ensure all actions are pure functions** that return new state
+
+**Benefit if stopped here**: Clear pipeline structure with immutable state threading
+
+### Phase 5: Reader Interface Definition
+**Standalone Value**: Standardized interface for all metadata extraction
+
+1. **Define new granular reader interfaces**:
+   - `TemporalReader`: Extracts temporal metadata
+   - `SpatialReader`: Extracts spatial metadata
+   - `AttributeReader`: Extracts general metadata/attributes
+2. **Create `ReaderRegistry`** to manage reader selection
+3. **Define reader selection logic** based on file types
+4. **Update pipeline state** to include reader registry
+
+**Benefit if stopped here**: Clear contract for all readers, foundation for extensibility
+
+### Phase 6: Custom Reader Implementation
+**Standalone Value**: Support for any file format without code changes
+
+1. **Implement custom reader base classes**:
+   - `CustomTemporalReader`
+   - `CustomSpatialReader`
+   - `CustomAttributeReader`
+2. **Add configuration parsing** for custom readers
+3. **Implement subprocess execution** with JSON output parsing
+4. **Add timeout and error handling**
+5. **Create example custom readers** and documentation
+6. **Register custom readers** in the reader registry
+
+**Benefit if stopped here**: Users can extend MetGenC to support any file format
+
+### Phase 7: Existing Reader Adaptation
+**Standalone Value**: All readers use consistent interface
+
+1. **Refactor `NetCDFReader`** to implement new interfaces:
+   - Split into temporal, spatial, and attribute readers
+2. **Refactor `CSVReader`** similarly
+3. **Refactor `SnowExReader`** similarly
+4. **Update reader registry** with refactored readers
+5. **Remove old reader code**
+
+**Benefit if stopped here**: Consistent reader architecture throughout the system
+
+### Phase 8: Specify/Execute Separation
+**Standalone Value**: Pure pipeline logic with deferred execution
+
+1. **Define side effect specifications**:
+   - `CreateUMMG`, `CreateCNM`, `WriteFile`, `S3Upload`, `SendMessage`
+2. **Modify pipeline to return specifications** instead of executing
+3. **Create first mapping phase** over granules to collect all specifications
+4. **Create second mapping phase** over specifications to execute with side-effects
+5. **Update ledger** during execution phase
+6. **Implement execution strategies** (parallel, batch, sequential)
+
+**Benefit if stopped here**: Complete separation of pure logic from side effects
+
+### Final Architecture (After Phase 8)
+
+```mermaid
+graph TD
+    subgraph "Pure Functional Pipeline"
+        Config[Configuration File] --> Pipeline[Pipeline Orchestrator]
         
-    def read(self, file_path: Path) -> CustomReaderResult:
-        """Execute custom reader and parse output"""
-        cmd = self.config.command.replace('{}', str(file_path))
-        
-        # Execute with timeout
-        result = subprocess.run(
-            shlex.split(cmd),
-            capture_output=True,
-            text=True,
-            timeout=self.config.timeout
-        )
-        
-        # Parse output based on format
-        if self.config.output_format == "json":
-            metadata = json.loads(result.stdout)
-        elif self.config.output_format == "yaml":
-            metadata = yaml.safe_load(result.stdout)
-        else:
-            raise ValueError(f"Unsupported output format: {self.config.output_format}")
+        subgraph "Initialization Phase"
+            Pipeline --> CMR[CMR Reader]
+            CMR --> |Collection Metadata| Context[Pipeline Context]
             
-        return CustomReaderResult(
-            metadata=metadata,
-            stdout=result.stdout,
-            stderr=result.stderr,
-            exit_code=result.returncode,
-            execution_time=time.time() - start_time
-        )
-
-# Custom Reader Protocol/Contract
-"""
-Custom readers must:
-1. Accept a file path as the first argument
-2. Write metadata to stdout in JSON or YAML format
-3. Write errors/warnings to stderr
-4. Return 0 on success, non-zero on failure
-5. Complete within the configured timeout
-
-Expected output structure:
-{
-    "temporal": {
-        "start_datetime": "2024-01-01T00:00:00Z",
-        "end_datetime": "2024-01-01T23:59:59Z"
-    },
-    "spatial": {
-        "type": "Point",
-        "coordinates": [-105.0, 40.0]
-    },
-    "attributes": {
-        "instrument": "CustomSensor",
-        "processing_level": "L2"
-    }
-}
-"""
-```
-
-### Pipeline State Architecture
-
-```python
-# Simplified State-like pattern for Python
-@dataclass(frozen=True)
-class PipelineState:
-    """Immutable state threaded through pipeline stages"""
-    configuration: Configuration
-    cmr_metadata: CMRMetadata
-    geometry_strategy: GeometryStrategy
-    temporal_strategy: TemporalStrategy
-    custom_readers: Dict[str, CustomReader]  # Pattern -> Reader mapping
-    processing_ledger: Tuple[ProcessingEvent, ...]
-    error_accumulator: Tuple[ProcessingError, ...]
-    
-    def with_ledger_entry(self, event: ProcessingEvent) -> 'PipelineState':
-        """Return new state with added ledger entry"""
-        return replace(self, processing_ledger=self.processing_ledger + (event,))
-    
-    def with_error(self, error: ProcessingError) -> 'PipelineState':
-        """Return new state with added error"""
-        return replace(self, error_accumulator=self.error_accumulator + (error,))
-
-# Pipeline Result type
-@dataclass(frozen=True)
-class PipelineResult:
-    """Result of a pipeline stage with new state"""
-    value: Any
-    state: PipelineState
-
-# Side-effect specifications (data, not execution)
-@dataclass(frozen=True)
-class SideEffect:
-    """Base class for side-effect specifications"""
-    granule_id: str
-    
-@dataclass(frozen=True)
-class GenerateUMMG(SideEffect):
-    metadata: ProcessedMetadata
-    template: str
-    
-@dataclass(frozen=True)
-class GenerateCNM(SideEffect):
-    metadata: ProcessedMetadata
-    template: str
-    
-@dataclass(frozen=True)
-class WriteFile(SideEffect):
-    path: Path
-    content: str
-    
-@dataclass(frozen=True)
-class S3Transfer(SideEffect):
-    source_path: Path
-    s3_key: str
-    
-@dataclass(frozen=True)
-class KinesisMessage(SideEffect):
-    stream_name: str
-    message: str
-```
-
-### Pipeline Stages
-
-```python
-# Type alias for pipeline functions
-PipelineStage = Callable[[Any, PipelineState], PipelineResult]
-
-# Configuration reading stage
-def read_configuration(config_path: Path, state: PipelineState) -> PipelineResult:
-    """Read configuration file - treated as a data source"""
-    try:
-        config = ConfigurationReader().read(config_path)
-        new_state = state.with_ledger_entry(
-            ConfigurationRead(config_path, config)
-        )
-        return PipelineResult(config, new_state)
-    except Exception as e:
-        return PipelineResult(
-            None, 
-            state.with_error(ConfigurationError(str(e)))
-        )
-
-# Reader selection with custom reader support
-def select_readers(configuration: Configuration, granule_paths: GranulePaths, 
-                  custom_readers: Dict[str, CustomReader]) -> ReaderSet:
-    """Select appropriate readers for granule files, preferring custom readers"""
-    readers = ReaderSet()
-    
-    # Check each file against custom reader patterns
-    for file_path in granule_paths.all_files:
-        for pattern, custom_reader in custom_readers.items():
-            if fnmatch.fnmatch(file_path.name, pattern):
-                readers.add_custom(file_path, custom_reader)
-                break
-        else:
-            # No custom reader matched, use built-in reader
-            if file_path.suffix in ['.nc', '.nc4', '.h5']:
-                readers.add_builtin(file_path, NetCDFReader())
-            elif file_path.suffix == '.csv':
-                readers.add_builtin(file_path, CSVReader())
-            elif 'premet' in file_path.name:
-                readers.add_builtin(file_path, PremetReader())
-            elif 'spatial' in file_path.name or '.spo' in file_path.suffix:
-                readers.add_builtin(file_path, SpatialReader())
-    
-    return readers
-
-# Granule file reading stage
-def read_granule_files(granule_paths: GranulePaths, state: PipelineState) -> PipelineResult:
-    """Read all files for a granule using appropriate readers"""
-    readers = select_readers(state.configuration, granule_paths, state.custom_readers)
-    
-    # Read files with appropriate readers
-    all_metadata = {}
-    for file_path, reader in readers.items():
-        try:
-            if isinstance(reader, CustomReader):
-                result = reader.read(file_path)
-                if result.exit_code != 0:
-                    state = state.with_error(
-                        CustomReaderError(file_path, result.stderr)
-                    )
-                else:
-                    all_metadata[file_path] = result.metadata
-            else:
-                # Built-in reader
-                all_metadata[file_path] = reader.read(file_path)
-        except Exception as e:
-            state = state.with_error(
-                ReaderError(file_path, str(e))
-            )
-    
-    # Organize metadata by type
-    granule_data = GranuleData(
-        science_data=merge_science_metadata(all_metadata),
-        premet_data=extract_premet_data(all_metadata),
-        spatial_data=extract_spatial_data(all_metadata),
-        custom_data=extract_custom_data(all_metadata)
-    )
-    
-    new_state = state.with_ledger_entry(
-        GranuleFilesRead(granule_paths.granule_id, granule_data, readers.summary())
-    )
-    return PipelineResult(granule_data, new_state)
-
-# Metadata processing stage
-def process_metadata(granule_data: GranuleData, state: PipelineState) -> PipelineResult:
-    """Process metadata using configured strategies"""
-    temporal = state.temporal_strategy.extract(granule_data, state.cmr_metadata)
-    geometry = state.geometry_strategy.extract(granule_data, state.cmr_metadata)
-    
-    metadata = ProcessedMetadata(
-        temporal_extent=temporal,
-        spatial_extent=geometry,
-        attributes=merge_attributes(granule_data, state.configuration)
-    )
-    
-    new_state = state.with_ledger_entry(
-        MetadataProcessed(granule_data.id, metadata)
-    )
-    return PipelineResult(metadata, new_state)
-
-# Side-effect specification stage
-def specify_side_effects(metadata: ProcessedMetadata, state: PipelineState) -> PipelineResult:
-    """Specify side-effects without executing them"""
-    effects = []
-    
-    # Always generate UMM-G
-    effects.append(GenerateUMMG(
-        granule_id=metadata.granule_id,
-        metadata=metadata,
-        template=state.configuration.ummg_template
-    ))
-    
-    # Conditionally add other side-effects
-    if state.configuration.cnm_enabled:
-        effects.append(GenerateCNM(
-            granule_id=metadata.granule_id,
-            metadata=metadata,
-            template=state.configuration.cnm_template
-        ))
-    
-    if state.configuration.write_files:
-        effects.extend([
-            WriteFile(
-                granule_id=metadata.granule_id,
-                path=state.configuration.output_dir / f"{metadata.granule_id}.ummg.json",
-                content=None  # Will be filled during execution
-            )
-        ])
-    
-    if state.configuration.s3_staging:
-        effects.append(S3Transfer(
-            granule_id=metadata.granule_id,
-            source_path=state.configuration.output_dir / f"{metadata.granule_id}.ummg.json",
-            s3_key=f"{state.configuration.s3_prefix}/{metadata.granule_id}.ummg.json"
-        ))
-    
-    if state.configuration.kinesis_enabled:
-        effects.append(KinesisMessage(
-            granule_id=metadata.granule_id,
-            stream_name=state.configuration.kinesis_stream,
-            message=None  # Will be CNM content
-        ))
-    
-    new_state = state.with_ledger_entry(
-        SideEffectsSpecified(metadata.granule_id, len(effects))
-    )
-    return PipelineResult(effects, new_state)
-```
-
-### Pipeline Composition
-
-```python
-class GranulePipeline:
-    """Composes pipeline stages for processing a single granule"""
-    
-    def __init__(self, initial_state: PipelineState):
-        self.initial_state = initial_state
-    
-    def process_granule(self, granule_paths: GranulePaths) -> Tuple[List[SideEffect], PipelineState]:
-        """Process a single granule through all pipeline stages"""
-        # Thread state through each stage
-        result = self.read_granule_files(granule_paths, self.initial_state)
-        if result.value is None:
-            return [], result.state
+            Context --> |Contains| Strategies[Strategies<br/>- Geometry Strategy<br/>- Temporal Strategy]
+            Context --> |Contains| Registry[Reader Registry<br/>- Built-in Readers<br/>- Custom Readers]
+        end
+        
+        subgraph "Specification Phase - Pure, No I/O"
+            Context --> Discovery[Granule Discovery]
             
-        result = self.process_metadata(result.value, result.state)
-        if result.value is None:
-            return [], result.state
+            Discovery --> |For Each Granule| GranulePipeline[Granule Pipeline]
             
-        result = self.specify_side_effects(result.value, result.state)
-        return result.value, result.state
+            GranulePipeline --> FileRead[File Reading<br/>Using Registry]
+            FileRead --> |Temporal| TempReaders[Temporal Readers]
+            FileRead --> |Spatial| SpatReaders[Spatial Readers]
+            FileRead --> |Attributes| AttrReaders[Attribute Readers]
+            
+            TempReaders --> Extract[Metadata Extraction]
+            SpatReaders --> Extract
+            AttrReaders --> Extract
+            
+            Extract --> Process[Process Metadata<br/>Using Strategies]
+            Process --> Specify[Specify Side Effects]
+            
+            Specify --> |Returns| Specs[Effect Specifications<br/>- CreateUMMG<br/>- CreateCNM<br/>- WriteFile<br/>- S3Upload<br/>- SendMessage]
+        end
+        
+        Specs --> |Collect All| AllSpecs[All Effect<br/>Specifications]
+        
+        subgraph "Execution Phase - All Side Effects"
+            AllSpecs --> Executor[Side Effect Executor]
+            
+            Executor --> Analysis[Analyze Effects]
+            Analysis --> |Choose Strategy| ExecStrategy{Execution<br/>Strategy}
+            
+            ExecStrategy --> |Sequential| Sequential[Sequential<br/>Execution]
+            ExecStrategy --> |Parallel| Parallel[Parallel by Type]
+            ExecStrategy --> |Batch| Batch[Batch Operations]
+            
+            Sequential --> Execute[Execute Effects]
+            Parallel --> Execute
+            Batch --> Execute
+            
+            Execute --> |Updates| Ledger[Processing Ledger]
+        end
+        
+        Ledger --> Report[Generate Report]
+    end
     
-    # Pipeline stages as methods for clarity
-    read_granule_files = staticmethod(read_granule_files)
-    process_metadata = staticmethod(process_metadata)
-    specify_side_effects = staticmethod(specify_side_effects)
+    %%% Colorblind-friendly palette with high contrast
+    %%% Using patterns and distinct shades instead of relying on color alone
+    
+    %% Pure functions - Light blue with dark text
+    style Pipeline fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
+    style GranulePipeline fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
+    style Extract fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
+    style Process fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
+    style Specify fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
+    
+    %% Context/State - Light gray with dark text
+    style Context fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    style Specs fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    style AllSpecs fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    style Ledger fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    
+    %% Side effects - Light orange with dark text
+    style Executor fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    style Execute fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    
+    %% Readers - Very light green with dark text
+    style TempReaders fill:#F1F8E9,stroke:#33691E,stroke-width:2px,color:#000
+    style SpatReaders fill:#F1F8E9,stroke:#33691E,stroke-width:2px,color:#000
+    style AttrReaders fill:#F1F8E9,stroke:#33691E,stroke-width:2px,color:#000
+    
+    %% Other elements - White with dark borders
+    style Config fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style CMR fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style Strategies fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style Registry fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style Discovery fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style FileRead fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style Analysis fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style ExecStrategy fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style Sequential fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style Parallel fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style Batch fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
+    style Report fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
 ```
 
-### Side-Effect Execution
+Key architectural improvements:
+- **Complete separation** between pure computation (Specification Phase) and side effects (Execution Phase)
+- **Extensible reader system** allowing custom readers for any file format
+- **Strategy pattern** for geometry and temporal processing based on CMR metadata
+- **Immutable state** threading through all pipeline operations
+- **Optimization opportunities** in the execution phase (parallel, batch, etc.)
+- **Comprehensive ledger** tracking all operations and errors
 
-```python
-class SideEffectExecutor:
-    """Executes side-effects in groups for efficiency"""
-    
-    def execute_effects(self, effects: List[SideEffect], state: PipelineState) -> PipelineState:
-        """Execute all side-effects and update state with results"""
-        # Group effects by type for batch processing
-        grouped = self.group_effects(effects)
-        
-        # Execute file generation effects
-        if grouped.get('generate'):
-            state = self.execute_generation(grouped['generate'], state)
-        
-        # Execute file write effects
-        if grouped.get('write'):
-            state = self.execute_writes(grouped['write'], state)
-        
-        # Execute AWS effects in parallel
-        if grouped.get('aws'):
-            state = self.execute_aws_operations(grouped['aws'], state)
-        
-        return state
-    
-    def group_effects(self, effects: List[SideEffect]) -> Dict[str, List[SideEffect]]:
-        """Group effects by operation type for batch processing"""
-        groups = defaultdict(list)
-        for effect in effects:
-            if isinstance(effect, (GenerateUMMG, GenerateCNM)):
-                groups['generate'].append(effect)
-            elif isinstance(effect, WriteFile):
-                groups['write'].append(effect)
-            elif isinstance(effect, (S3Transfer, KinesisMessage)):
-                groups['aws'].append(effect)
-        return groups
-    
-    def execute_generation(self, effects: List[SideEffect], state: PipelineState) -> PipelineState:
-        """Execute content generation effects"""
-        for effect in effects:
-            try:
-                if isinstance(effect, GenerateUMMG):
-                    content = generate_ummg_content(effect.metadata, effect.template)
-                    # Update effect with content for downstream use
-                    effect = replace(effect, content=content)
-                elif isinstance(effect, GenerateCNM):
-                    content = generate_cnm_content(effect.metadata, effect.template)
-                    effect = replace(effect, content=content)
-                
-                state = state.with_ledger_entry(
-                    GenerationCompleted(effect.granule_id, type(effect).__name__)
-                )
-            except Exception as e:
-                state = state.with_error(
-                    GenerationError(effect.granule_id, str(e))
-                )
-        return state
-```
+### Implementation Priorities
 
-### Main Pipeline Orchestrator
-
-```python
-class PipelineOrchestrator:
-    """Orchestrates the entire MetGenC pipeline"""
-    
-    def __init__(self, config_path: Path):
-        self.config_path = config_path
-        
-    def run(self, input_paths: List[Path]) -> ProcessingReport:
-        """Run the complete pipeline"""
-        # Phase 1: Initialize pipeline
-        state = self.initialize_pipeline()
-        
-        # Phase 2: Discover and group granules
-        granule_groups = self.discover_granules(input_paths, state)
-        
-        # Phase 3: Process each granule (can be parallelized)
-        all_effects = []
-        for granule_paths in granule_groups:
-            pipeline = GranulePipeline(state)
-            effects, new_state = pipeline.process_granule(granule_paths)
-            all_effects.extend(effects)
-            state = new_state
-        
-        # Phase 4: Execute all side-effects
-        executor = SideEffectExecutor()
-        final_state = executor.execute_effects(all_effects, state)
-        
-        # Phase 5: Generate report
-        return self.generate_report(final_state)
-    
-    def initialize_pipeline(self) -> PipelineState:
-        """Initialize pipeline with configuration and strategies"""
-        # Read configuration
-        config = ConfigurationReader().read(self.config_path)
-        
-        # Get CMR metadata
-        cmr_metadata = CMRReader().read_collection(config.collection_id)
-        
-        # Select strategies
-        geometry_strategy = GeometryStrategyFactory.create(config, cmr_metadata)
-        temporal_strategy = TemporalStrategyFactory.create(config, cmr_metadata)
-        
-        # Load custom readers from configuration
-        custom_readers = self.load_custom_readers(config)
-        
-        return PipelineState(
-            configuration=config,
-            cmr_metadata=cmr_metadata,
-            geometry_strategy=geometry_strategy,
-            temporal_strategy=temporal_strategy,
-            custom_readers=custom_readers,
-            processing_ledger=(),
-            error_accumulator=()
-        )
-    
-    def load_custom_readers(self, config: Configuration) -> Dict[str, CustomReader]:
-        """Load custom readers from configuration"""
-        custom_readers = {}
-        
-        if 'custom_readers' in config.sections:
-            for pattern, command in config.custom_readers.items():
-                timeout = config.reader_timeouts.get(pattern, 120)
-                reader_config = CustomReaderConfig(
-                    file_pattern=pattern,
-                    command=command,
-                    timeout=timeout
-                )
-                custom_readers[pattern] = CustomReader(reader_config)
-                
-        return custom_readers
-```
-
-## Implementation Strategy for Time-Constrained Delivery
-
-### Critical Context: Working Under Deadline Pressure
-
-Given hard deadlines, we must prioritize phases that deliver immediate, standalone value. Each phase should be deployable independently and provide tangible benefits even if subsequent phases aren't completed.
-
-### Minimum Viable Refactoring Path
-
-If only one thing can be done, implement **Custom Readers** (2-3 days):
-- Solves immediate user need for extensibility
-- No changes to existing pipeline required
-- Can be deployed immediately
-
-### Reordered Phases for Maximum Incremental Value
-
-### Phase 1: Custom Reader System (Week 1)
-**Standalone Value**: Users can process any file format immediately
-
-1. **Implement custom reader system**:
-   - Create `CustomReader` class with subprocess execution
-   - Add INI configuration parsing for reader definitions
-   - Implement timeout and error handling
-   - Create validation for JSON/YAML output format
-2. Create documentation and example readers
-3. Add integration tests for custom readers
-
-**Benefit if stopped here**: MetGenC becomes extensible for any file format without code changes
-
-### Phase 2: Reader Refactoring & Immutability (Week 2-3)
-**Standalone Value**: More reliable system with better error handling
-
-1. Extract CMR reader from utilities (improves testability)
-2. Refactor readers to return immutable data structures
-3. Implement non-fatal error accumulation
-4. Create `ConfigurationReader` to treat config as data
-5. Add comprehensive reader tests
-
-**Benefit if stopped here**: Fewer bugs, easier debugging, better test coverage
-
-### Phase 3: Strategy Pattern Implementation (Week 4)
-**Standalone Value**: Cleaner code, easier to add new processing strategies
-
-1. Extract geometry strategies from operations
-2. Extract temporal strategies from operations
-3. Create strategy factories
-4. Refactor existing code to use strategies
-5. Add strategy tests
-
-**Benefit if stopped here**: More maintainable code, easier to add new geometry/temporal handling
-
-### Phase 4: Basic Pipeline Separation (Week 5-6)
-**Standalone Value**: I/O at boundaries, better testability
-
-1. Create simple pipeline state (not full State Monad)
-2. Move file writing to end of pipeline
-3. Move AWS operations to end of pipeline
-4. Create basic side-effect specifications
-5. Add pipeline tests
-
-**Benefit if stopped here**: Testable business logic, I/O isolation
-
-### Phase 5: Full Pipeline Refactoring (Week 7-9)
-**Only if time permits**: Complete State Monad pattern
-
-1. Implement `PipelineState` and `PipelineResult`
-2. Create pipeline stages as pure functions
-3. Implement `ProcessingLedger`
-4. Add `PipelineOrchestrator`
-5. Create migration path
-
-**Benefit**: Full functional pipeline with all architectural benefits
-
-### Phase 6: Performance & Polish (Week 10-12)
-**Only if time permits**: Optimization and documentation
-
-1. Add parallel processing
-2. Implement batch operations
-3. Performance benchmarking
-4. Complete documentation
-
-### Decision Matrix for Time Constraints
-
-| Time Available | Implement Phases | Key Benefits |
-|----------------|------------------|--------------|
-| 1 week | Phase 1 only | Custom reader extensibility |
-| 2-3 weeks | Phases 1-2 | Extensibility + reliability |
-| 4 weeks | Phases 1-3 | Above + maintainability |
-| 6 weeks | Phases 1-4 | Above + testability |
-| 9+ weeks | All phases | Full architectural benefits |
+| Priority | Implement Phases | Key Benefits |
+|----------|------------------|--------------|
+| Foundation | Phases 1-3 | Extracted strategies + CMR reader |
+| Core Refactor | Phases 1-4 | Above + pipeline state architecture |
+| Extensibility | Phases 1-6 | Above + custom reader support |
+| Full Refactor | Phases 1-7 | Above + consistent reader architecture |
+| Complete | All 8 phases | Above + pure functional pipeline |
 
 ### Critical Success Factors
 
-1. **Feature Flag Everything**: Each phase behind a flag
-2. **No Breaking Changes**: Existing pipeline continues working
-3. **Deploy Early**: Ship each phase as completed
-4. **Document Incrementally**: Don't wait until the end
+1. **Incremental Extraction**: Extract existing logic rather than rewriting
+2. **Maintain Compatibility**: Existing pipeline continues to work
+3. **Test Each Phase**: Ensure extracted components work identically
+4. **Feature Flags**: Toggle between old and new implementations
 
 ## Benefits of This Approach
 
@@ -665,58 +396,68 @@ The custom reader feature enables several important scenarios:
 4. **External Tools**: Leverage existing command-line tools (e.g., GDAL, NCO utilities)
 5. **Language Flexibility**: Write readers in any language (Python, R, Julia, shell scripts)
 
-### Example Custom Readers
-
-```ini
-# Example 1: HDF5 reader using h5dump
-[custom_readers]
-*.hdf5 = h5dump -p -H -d /path/to/dataset {} | python /opt/parsers/h5dump_to_json.py
-
-# Example 2: GeoTIFF reader using GDAL
-*.tif = gdal_translate -of VRT {} /vsistdout/ | python /opt/parsers/vrt_to_json.py
-
-# Example 3: Binary format with custom C program
-*.bin = /usr/local/bin/binary_reader --json {}
-
-# Example 4: R script for statistical data
-*.rdata = Rscript /opt/readers/rdata_extractor.R {}
-```
 
 ## Risk Assessment for Partial Implementation
 
 ### What Happens If We Stop Early?
 
-**After Phase 1 (Custom Readers)**:
-- ✅ Users can process new file formats
-- ✅ No risk to existing functionality
-- ❌ Technical debt remains in core pipeline
+**After Phase 1 (CMR Reader Extraction)**:
+- ✅ CMR logic isolated and testable
+- ✅ Collection metadata available for all decisions
+- ✅ Better error handling for CMR failures
+- ❌ Core pipeline still monolithic
 
-**After Phase 2 (Reader Refactoring)**:
+**After Phase 2 (Geometry Strategy)**:
 - ✅ All above benefits
-- ✅ More reliable reader system
-- ✅ Better error messages
-- ❌ Pipeline still has mixed concerns
+- ✅ Geometry processing is modular
+- ✅ Easier to add new geometry types
+- ❌ Temporal processing still embedded
 
-**After Phase 3 (Strategies)**:
+**After Phase 3 (Temporal Strategy)**:
 - ✅ All above benefits
-- ✅ Easier to add new processing logic
-- ✅ Cleaner code organization
-- ❌ I/O still embedded in pipeline
+- ✅ All processing strategies extracted
+- ✅ Clear separation of business logic
+- ❌ Pipeline structure still procedural
 
-**After Phase 4 (Basic Separation)**:
+**After Phase 4 (Pipeline State)**:
 - ✅ All above benefits
-- ✅ Testable business logic
-- ✅ I/O at boundaries
-- ❌ Missing advanced features (ledger, parallel processing)
+- ✅ Clear pipeline architecture
+- ✅ Immutable state threading
+- ❌ No extensibility for new file formats
 
-### Recommendation for Time-Constrained Projects
+**After Phase 5 (Reader Interface)**:
+- ✅ All above benefits
+- ✅ Standardized reader contract
+- ✅ Foundation for extensibility
+- ❌ No actual custom reader support yet
 
-**With 1-2 weeks**: Do Phase 1 (Custom Readers) - immediate user value
-**With 3-4 weeks**: Do Phases 1-3 - significant code quality improvements  
-**With 6+ weeks**: Do Phases 1-4 - achieve core architectural goals
-**With 9+ weeks**: Complete all phases - full benefits
+**After Phase 6 (Custom Readers)**:
+- ✅ All above benefits
+- ✅ Users can support any file format
+- ✅ Major user-visible feature
+- ❌ Existing readers still use old interface
 
-The key insight: **Each phase delivers value independently**, so even partial implementation is worthwhile.
+**After Phase 7 (Reader Adaptation)**:
+- ✅ All above benefits
+- ✅ Consistent reader architecture
+- ✅ All readers are modular
+- ❌ I/O still mixed with logic
+
+**After Phase 8 (Specify/Execute Separation)**:
+- ✅ All above benefits
+- ✅ Pure functional pipeline
+- ✅ Complete testability without I/O
+- ✅ Optimization opportunities
+
+### Implementation Recommendations
+
+**Foundation**: Phases 1-3 - Extract core strategies and CMR reader
+**Core Refactor**: Phases 1-4 - Above + clean pipeline architecture
+**Extensibility**: Phases 1-6 - Above + custom reader support (major user value)
+**Full Refactor**: Phases 1-7 - Above + consistent reader system
+**Complete**: All 8 phases - Above + pure functional design
+
+The key insight: **Phase 6 (Custom Readers) delivers the most user-visible value**, while earlier phases improve code quality and maintainability.
 
 ## Migration Notes
 
