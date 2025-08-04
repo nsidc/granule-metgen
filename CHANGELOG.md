@@ -1,8 +1,8 @@
-## UNRELEASED
+## v1.10.0rc1 (2025-08-04)
 
 * Allow operator to specify which science (data) file should be scraped for
   metadata in the case of a granule with multiple science files. (Issue-169)
-* Update version bump configuration to only deal with `UNRELEASED` entries in
+* Update version bump configuration to only deal with `v1.10.0rc1 (2025-08-04)` entries in
   this (`CHANGELOG.md`) file, and to insert the date of the version bump.
 
 
