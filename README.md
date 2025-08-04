@@ -362,16 +362,21 @@ See this project's GitHub file, `fixtures/test.ini` for examples.
 | pixel_size             | Collection    | GeoTransform        | n/a | 4    |
 
 1. For ease, set this to be the year-month-day MetGenC is run (e.g., date_modified =
-2025-07-22); including a precise time value is unnecessary (we're breaking from how SIPSMetgen
-rolled here!); this value is a constant that will be applied to all granule-level metadata.
-2. This regex is matched against file name to determine `time_coverage_start`, which
-is used to populate granules' ummg BeginningDateTime values. Must match using the named
-group `(?P<time_coverage_start>)`.
-3. A duration value applied to `time_coverage_start` to determine `time_coverage_end`,
-which is used to populate granules' ummg EndingDateTime values; value is a constant that will
-be applied to each time_start_regex value gleaned from the file. Must be a valid
+2025-07-22); this value is a constant that will be added to all ummg file's ProductionDateTime
+container.
+   * This attribute should be used with "nearly" compliant netCDF files that don't have global
+  attributes containing `date_modified`, and it will need to be used with non-netCDF file types.
+2. This regex attribute leverages a netCDF's file name containing a date to populate ummg files'
+TemporalExtent field attribute, BeginningDateTime. Must match using the named group `(?P<time_coverage_start>)`.
+   * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
+   (csv, tif, etc.) since these should rely on premet files containing temporal details for each file. 
+3. The time_coverage_duration attribute value specifies the duration to be applied to the `time_coverage_start`
+value to generate correct EndingDateTime values in ummg files; this value is a constant that will
+be applied to each time_start_regex value gleaned from files. Must be a valid
 [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
-4. Rarely applicable for science files that aren't netCDF (.txt, .csv, .jpg, .tif, etc.); this
+   * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
+   (csv, tif, etc.) since these should rely on premet files containing temporal details for each file. 
+5. Rarely applicable for science files that aren't gridded netCDF (.txt, .csv, .jpg, .tif, etc.); this
 value is a constant that will be applied to all granule-level metadata. 
 
 #### Granule and Browse regex
