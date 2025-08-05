@@ -396,9 +396,10 @@ Note column:
 1. The file name pattern identifying a browse file. The default is `_brws`. This element is
  prompted for as one of the `metgenc init` prompts.
 2. The file name pattern identifying related files. Must  capture all text
- comprising the granule name in UMM-G and CNM output, and must provide a match
- using the named group `(?P<granuleid>)`. This value must be added manually; it
- is **not** included in the `metgenc init` prompts.
+ in file names that will result in a globally unique: product/name (in CNM), and
+ Identifier (as the IdentifierType: ProducerGranuleId in UMM-G) generated for each file,
+ relying on the named group `(?P<granuleid>)` within the regex tp provide a match. This init
+ elementvalue must be added manually as it's **not** included in the `metgenc init` prompts.
 
 ##### Example: Use of `granule_regex`
 Given the `granule_regex`:
