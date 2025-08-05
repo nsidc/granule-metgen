@@ -304,6 +304,7 @@ def process(configuration: config.Config) -> None:
     if errors:
         raise config.ValidationError(errors)
 
+
     # Determine geometry and temporal specifications for debugging
     # This is a demonstration of the new specification system
     # Note: This does not modify the pipeline behavior yet
@@ -1208,7 +1209,9 @@ def apply_schema(schema, json_file, dummy_json):
     return True
 
 
-def _demonstrate_specifications(configuration: config.Config, collection: Collection) -> None:
+def _demonstrate_specifications(
+    configuration: config.Config, collection: Collection
+) -> None:
     """
     Demonstrate the new specification system by determining specs for the first granule.
 
@@ -1260,10 +1263,14 @@ def _demonstrate_specifications(configuration: config.Config, collection: Collec
     # Log the specifications for debugging
     logger.info("=== Specification Demonstration ===")
     logger.info(f"Granule: {first_granule_key}")
-    logger.info(f"Geometry Spec: source={geometry_spec.source.value}, type={geometry_spec.geometry_type.value}")
+    logger.info(
+        f"Geometry Spec: source={geometry_spec.source.value}, type={geometry_spec.geometry_type.value}"
+    )
     if geometry_spec.spatial_filename:
         logger.info(f"  Spatial file: {geometry_spec.spatial_filename}")
-    logger.info(f"Temporal Spec: source={temporal_spec.source.value}, type={temporal_spec.temporal_type.value}")
+    logger.info(
+        f"Temporal Spec: source={temporal_spec.source.value}, type={temporal_spec.temporal_type.value}"
+    )
     if temporal_spec.premet_filename:
         logger.info(f"  Premet file: {temporal_spec.premet_filename}")
     logger.info("=== End Specification Demo ===")
