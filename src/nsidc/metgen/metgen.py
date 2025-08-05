@@ -38,9 +38,11 @@ from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws, config, constants
 from nsidc.metgen.collection import get_collection
+from nsidc.metgen.geometry_decisions import determine_geometry_spec
 from nsidc.metgen.models import Collection
 from nsidc.metgen.readers import generic, registry, utilities
 from nsidc.metgen.spatial import create_flightline_polygon
+from nsidc.metgen.temporal_decisions import determine_temporal_spec
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -300,6 +302,11 @@ def process(configuration: config.Config) -> None:
     ) + validate_collection_temporal(configuration, collection)
     if errors:
         raise config.ValidationError(errors)
+    
+    # Determine geometry and temporal specifications for debugging
+    # This is a demonstration of the new specification system
+    # Note: This does not modify the pipeline behavior yet
+    _demonstrate_specifications(configuration, collection)
 
     # Ordered list of operations to perform on each granule
     # Use optimized operations that skip individual CMR calls
@@ -1198,3 +1205,64 @@ def apply_schema(schema, json_file, dummy_json):
             )
 
     return True
+
+
+def _demonstrate_specifications(configuration: config.Config, collection: Collection) -> None:
+    """
+    Demonstrate the new specification system by determining specs for the first granule.
+    
+    This function is for debugging and does not modify pipeline behavior.
+    It will be removed once the pipeline is updated to use specifications.
+    """
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+    
+    # Get the first granule's files to demonstrate
+    file_list = [p for p in Path(configuration.data_dir).glob("*")]
+    if not file_list:
+        logger.debug("No files found to demonstrate specifications")
+        return
+    
+    # Get ancillary files
+    premet_files = ancillary_files(
+        configuration.premet_dir, [constants.PREMET_SUFFIX]
+    ) if configuration.premet_dir else None
+    spatial_files = ancillary_files(
+        configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
+    ) if configuration.spatial_dir else None
+    
+    # Get first granule key for demonstration
+    granule_keys_set = granule_keys(configuration, file_list)
+    if not granule_keys_set:
+        logger.debug("No granule keys found to demonstrate specifications")
+        return
+    
+    first_granule_key = next(iter(granule_keys_set))
+    
+    # Determine geometry specification
+    geometry_spec = determine_geometry_spec(
+        configuration,
+        collection,
+        first_granule_key,
+        set(file_list),
+        spatial_files,
+    )
+    
+    # Determine temporal specification
+    temporal_spec = determine_temporal_spec(
+        configuration,
+        collection,
+        first_granule_key,
+        set(file_list),
+        premet_files,
+    )
+    
+    # Log the specifications for debugging
+    logger.info("=== Specification Demonstration ===")
+    logger.info(f"Granule: {first_granule_key}")
+    logger.info(f"Geometry Spec: source={geometry_spec.source.value}, type={geometry_spec.geometry_type.value}")
+    if geometry_spec.spatial_filename:
+        logger.info(f"  Spatial file: {geometry_spec.spatial_filename}")
+    logger.info(f"Temporal Spec: source={temporal_spec.source.value}, type={temporal_spec.temporal_type.value}")
+    if temporal_spec.premet_filename:
+        logger.info(f"  Premet file: {temporal_spec.premet_filename}")
+    logger.info("=== End Specification Demo ===")
