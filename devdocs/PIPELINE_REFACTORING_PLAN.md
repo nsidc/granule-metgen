@@ -155,34 +155,45 @@ This implementation strategy focuses on extracting and refactoring existing code
 
 **Benefit if stopped here**: CMR logic is isolated and testable, collection metadata available for all decisions
 
-### Phase 2: Geometry Strategy Extraction
-**Standalone Value**: Clean separation of geometry processing logic
+### Phase 2: Geometry Specification Extraction
+**Standalone Value**: Clean separation of geometry decision-making from execution
 
 1. **Extract geometry decision logic** from current pipeline
-2. **Define `GeometryStrategy` interface**
-3. **Create concrete strategies** based on existing logic:
-   - `PointGeometryStrategy`
-   - `BoundingBoxStrategy`
-   - `PolygonStrategy`
-   - `FootprintStrategy`
-4. **Create `GeometryStrategyFactory`** that uses CMR metadata to select strategy
-5. **Replace inline geometry logic** with strategy calls
+2. **Define `GeometrySpec` dataclass** to capture decisions:
+   - Source: where to get geometry data (granule metadata, spatial file, collection)
+   - Type: what geometry type to create (point, polygon, bounding box)
+   - Representation: coordinate system (geodetic, cartesian)
+3. **Create `determine_geometry_spec()` function** that:
+   - Takes configuration, collection metadata, and available files
+   - Returns a complete specification of geometry decisions
+   - Contains all business rules for geometry selection
+4. **Document decision rules** clearly:
+   - Priority order for data sources
+   - Fallback logic
+   - Override conditions
+5. **Add `GeometrySpec` to pipeline context** for use in later phases
 
-**Benefit if stopped here**: Geometry processing is modular and easier to extend
+**Benefit if stopped here**: Geometry decision logic is isolated from execution, making it testable and comprehensible
 
-### Phase 3: Temporal Strategy Extraction
-**Standalone Value**: Clean separation of temporal processing logic
+### Phase 3: Temporal Specification Extraction
+**Standalone Value**: Clean separation of temporal decision-making from execution
 
 1. **Extract temporal decision logic** from current pipeline
-2. **Define `TemporalStrategy` interface**
-3. **Create concrete strategies** based on existing logic:
-   - `RangeTemporalStrategy`
-   - `PointInTimeStrategy`
-   - `CyclicTemporalStrategy`
-4. **Create `TemporalStrategyFactory`** that uses CMR metadata to select strategy
-5. **Replace inline temporal logic** with strategy calls
+2. **Define `TemporalSpec` dataclass** to capture decisions:
+   - Source: where to get temporal data (granule metadata, premet file, collection)
+   - Type: what temporal type to create (single datetime, range datetime)
+   - Additional configuration specific to the temporal type
+3. **Create `determine_temporal_spec()` function** that:
+   - Takes configuration, collection metadata, and available files
+   - Returns a complete specification of temporal decisions
+   - Encapsulates all business rules for temporal selection
+4. **Document decision rules** clearly:
+   - When to use single vs range datetime
+   - Collection temporal override logic
+   - Validation requirements
+5. **Add `TemporalSpec` to pipeline context** for use in later phases
 
-**Benefit if stopped here**: Temporal processing is modular and easier to extend
+**Benefit if stopped here**: Temporal decision logic is isolated from execution, testable independently
 
 ### Phase 4: Pipeline State Creation
 **Standalone Value**: Organized pipeline with clear data flow
@@ -190,15 +201,18 @@ This implementation strategy focuses on extracting and refactoring existing code
 1. **Create `PipelineState`** class containing:
    - Configuration
    - CMR metadata (from Phase 1)
-   - Geometry strategy (from Phase 2)
-   - Temporal strategy (from Phase 3)
+   - Geometry specification (from Phase 2)
+   - Temporal specification (from Phase 3)
    - Reader registry (empty for now)
    - Processing ledger
 2. **Create new `Pipeline` class** that uses state
-3. **Refactor existing pipeline actions** to use state instead of passing individual parameters
+3. **Update pipeline operations** to use specifications:
+   - Operations read the specs to know what to do
+   - Specs tell WHERE to get data and WHAT type to create
+   - Operations handle the HOW of extraction and formatting
 4. **Ensure all actions are pure functions** that return new state
 
-**Benefit if stopped here**: Clear pipeline structure with immutable state threading
+**Benefit if stopped here**: Clear separation between decision-making (specs) and execution (operations)
 
 ### Phase 5: Reader Interface Definition
 **Standalone Value**: Standardized interface for all metadata extraction
@@ -259,82 +273,84 @@ This implementation strategy focuses on extracting and refactoring existing code
 graph TD
     subgraph "Pure Functional Pipeline"
         Config[Configuration File] --> Pipeline[Pipeline Orchestrator]
-        
+
         subgraph "Initialization Phase"
             Pipeline --> CMR[CMR Reader]
-            CMR --> |Collection Metadata| Context[Pipeline Context]
-            
-            Context --> |Contains| Strategies[Strategies<br/>- Geometry Strategy<br/>- Temporal Strategy]
+            CMR --> |Collection Metadata| Decision[Decision Phase]
+
+            Decision --> |Creates| Specs[Specifications<br/>- Geometry Spec<br/>- Temporal Spec]
+
+            Specs --> Context[Pipeline Context]
             Context --> |Contains| Registry[Reader Registry<br/>- Built-in Readers<br/>- Custom Readers]
         end
-        
+
         subgraph "Specification Phase - Pure, No I/O"
             Context --> Discovery[Granule Discovery]
-            
+
             Discovery --> |For Each Granule| GranulePipeline[Granule Pipeline]
-            
+
             GranulePipeline --> FileRead[File Reading<br/>Using Registry]
             FileRead --> |Temporal| TempReaders[Temporal Readers]
             FileRead --> |Spatial| SpatReaders[Spatial Readers]
             FileRead --> |Attributes| AttrReaders[Attribute Readers]
-            
+
             TempReaders --> Extract[Metadata Extraction]
             SpatReaders --> Extract
             AttrReaders --> Extract
-            
-            Extract --> Process[Process Metadata<br/>Using Strategies]
+
+            Extract --> Process[Process Metadata<br/>Using Specifications]
             Process --> Specify[Specify Side Effects]
-            
+
             Specify --> |Returns| Specs[Effect Specifications<br/>- CreateUMMG<br/>- CreateCNM<br/>- WriteFile<br/>- S3Upload<br/>- SendMessage]
         end
-        
+
         Specs --> |Collect All| AllSpecs[All Effect<br/>Specifications]
-        
+
         subgraph "Execution Phase - All Side Effects"
             AllSpecs --> Executor[Side Effect Executor]
-            
+
             Executor --> Analysis[Analyze Effects]
             Analysis --> |Choose Strategy| ExecStrategy{Execution<br/>Strategy}
-            
+
             ExecStrategy --> |Sequential| Sequential[Sequential<br/>Execution]
             ExecStrategy --> |Parallel| Parallel[Parallel by Type]
             ExecStrategy --> |Batch| Batch[Batch Operations]
-            
+
             Sequential --> Execute[Execute Effects]
             Parallel --> Execute
             Batch --> Execute
-            
+
             Execute --> |Updates| Ledger[Processing Ledger]
         end
-        
+
         Ledger --> Report[Generate Report]
     end
-    
+
     %%% Colorblind-friendly palette with high contrast
     %%% Using patterns and distinct shades instead of relying on color alone
-    
+
     %% Pure functions - Light blue with dark text
     style Pipeline fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
     style GranulePipeline fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
     style Extract fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
     style Process fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
     style Specify fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
-    
+
     %% Context/State - Light gray with dark text
     style Context fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
     style Specs fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
     style AllSpecs fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
     style Ledger fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
-    
+
     %% Side effects - Light orange with dark text
     style Executor fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
     style Execute fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
-    
+
     %% Readers - Very light green with dark text
     style TempReaders fill:#F1F8E9,stroke:#33691E,stroke-width:2px,color:#000
     style SpatReaders fill:#F1F8E9,stroke:#33691E,stroke-width:2px,color:#000
     style AttrReaders fill:#F1F8E9,stroke:#33691E,stroke-width:2px,color:#000
-    
+
     %% Other elements - White with dark borders
     style Config fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
     style CMR fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000

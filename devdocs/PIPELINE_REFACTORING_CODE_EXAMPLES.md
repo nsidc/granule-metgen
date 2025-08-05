@@ -7,8 +7,8 @@ NOTE: This was generated with the help of an AI coding assistant. Do not use thi
 ## Table of Contents
 
 - [Phase 1: CMR Reader Extraction](#phase-1-cmr-reader-extraction)
-- [Phase 2: Geometry Strategy Extraction](#phase-2-geometry-strategy-extraction)
-- [Phase 3: Temporal Strategy Extraction](#phase-3-temporal-strategy-extraction)
+- [Phase 2: Geometry Specification Extraction](#phase-2-geometry-specification-extraction)
+- [Phase 3: Temporal Specification Extraction](#phase-3-temporal-specification-extraction)
 - [Phase 4: Pipeline State Architecture](#phase-4-pipeline-state-architecture)
 - [Phase 5: Reader Interface Definition](#phase-5-reader-interface-definition)
 - [Phase 6: Custom Reader Implementation](#phase-6-custom-reader-implementation)
@@ -81,223 +81,261 @@ class MockCMRReader(CMRReader):
         raise ValueError(f"No mock data for {collection_id} in {environment}")
 ```
 
-## Phase 2: Geometry Strategy Extraction
+## Phase 2: Geometry Specification Extraction
 
-Extract geometry processing logic into strategy pattern.
+Extract geometry decision-making logic into a specification that captures WHAT geometry to create and WHERE to get it from.
 
 ```python
-from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from dataclasses import dataclass
+from enum import Enum
+from typing import Optional, Dict, Any, List
+from pathlib import Path
 
-class GeometryStrategy(ABC):
-    """Base class for geometry extraction strategies"""
+class GeometrySource(Enum):
+    """Where to get geometry data from"""
+    GRANULE_METADATA = "granule_metadata"
+    SPATIAL_FILE = "spatial_file"
+    COLLECTION = "collection"
+    NONE = "none"
 
-    @abstractmethod
-    def extract(self, spatial_data: List[Dict[str, float]],
-                cmr_metadata: CMRMetadata) -> Dict[str, Any]:
-        """Extract geometry based on strategy"""
-        pass
+class GeometryType(Enum):
+    """What type of geometry to create"""
+    POINT = "point"
+    POLYGON = "polygon"
+    BOUNDING_BOX = "bounding_box"
+    NONE = "none"
 
-    @abstractmethod
-    def validate(self, geometry: Dict[str, Any]) -> bool:
-        """Validate extracted geometry"""
-        pass
+@dataclass(frozen=True)
+class GeometrySpec:
+    """Specification for geometry decisions - WHAT and WHERE, not HOW"""
+    source: GeometrySource
+    type: GeometryType
+    representation: str  # GEODETIC or CARTESIAN
+    
+    # Additional context for the decision
+    source_file_path: Optional[Path] = None
+    fallback_source: Optional[GeometrySource] = None
+    validation_required: bool = True
+    
+    # Collection-specific settings
+    use_collection_bbox: bool = False
+    collection_bbox: Optional[Dict[str, float]] = None
 
-class PointGeometryStrategy(GeometryStrategy):
-    """Strategy for point-based geometries"""
+def determine_geometry_spec(config: Dict[str, Any], 
+                          collection: CMRMetadata,
+                          available_files: Dict[str, Path]) -> GeometrySpec:
+    """
+    Determine WHAT geometry to create and WHERE to get it from.
+    This function contains all the business rules for geometry decisions.
+    """
+    # Rule 1: Check if geometry is disabled
+    if config.get("skip_geometry", False):
+        return GeometrySpec(
+            source=GeometrySource.NONE,
+            type=GeometryType.NONE,
+            representation="GEODETIC"
+        )
+    
+    # Rule 2: Check collection override
+    if config.get("collection_geometry_override", False):
+        if not collection.bounding_box:
+            raise ValueError("Collection geometry override requested but no bbox available")
+        
+        return GeometrySpec(
+            source=GeometrySource.COLLECTION,
+            type=GeometryType.BOUNDING_BOX,
+            representation="CARTESIAN",
+            use_collection_bbox=True,
+            collection_bbox=collection.bounding_box
+        )
+    
+    # Rule 3: Determine source priority
+    # Priority: spatial file > granule metadata > collection
+    spatial_file = available_files.get("spatial")
+    
+    if spatial_file and spatial_file.exists():
+        # We have a spatial file
+        geometry_type = _determine_geometry_type_from_file(spatial_file, collection)
+        return GeometrySpec(
+            source=GeometrySource.SPATIAL_FILE,
+            type=geometry_type,
+            representation=collection.granule_spatial_representation,
+            source_file_path=spatial_file
+        )
+    
+    # Rule 4: Fall back to granule metadata
+    # The geometry type depends on the collection's spatial representation
+    geometry_type = _map_representation_to_type(collection.granule_spatial_representation)
+    
+    return GeometrySpec(
+        source=GeometrySource.GRANULE_METADATA,
+        type=geometry_type,
+        representation=collection.granule_spatial_representation,
+        fallback_source=GeometrySource.COLLECTION if collection.bounding_box else None
+    )
 
-    def extract(self, spatial_data: List[Dict[str, float]],
-                cmr_metadata: CMRMetadata) -> Dict[str, Any]:
-        """Extract single point from spatial data"""
-        if not spatial_data:
-            raise ValueError("No spatial data provided")
+def _determine_geometry_type_from_file(spatial_file: Path, 
+                                     collection: CMRMetadata) -> GeometryType:
+    """Determine geometry type based on spatial file contents"""
+    # This would inspect the file to determine if it contains
+    # point, polygon, or other geometry data
+    # For now, use collection hint
+    gsr = collection.granule_spatial_representation.upper()
+    
+    if gsr == "GEODETIC":
+        return GeometryType.POLYGON
+    elif gsr == "CARTESIAN":
+        return GeometryType.BOUNDING_BOX
+    else:
+        return GeometryType.POINT
 
-        # Use first point or average of points
-        point = spatial_data[0]
-        return {
-            "type": "Point",
-            "coordinates": [point["Longitude"], point["Latitude"]]
-        }
-
-    def validate(self, geometry: Dict[str, Any]) -> bool:
-        """Validate point geometry"""
-        return (geometry.get("type") == "Point" and
-                len(geometry.get("coordinates", [])) == 2)
-
-class BoundingBoxStrategy(GeometryStrategy):
-    """Strategy for bounding box geometries"""
-
-    def extract(self, spatial_data: List[Dict[str, float]],
-                cmr_metadata: CMRMetadata) -> Dict[str, Any]:
-        """Extract bounding box from spatial data"""
-        if not spatial_data:
-            raise ValueError("No spatial data provided")
-
-        lons = [p["Longitude"] for p in spatial_data]
-        lats = [p["Latitude"] for p in spatial_data]
-
-        return {
-            "type": "BoundingBox",
-            "coordinates": {
-                "west": min(lons),
-                "east": max(lons),
-                "south": min(lats),
-                "north": max(lats)
-            }
-        }
-
-    def validate(self, geometry: Dict[str, Any]) -> bool:
-        """Validate bounding box geometry"""
-        if geometry.get("type") != "BoundingBox":
-            return False
-        coords = geometry.get("coordinates", {})
-        return all(k in coords for k in ["west", "east", "south", "north"])
-
-class PolygonStrategy(GeometryStrategy):
-    """Strategy for polygon geometries"""
-
-    def extract(self, spatial_data: List[Dict[str, float]],
-                cmr_metadata: CMRMetadata) -> Dict[str, Any]:
-        """Extract polygon from spatial data"""
-        if len(spatial_data) < 3:
-            raise ValueError("Polygon requires at least 3 points")
-
-        # Create polygon from points
-        coordinates = [[p["Longitude"], p["Latitude"]] for p in spatial_data]
-
-        # Ensure polygon is closed
-        if coordinates[0] != coordinates[-1]:
-            coordinates.append(coordinates[0])
-
-        return {
-            "type": "Polygon",
-            "coordinates": [coordinates]
-        }
-
-class GeometryStrategyFactory:
-    """Factory for creating geometry strategies based on CMR metadata"""
-
-    @staticmethod
-    def create(config: Dict[str, Any], cmr_metadata: CMRMetadata) -> GeometryStrategy:
-        """Create appropriate geometry strategy"""
-        # Check configuration override
-        if config.get("geometry_strategy"):
-            strategy_name = config["geometry_strategy"]
-        else:
-            # Use CMR metadata to determine strategy
-            strategy_name = cmr_metadata.granule_spatial_representation.lower()
-
-        strategies = {
-            "point": PointGeometryStrategy,
-            "boundingbox": BoundingBoxStrategy,
-            "polygon": PolygonStrategy,
-            "footprint": PolygonStrategy,  # Alias
-        }
-
-        strategy_class = strategies.get(strategy_name)
-        if not strategy_class:
-            raise ValueError(f"Unknown geometry strategy: {strategy_name}")
-
-        return strategy_class()
+def _map_representation_to_type(representation: str) -> GeometryType:
+    """Map spatial representation to default geometry type"""
+    mapping = {
+        "GEODETIC": GeometryType.POLYGON,
+        "CARTESIAN": GeometryType.BOUNDING_BOX,
+        "POINT": GeometryType.POINT,
+    }
+    return mapping.get(representation.upper(), GeometryType.POINT)
 ```
 
-## Phase 3: Temporal Strategy Extraction
+## Phase 3: Temporal Specification Extraction
 
-Extract temporal processing logic into strategy pattern.
+Extract temporal decision-making logic into a specification that captures WHAT temporal type to create and WHERE to get it from.
 
 ```python
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from dataclasses import dataclass
+from enum import Enum
+from typing import Optional, Dict, Any, List
+from pathlib import Path
 
-class TemporalStrategy(ABC):
-    """Base class for temporal extraction strategies"""
+class TemporalSource(Enum):
+    """Where to get temporal data from"""
+    GRANULE_METADATA = "granule_metadata"
+    PREMET_FILE = "premet_file"
+    COLLECTION = "collection"
+    FILENAME_PATTERN = "filename_pattern"
+    NONE = "none"
 
-    @abstractmethod
-    def extract(self, temporal_data: List[Dict[str, str]],
-                cmr_metadata: CMRMetadata) -> Dict[str, Any]:
-        """Extract temporal extent based on strategy"""
-        pass
+class TemporalType(Enum):
+    """What type of temporal to create"""
+    SINGLE_DATETIME = "single_datetime"
+    RANGE_DATETIME = "range_datetime"
+    NONE = "none"
 
-    @abstractmethod
-    def validate(self, temporal: Dict[str, Any]) -> bool:
-        """Validate extracted temporal extent"""
-        pass
+@dataclass(frozen=True)
+class TemporalSpec:
+    """Specification for temporal decisions - WHAT and WHERE, not HOW"""
+    source: TemporalSource
+    type: TemporalType
+    
+    # Additional context for the decision
+    source_file_path: Optional[Path] = None
+    filename_pattern: Optional[str] = None
+    fallback_source: Optional[TemporalSource] = None
+    
+    # Collection temporal override settings
+    use_collection_temporal: bool = False
+    collection_temporal: Optional[Dict[str, Any]] = None
+    
+    # Validation rules
+    require_complete_range: bool = True
+    allow_future_dates: bool = False
 
-class RangeTemporalStrategy(TemporalStrategy):
-    """Strategy for temporal ranges"""
+def determine_temporal_spec(config: Dict[str, Any],
+                          collection: CMRMetadata,
+                          available_files: Dict[str, Path],
+                          granule_id: str) -> TemporalSpec:
+    """
+    Determine WHAT temporal type to create and WHERE to get it from.
+    This function contains all the business rules for temporal decisions.
+    """
+    # Rule 1: Check if temporal is disabled
+    if config.get("skip_temporal", False):
+        return TemporalSpec(
+            source=TemporalSource.NONE,
+            type=TemporalType.NONE
+        )
+    
+    # Rule 2: Check collection temporal override
+    if config.get("collection_temporal_override", False):
+        if not collection.temporal_extent:
+            raise ValueError("Collection temporal override requested but no temporal extent available")
+        
+        # Validate collection temporal
+        if collection.temporal_extent_error:
+            raise ValueError(f"Collection temporal error: {collection.temporal_extent_error}")
+        
+        return TemporalSpec(
+            source=TemporalSource.COLLECTION,
+            type=_determine_temporal_type_from_collection(collection),
+            use_collection_temporal=True,
+            collection_temporal=collection.temporal_extent
+        )
+    
+    # Rule 3: Determine source priority
+    # Priority: premet file > granule metadata > filename pattern > collection
+    premet_file = available_files.get("premet")
+    
+    if premet_file and premet_file.exists():
+        # We have a premet file with temporal info
+        return TemporalSpec(
+            source=TemporalSource.PREMET_FILE,
+            type=TemporalType.RANGE_DATETIME,  # Premet typically has ranges
+            source_file_path=premet_file
+        )
+    
+    # Rule 4: Check if we can extract from filename
+    if config.get("temporal_from_filename"):
+        pattern = config.get("temporal_filename_pattern")
+        if pattern and _can_extract_from_filename(granule_id, pattern):
+            return TemporalSpec(
+                source=TemporalSource.FILENAME_PATTERN,
+                type=TemporalType.SINGLE_DATETIME,
+                filename_pattern=pattern
+            )
+    
+    # Rule 5: Default to granule metadata
+    # Determine if we expect single or range based on collection
+    temporal_type = _determine_expected_temporal_type(collection, config)
+    
+    return TemporalSpec(
+        source=TemporalSource.GRANULE_METADATA,
+        type=temporal_type,
+        fallback_source=TemporalSource.COLLECTION if collection.temporal_extent else None
+    )
 
-    def extract(self, temporal_data: List[Dict[str, str]],
-                cmr_metadata: CMRMetadata) -> Dict[str, Any]:
-        """Extract temporal range from data"""
-        if not temporal_data:
-            raise ValueError("No temporal data provided")
+def _determine_temporal_type_from_collection(collection: CMRMetadata) -> TemporalType:
+    """Determine temporal type from collection temporal extent"""
+    if not collection.temporal_extent:
+        return TemporalType.NONE
+    
+    # Check if it's a range or single value
+    extent = collection.temporal_extent[0]  # First extent
+    if "BeginningDateTime" in extent and "EndingDateTime" in extent:
+        return TemporalType.RANGE_DATETIME
+    else:
+        return TemporalType.SINGLE_DATETIME
 
-        # Find min/max times
-        start_times = []
-        end_times = []
+def _can_extract_from_filename(filename: str, pattern: str) -> bool:
+    """Check if temporal can be extracted from filename"""
+    import re
+    return bool(re.search(pattern, filename))
 
-        for entry in temporal_data:
-            if "start_datetime" in entry:
-                start_times.append(datetime.fromisoformat(entry["start_datetime"]))
-            if "end_datetime" in entry:
-                end_times.append(datetime.fromisoformat(entry["end_datetime"]))
-
-        return {
-            "type": "RangeDateTime",
-            "BeginningDateTime": min(start_times).isoformat(),
-            "EndingDateTime": max(end_times).isoformat()
-        }
-
-class PointInTimeStrategy(TemporalStrategy):
-    """Strategy for single point in time"""
-
-    def extract(self, temporal_data: List[Dict[str, str]],
-                cmr_metadata: CMRMetadata) -> Dict[str, Any]:
-        """Extract single time point"""
-        if not temporal_data:
-            raise ValueError("No temporal data provided")
-
-        # Use first time point or configuration
-        time_point = temporal_data[0].get("datetime") or temporal_data[0].get("start_datetime")
-
-        return {
-            "type": "SingleDateTime",
-            "DateTime": time_point
-        }
-
-class CyclicTemporalStrategy(TemporalStrategy):
-    """Strategy for cyclic/recurring temporal patterns"""
-
-    def extract(self, temporal_data: List[Dict[str, str]],
-                cmr_metadata: CMRMetadata) -> Dict[str, Any]:
-        """Extract cyclic temporal pattern"""
-        # Implementation for cyclic patterns
-        # This would handle recurring observations
-        pass
-
-class TemporalStrategyFactory:
-    """Factory for creating temporal strategies"""
-
-    @staticmethod
-    def create(config: Dict[str, Any], cmr_metadata: CMRMetadata) -> TemporalStrategy:
-        """Create appropriate temporal strategy"""
-        # Check configuration override
-        if config.get("temporal_strategy"):
-            strategy_name = config["temporal_strategy"]
-        else:
-            # Use CMR metadata to determine strategy
-            strategy_name = cmr_metadata.temporal_extent_type.lower()
-
-        strategies = {
-            "range": RangeTemporalStrategy,
-            "rangedatetime": RangeTemporalStrategy,
-            "single": PointInTimeStrategy,
-            "singledatetime": PointInTimeStrategy,
-            "cyclic": CyclicTemporalStrategy,
-        }
-
-        strategy_class = strategies.get(strategy_name, RangeTemporalStrategy)
-        return strategy_class()
+def _determine_expected_temporal_type(collection: CMRMetadata, 
+                                    config: Dict[str, Any]) -> TemporalType:
+    """Determine expected temporal type based on collection and config"""
+    # Check explicit configuration
+    if config.get("temporal_type"):
+        return TemporalType(config["temporal_type"])
+    
+    # Use collection hints
+    if collection.temporal_extent_type:
+        if "range" in collection.temporal_extent_type.lower():
+            return TemporalType.RANGE_DATETIME
+    
+    # Default
+    return TemporalType.SINGLE_DATETIME
 ```
 
 ## Phase 4: Pipeline State Architecture
@@ -328,8 +366,8 @@ class PipelineState:
     """Immutable state threaded through pipeline stages"""
     configuration: Dict[str, Any]
     cmr_metadata: CMRMetadata
-    geometry_strategy: GeometryStrategy
-    temporal_strategy: TemporalStrategy
+    geometry_spec: GeometrySpec
+    temporal_spec: TemporalSpec
     reader_registry: Optional['ReaderRegistry'] = None  # Added in Phase 5
     processing_ledger: Tuple[ProcessingEvent, ...] = field(default_factory=tuple)
     error_accumulator: Tuple[ProcessingError, ...] = field(default_factory=tuple)
@@ -370,16 +408,18 @@ class Pipeline:
             config.get("environment", "prod")
         )
 
-        # Create strategies
-        geometry_strategy = GeometryStrategyFactory.create(config, cmr_metadata)
-        temporal_strategy = TemporalStrategyFactory.create(config, cmr_metadata)
+        # Determine specifications (decisions about WHAT and WHERE)
+        available_files = self._discover_available_files(config["data_dir"])
+        
+        geometry_spec = determine_geometry_spec(config, cmr_metadata, available_files)
+        temporal_spec = determine_temporal_spec(config, cmr_metadata, available_files, "")
 
         # Create initial state
         return PipelineState(
             configuration=config,
             cmr_metadata=cmr_metadata,
-            geometry_strategy=geometry_strategy,
-            temporal_strategy=temporal_strategy
+            geometry_spec=geometry_spec,
+            temporal_spec=temporal_spec
         )
 
     def process_granule(self, granule_path: str, state: PipelineState) -> PipelineResult:
