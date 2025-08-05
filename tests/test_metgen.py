@@ -8,6 +8,7 @@ import pytest
 from funcy import identity, partial
 
 from nsidc.metgen import config, constants, metgen
+from nsidc.metgen.models import Collection
 
 # Unit tests for the 'metgen' module functions.
 #
@@ -40,7 +41,9 @@ def test_config():
 
 @pytest.fixture
 def test_collection():
-    return metgen.Collection("ABCD", 2)
+    return Collection(
+        short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
+    )
 
 
 @pytest.fixture
@@ -70,61 +73,6 @@ def single_file_granule():
             "temporal": "now",
             "geometry": "big",
         }
-    }
-
-
-@pytest.fixture
-def fake_ummc_response():
-    return {
-        "ShortName": "BigData",
-        "Version": 1,
-        "TemporalExtents": ["then", "now"],
-        "SpatialExtent": {"here": "there"},
-    }
-
-
-@pytest.fixture
-def ummc_valid_temporal_extent():
-    return {
-        "TemporalExtents": [
-            {
-                "RangeDateTimes": [{"begin": 1, "end": 2}],
-            },
-        ]
-    }
-
-
-@pytest.fixture
-def ummc_multi_temporal_extent():
-    return {
-        "TemporalExtents": [
-            {
-                "RangeDateTimes": [{"begin": 1, "end": 2}],
-            },
-            {
-                "RangeDateTimes": [{"begin": 3, "end": 4}],
-            },
-        ]
-    }
-
-
-@pytest.fixture
-def ummc_multi_temporal_range():
-    return {
-        "TemporalExtents": [
-            {
-                "RangeDateTimes": [
-                    {
-                        "BeginningDateTime": "2021-11-01T00:00:00.000Z",
-                        "EndingDateTime": "2021-11-30T00:00:00.000Z",
-                    },
-                    {
-                        "BeginningDateTime": "2022-12-01T00:00:00.000Z",
-                        "EndingDateTime": "2022-12-31T00:00:00.000Z",
-                    },
-                ],
-            }
-        ]
     }
 
 
@@ -455,7 +403,9 @@ def test_no_attempt_to_match_empty_ancillary_files():
 def test_stage_files(m1, m2, m3, test_config):
     granule = metgen.Granule(
         "foo",
-        metgen.Collection("ABCD", 2),
+        Collection(
+            short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
+        ),
         uuid="abcd-1234",
         data_filenames={"file1", "file2", "file3"},
         browse_filenames={"browse1", "browse2", "browse3"},
@@ -475,14 +425,26 @@ def test_returns_datetime_range():
 
 
 def test_s3_object_path_has_no_leading_slash():
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    granule = metgen.Granule(
+        "foo",
+        Collection(
+            short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
+        ),
+        uuid="abcd-1234",
+    )
     expected = "external/ABCD/2/abcd-1234/xyzzy.bin"
     assert metgen.s3_object_path(granule, "xyzzy.bin") == expected
 
 
 def test_s3_url_simple_case():
     staging_bucket_name = "xyzzy-bucket"
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    granule = metgen.Granule(
+        "foo",
+        Collection(
+            short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
+        ),
+        uuid="abcd-1234",
+    )
     expected = "s3://xyzzy-bucket/external/ABCD/2/abcd-1234/xyzzy.bin"
     assert metgen.s3_url(staging_bucket_name, granule, "xyzzy.bin") == expected
 
@@ -586,60 +548,6 @@ def test_dummy_json_used(mock_validate, mock_open):
         )
 
 
-@pytest.mark.parametrize(
-    "ingest_env,edl_env",
-    [("int", "UAT"), ("uat", "UAT"), ("prod", "PROD")],
-)
-def test_edl_login_environment(ingest_env, edl_env):
-    environment = metgen.edl_environment(ingest_env)
-    assert (environment) == edl_env
-
-    environment = metgen.edl_environment(ingest_env.upper())
-    assert (environment) == edl_env
-
-
-def test_handles_missing_ummc_key(fake_ummc_response):
-    assert metgen.ummc_content({}, ["fakekey"]) is None
-    assert metgen.ummc_content(fake_ummc_response, ["DOI"]) is None
-
-
-def test_finds_existing_ummc_key(fake_ummc_response):
-    assert metgen.ummc_content(fake_ummc_response, ["Version"]) == 1
-
-
-def test_looks_for_umm_dict(fake_ummc_response):
-    ummc = metgen.validate_cmr_response([{"umm": fake_ummc_response}])
-    assert ummc == fake_ummc_response
-
-
-@pytest.mark.parametrize(
-    "umm_content,error",
-    [
-        ([], "Empty UMM-C response from CMR."),
-        (
-            ["ummc1", "ummc2"],
-            "Multiple UMM-C records returned from CMR, none will be used.",
-        ),
-        (
-            ["ummc1"],
-            "No UMM-C content in CMR response.",
-        ),
-        (
-            [{"ummc1": "some ummc"}],
-            "No UMM-C content in CMR response.",
-        ),
-        (
-            [{"umm": "some ummc"}],
-            "Malformed UMM-C content returned from CMR.",
-        ),
-    ],
-)
-def test_umm_key_required(umm_content, error):
-    with pytest.raises(config.ValidationError) as exc_info:
-        metgen.validate_cmr_response(umm_content)
-    assert re.search(error, exc_info.value.args[0])
-
-
 def test_gsr_is_required(test_config, test_collection):
     errors = metgen.validate_collection_spatial(test_config, test_collection)
     assert re.search("GranuleSpatialRepresentation not available", " ".join(errors))
@@ -684,18 +592,3 @@ def test_collection_temporal_errors_returned(test_config, test_collection):
     test_collection.temporal_extent_error = "Very bad temporal error"
     errors = metgen.validate_collection_temporal(test_config, test_collection)
     assert errors[0] == "Very bad temporal error"
-
-
-def test_only_one_collection_temporal_extent_allowed(ummc_multi_temporal_extent):
-    temporal_details, error = metgen.temporal_from_ummc(ummc_multi_temporal_extent)
-    assert re.search("one temporal extent", error)
-
-
-def test_only_one_collection_temporal_details_allowed(ummc_multi_temporal_range):
-    temporal_details, error = metgen.temporal_from_ummc(ummc_multi_temporal_range)
-    assert re.search("one temporal range or a single temporal", error)
-
-
-def test_valid_collection_temporal(ummc_valid_temporal_extent):
-    temporal_details, error = metgen.temporal_from_ummc(ummc_valid_temporal_extent)
-    assert not error
