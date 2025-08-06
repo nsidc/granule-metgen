@@ -6,6 +6,7 @@ These tests use mocked responses to avoid actual CMR API calls.
 
 from unittest.mock import patch
 
+import earthaccess
 import pytest
 
 from nsidc.metgen.collection_metadata import (
@@ -153,20 +154,25 @@ class TestCollectionMetadataReader:
         """Test CMR reader initialization for UAT environment."""
         assert collection_metadata_reader_uat.environment == "uat"
         assert collection_metadata_reader_uat.provider == "NSIDC_CUAT"
-        assert collection_metadata_reader_uat._get_edl_environment() == "uat"
+        assert (
+            collection_metadata_reader_uat._get_earthaccess_system() == earthaccess.UAT
+        )
 
     def test_initialization_prod(self, collection_metadata_reader_prod):
         """Test CMR reader initialization for production environment."""
         assert collection_metadata_reader_prod.environment == "prod"
         assert collection_metadata_reader_prod.provider == "NSIDC_CPRD"
-        assert collection_metadata_reader_prod._get_edl_environment() == "ops"
+        assert (
+            collection_metadata_reader_prod._get_earthaccess_system()
+            == earthaccess.PROD
+        )
 
     def test_initialization_int_environment(self):
         """Test CMR reader handles 'int' environment as UAT."""
         reader = CollectionMetadataReader(environment="int")
         assert reader.environment == "int"
         assert reader.provider == "NSIDC_CUAT"
-        assert reader._get_edl_environment() == "uat"
+        assert reader._get_earthaccess_system() == earthaccess.UAT
 
     def test_initialization_case_insensitive(self):
         """Test CMR reader handles uppercase environment names."""
@@ -227,7 +233,7 @@ class TestCollectionMetadataReader:
         assert metadata.raw_ummc["ShortName"] == "SNEX23_SSADUCk"
 
         # Verify mocks were called correctly
-        mock_login.assert_called_once_with(strategy="uat")
+        mock_login.assert_called_once_with(system=earthaccess.UAT)
         mock_search.assert_called_once_with(
             short_name="SNEX23_SSADUCk",
             version="1",
@@ -507,7 +513,7 @@ class TestConvenienceFunction:
         assert metadata.version == "1"
 
         # Should use UAT environment
-        mock_login.assert_called_once_with(strategy="uat")
+        mock_login.assert_called_once_with(system=earthaccess.UAT)
         mock_search.assert_called_once()
         call_args = mock_search.call_args[1]
         assert call_args["provider"] == "NSIDC_CUAT"
@@ -526,7 +532,7 @@ class TestConvenienceFunction:
         assert metadata.version == "2"
 
         # Should use production environment
-        mock_login.assert_called_once_with(strategy="ops")
+        mock_login.assert_called_once_with(system=earthaccess.PROD)
         mock_search.assert_called_once()
         call_args = mock_search.call_args[1]
         assert call_args["provider"] == "NSIDC_CPRD"

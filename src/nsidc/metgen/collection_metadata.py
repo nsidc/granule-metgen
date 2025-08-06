@@ -40,9 +40,9 @@ class CollectionMetadataReader:
             else constants.CMR_UAT_PROVIDER
         )
 
-    def _get_edl_environment(self) -> str:
-        """Get the Earthdata Login environment."""
-        return "uat" if self.environment != "prod" else "ops"
+    def _get_earthaccess_system(self):
+        """Get the Earthdata Login system object."""
+        return earthaccess.PROD if self.environment == "prod" else earthaccess.UAT
 
     @lru_cache(maxsize=128)
     def get_collection_metadata(
@@ -66,7 +66,7 @@ class CollectionMetadataReader:
         version_str = str(version)
 
         # Attempt Earthdata login
-        if not earthaccess.login(strategy=self._get_edl_environment()):
+        if not earthaccess.login(system=self._get_earthaccess_system()):
             raise Exception(
                 f"Earthdata login failed, cannot retrieve UMM-C metadata for "
                 f"{short_name}.{version_str}"
