@@ -6,7 +6,7 @@ This module contains dataclasses used throughout the metgen pipeline.
 
 import dataclasses
 from enum import Enum
-from typing import Optional
+from typing import Callable, Optional
 
 
 @dataclasses.dataclass
@@ -63,21 +63,17 @@ class GeometrySpec:
     Specification for geometry extraction and creation.
 
     This captures the decisions about WHERE to get geometry data from
-    and WHAT type of geometry to create, but not HOW to do it.
+    and WHAT type of geometry to create based on the data found.
     """
 
     # Where to get the geometry data
     source: GeometrySource
 
-    # What type of geometry to create
-    geometry_type: GeometryType
+    # Function that determines geometry type based on point count
+    get_geometry_type: Callable[[int], GeometryType]
 
-    # Coordinate system (if applicable)
-    representation: Optional[str] = None  # "GEODETIC" or "CARTESIAN"
-
-    # Additional context needed for execution
-    spatial_filename: Optional[str] = None  # If source is SPATIAL_FILE
-    metadata_fields: Optional[list] = None  # Which fields to extract from
+    # Coordinate system
+    representation: str  # "GEODETIC" or "CARTESIAN"
 
 
 class TemporalSource(Enum):

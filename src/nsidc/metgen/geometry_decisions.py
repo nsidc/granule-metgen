@@ -28,7 +28,7 @@ def determine_geometry_spec(
 
     This function encapsulates all the business rules for deciding:
     - WHERE to get geometry data from (source)
-    - WHAT type of geometry to create (type)
+    - Rules for WHAT type of geometry to create based on point count
     - HOW it should be represented (coordinate system)
 
     Args:
@@ -36,7 +36,7 @@ def determine_geometry_spec(
         collection: Collection metadata from CMR
         granule_name: Name of the granule being processed
         data_files: Set of science data files
-        spatial_files: Optional list of .spatial ancillary files
+        spatial_files: Optional list of .spatial and .spo ancillary files
 
     Returns:
         GeometrySpec describing the geometry decisions
@@ -46,7 +46,8 @@ def determine_geometry_spec(
         logger.debug(f"No granule spatial representation for {granule_name}")
         return GeometrySpec(
             source=GeometrySource.NOT_PROVIDED,
-            geometry_type=GeometryType.NONE,
+            get_geometry_type=lambda _: GeometryType.NONE,
+            representation="NONE",
         )
 
     # Check for collection geometry override
@@ -54,27 +55,23 @@ def determine_geometry_spec(
         logger.debug(f"Using collection geometry override for {granule_name}")
         return _collection_geometry_spec(collection)
 
-    # Check for spatial file
-    spatial_file = _find_matching_spatial_file(granule_name, spatial_files)
-    if spatial_file:
-        logger.debug(f"Found spatial file {spatial_file} for {granule_name}")
-        return GeometrySpec(
-            source=GeometrySource.SPATIAL_FILE,
-            geometry_type=GeometryType.POLYGON,  # Spatial files contain polygons
-            representation=collection.granule_spatial_representation,
-            spatial_filename=str(spatial_file),
-        )
+    # Check for .spo or .spatial files
+    if spatial_files:
+        # Check if any .spo files exist (not granule-specific)
+        has_spo_files = any(f.suffix == ".spo" for f in spatial_files)
+        if has_spo_files:
+            logger.debug(f"Processing with .spo file rules for {granule_name}")
+            return _spo_geometry_spec(collection)
+
+        # Check if any .spatial files exist
+        has_spatial_files = any(f.suffix == ".spatial" for f in spatial_files)
+        if has_spatial_files:
+            logger.debug(f"Processing with .spatial file rules for {granule_name}")
+            return _spatial_geometry_spec(collection)
 
     # Default: extract from granule metadata
     logger.debug(f"Will extract geometry from granule metadata for {granule_name}")
-    geometry_type = _determine_geometry_type_from_config(configuration)
-
-    return GeometrySpec(
-        source=GeometrySource.GRANULE_METADATA,
-        geometry_type=geometry_type,
-        representation=collection.granule_spatial_representation,
-        metadata_fields=_get_geometry_fields(configuration, geometry_type),
-    )
+    return _granule_metadata_geometry_spec(collection)
 
 
 def _collection_geometry_spec(collection: Collection) -> GeometrySpec:
@@ -82,63 +79,119 @@ def _collection_geometry_spec(collection: Collection) -> GeometrySpec:
     # Collection geometry is always a bounding box in CARTESIAN representation
     return GeometrySpec(
         source=GeometrySource.COLLECTION,
-        geometry_type=GeometryType.BOUNDING_BOX,
+        get_geometry_type=lambda _: GeometryType.BOUNDING_BOX,
         representation="CARTESIAN",  # Collection override requires CARTESIAN
     )
 
 
-def _find_matching_spatial_file(
-    granule_name: str, spatial_files: Optional[List[Path]]
-) -> Optional[Path]:
+def _spo_geometry_spec(collection: Collection) -> GeometrySpec:
     """
-    Find a spatial file that matches the granule.
+    Create geometry spec for .spo file based geometry.
 
-    Looks for files where the spatial filename starts with the granule name
-    followed by a period (to ensure exact match, not partial).
+    According to README:
+    - .spo files inherently define GPoly vertices
+    - GPolys must be geodetic, not cartesian
+    - Requires at least 3 points to define a polygon
     """
-    if not spatial_files:
-        return None
+    # Validate that collection uses geodetic representation
+    if collection.granule_spatial_representation != "GEODETIC":
+        logger.error(
+            f"Invalid: .spo files require GEODETIC representation, "
+            f"but collection has {collection.granule_spatial_representation}"
+        )
+        # Return error state
+        return GeometrySpec(
+            source=GeometrySource.NOT_PROVIDED,
+            get_geometry_type=lambda _: GeometryType.NONE,
+            representation=collection.granule_spatial_representation,
+        )
 
-    for spatial_file in spatial_files:
-        # Get just the filename without path
-        filename = spatial_file.name
-        # Check if filename starts with granule_name followed by a period
-        # This ensures "test_granule" matches "test_granule.nc.spatial"
-        # but not "test_granule_v2.nc.spatial" or "test.nc.spatial"
-        if filename.startswith(f"{granule_name}."):
-            return spatial_file
+    def spo_geometry_type(point_count: int) -> GeometryType:
+        """Determine geometry type for .spo files based on point count."""
+        if point_count <= 2:
+            raise ValueError(
+                f"Invalid .spo file: has {point_count} points, "
+                f"but at least 3 points are required to define a polygon"
+            )
+        return GeometryType.POLYGON
 
-    return None
+    return GeometrySpec(
+        source=GeometrySource.SPATIAL_FILE,
+        get_geometry_type=spo_geometry_type,
+        representation="GEODETIC",
+    )
 
 
-def _determine_geometry_type_from_config(configuration: Config) -> GeometryType:
+def _spatial_geometry_spec(collection: Collection) -> GeometrySpec:
     """
-    Determine geometry type based on configuration settings.
+    Create geometry spec for .spatial file based geometry.
 
-    Currently, MetGenC doesn't have a write_points configuration option,
-    so we determine based on other factors. In the future, this could be
-    enhanced to support point-only output.
+    According to README, the geometry type depends on:
+    - Number of points in the file
+    - Coordinate system (geodetic vs cartesian)
     """
-    # Default is polygon for geodetic, bounding box for cartesian
-    # This logic may be enhanced in the future with explicit configuration
-    return GeometryType.POLYGON
+    representation = collection.granule_spatial_representation
+
+    if representation == "CARTESIAN":
+
+        def cartesian_geometry_type(point_count: int) -> GeometryType:
+            """Determine geometry type for cartesian .spatial files."""
+            if point_count == 1:
+                raise ValueError(
+                    "Invalid .spatial file: single point with CARTESIAN representation. "
+                    "Points must use GEODETIC representation."
+                )
+            elif point_count == 2:
+                return GeometryType.BOUNDING_BOX
+            else:  # point_count > 2
+                raise ValueError(
+                    f"Invalid .spatial file: has {point_count} points with CARTESIAN representation. "
+                    "Only 2 points (bounding box) are valid for CARTESIAN."
+                )
+
+        return GeometrySpec(
+            source=GeometrySource.SPATIAL_FILE,
+            get_geometry_type=cartesian_geometry_type,
+            representation="CARTESIAN",
+        )
+    else:  # GEODETIC
+
+        def geodetic_geometry_type(point_count: int) -> GeometryType:
+            """Determine geometry type for geodetic .spatial files."""
+            if point_count == 0:
+                raise ValueError("Invalid .spatial file: no points found")
+            elif point_count == 1:
+                return GeometryType.POINT
+            else:  # point_count >= 2
+                return GeometryType.POLYGON
+
+        return GeometrySpec(
+            source=GeometrySource.SPATIAL_FILE,
+            get_geometry_type=geodetic_geometry_type,
+            representation="GEODETIC",
+        )
 
 
-def _get_geometry_fields(
-    configuration: Config, geometry_type: GeometryType
-) -> Optional[List[str]]:
+def _granule_metadata_geometry_spec(collection: Collection) -> GeometrySpec:
     """
-    Get the metadata field names to extract based on geometry type.
+    Create geometry spec for granule metadata based geometry.
 
-    Returns None if fields should be determined by the reader.
+    For science files (NetCDF), the geometry type is determined by
+    the coordinate system.
     """
-    if geometry_type == GeometryType.POINT:
-        # For points, we need lat/lon fields
-        # The actual field names depend on the file format and reader
-        return None  # Let the reader determine the appropriate fields
-    elif geometry_type == GeometryType.POLYGON:
-        # For polygons, we need coordinate arrays
-        # The actual field names depend on the file format and reader
-        return None  # Let the reader determine the appropriate fields
-    else:
-        return None
+    representation = collection.granule_spatial_representation
+
+    if representation == "CARTESIAN":
+        # Science files with cartesian create bounding rectangles
+        return GeometrySpec(
+            source=GeometrySource.GRANULE_METADATA,
+            get_geometry_type=lambda _: GeometryType.BOUNDING_BOX,
+            representation="CARTESIAN",
+        )
+    else:  # GEODETIC
+        # Science files with geodetic create polygons from grid perimeter
+        return GeometrySpec(
+            source=GeometrySource.GRANULE_METADATA,
+            get_geometry_type=lambda _: GeometryType.POLYGON,
+            representation="GEODETIC",
+        )
