@@ -40,7 +40,7 @@ from nsidc.metgen import aws, config, constants
 from nsidc.metgen.collection_metadata import get_collection_metadata
 from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.geometry_decisions import determine_geometry_spec
-from nsidc.metgen.models import Collection
+from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.readers import generic, registry, utilities
 from nsidc.metgen.spatial import create_flightline_polygon
 from nsidc.metgen.temporal_decisions import determine_temporal_spec
@@ -1210,7 +1210,7 @@ def apply_schema(schema, json_file, dummy_json):
 
 
 def _demonstrate_specifications(
-    configuration: config.Config, collection: Collection
+    configuration: config.Config, collection: CollectionMetadata
 ) -> None:
     """
     Demonstrate the new specification system by determining specs for the first granule.

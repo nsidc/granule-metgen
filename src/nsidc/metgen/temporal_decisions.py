@@ -11,14 +11,14 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 from nsidc.metgen.config import Config
-from nsidc.metgen.models import Collection, TemporalSource, TemporalSpec, TemporalType
+from nsidc.metgen.models import CollectionMetadata, TemporalSource, TemporalSpec, TemporalType
 
 logger = logging.getLogger(__name__)
 
 
 def determine_temporal_spec(
     configuration: Config,
-    collection: Collection,
+    collection: CollectionMetadata,
     granule_name: str,
     data_files: Set[Path],
     premet_files: Optional[List[Path]] = None,
@@ -65,7 +65,7 @@ def determine_temporal_spec(
     )
 
 
-def _collection_temporal_spec(collection: Collection) -> TemporalSpec:
+def _collection_temporal_spec(collection: CollectionMetadata) -> TemporalSpec:
     """Create temporal spec for collection-based temporal."""
     # Check if collection has temporal extent error
     if collection.temporal_extent_error:

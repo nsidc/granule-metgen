@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 
 from nsidc.metgen.config import Config
-from nsidc.metgen.models import Collection
+from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.temporal_decisions import (
     TemporalSource,
     TemporalType,
@@ -46,7 +46,7 @@ def config():
 @pytest.fixture
 def collection():
     """Create a test collection with temporal extent."""
-    return Collection(
+    return CollectionMetadata(
         short_name="TEST",
         version="1",
         entry_title="Test Collection",
@@ -63,7 +63,7 @@ def collection():
 @pytest.fixture
 def collection_single_temporal():
     """Create a test collection with single temporal value."""
-    return Collection(
+    return CollectionMetadata(
         short_name="TEST",
         version="1",
         entry_title="Test Collection",
@@ -75,7 +75,7 @@ def collection_single_temporal():
 @pytest.fixture
 def collection_temporal_error():
     """Create a test collection with temporal extent error."""
-    return Collection(
+    return CollectionMetadata(
         short_name="TEST",
         version="1",
         entry_title="Test Collection",
