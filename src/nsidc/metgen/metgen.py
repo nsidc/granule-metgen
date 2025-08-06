@@ -37,9 +37,9 @@ from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws, config, constants
-from nsidc.metgen.collection import get_collection
+from nsidc.metgen.collection_metadata import get_collection_metadata
 from nsidc.metgen.geometry_decisions import determine_geometry_spec
-from nsidc.metgen.models import Collection
+from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.readers import generic, registry, utilities
 from nsidc.metgen.spatial import create_flightline_polygon
 from nsidc.metgen.temporal_decisions import determine_temporal_spec
@@ -240,7 +240,7 @@ class Granule:
     """Granule to ingest"""
 
     producer_granule_id: str
-    collection: Maybe[Collection] = Maybe.empty
+    collection: Maybe[CollectionMetadata] = Maybe.empty
     data_filenames: set[str] = dataclasses.field(default_factory=set)
     browse_filenames: set[str] = dataclasses.field(default_factory=set)
     premet_filename: Maybe[str] = Maybe.empty
@@ -291,7 +291,7 @@ def process(configuration: config.Config) -> None:
     logger.info(
         f"Retrieving collection metadata for {configuration.auth_id}.{configuration.version}"
     )
-    collection = get_collection(
+    collection = get_collection_metadata(
         configuration.environment, configuration.auth_id, str(configuration.version)
     )
     logger.info(f"Successfully retrieved metadata for: {collection.entry_title}")
@@ -591,7 +591,7 @@ def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
         return os.path.basename(a_file_path)
 
 
-def associate_collection(granule: Granule, collection: Collection) -> Granule:
+def associate_collection(granule: Granule, collection: CollectionMetadata) -> Granule:
     """
     Associate pre-fetched collection information with the Granule.
 
@@ -1208,7 +1208,7 @@ def apply_schema(schema, json_file, dummy_json):
 
 
 def _demonstrate_specifications(
-    configuration: config.Config, collection: Collection
+    configuration: config.Config, collection: CollectionMetadata
 ) -> None:
     """
     Demonstrate the new specification system by determining specs for the first granule.

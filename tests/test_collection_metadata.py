@@ -1,5 +1,5 @@
 """
-Unit tests for the CMR reader module.
+Unit tests for the collection metadata reader module.
 
 These tests use mocked responses to avoid actual CMR API calls.
 """
@@ -8,8 +8,8 @@ from unittest.mock import patch
 
 import pytest
 
-from nsidc.metgen.collection import CollectionReader, get_collection
-from nsidc.metgen.models import Collection
+from nsidc.metgen.collection_metadata import CollectionMetadataReader, get_collection_metadata
+from nsidc.metgen.models import CollectionMetadata
 
 
 @pytest.fixture
@@ -132,53 +132,53 @@ def minimal_ummc_response():
 
 
 @pytest.fixture
-def collection_reader_uat():
+def collection_metadata_reader_uat():
     """Collection reader instance for UAT environment."""
-    return CollectionReader(environment="uat")
+    return CollectionMetadataReader(environment="uat")
 
 
 @pytest.fixture
-def collection_reader_prod():
+def collection_metadata_reader_prod():
     """Collection reader instance for production environment."""
-    return CollectionReader(environment="prod")
+    return CollectionMetadataReader(environment="prod")
 
 
-class TestCollectionReader:
+class TestCollectionMetadataReader:
     """Test cases for the CMRReader class."""
 
-    def test_initialization_uat(self, collection_reader_uat):
+    def test_initialization_uat(self, collection_metadata_reader_uat):
         """Test CMR reader initialization for UAT environment."""
-        assert collection_reader_uat.environment == "uat"
-        assert collection_reader_uat.provider == "NSIDC_CUAT"
-        assert collection_reader_uat._get_edl_environment() == "uat"
+        assert collection_metadata_reader_uat.environment == "uat"
+        assert collection_metadata_reader_uat.provider == "NSIDC_CUAT"
+        assert collection_metadata_reader_uat._get_edl_environment() == "uat"
 
-    def test_initialization_prod(self, collection_reader_prod):
+    def test_initialization_prod(self, collection_metadata_reader_prod):
         """Test CMR reader initialization for production environment."""
-        assert collection_reader_prod.environment == "prod"
-        assert collection_reader_prod.provider == "NSIDC_CPRD"
-        assert collection_reader_prod._get_edl_environment() == "ops"
+        assert collection_metadata_reader_prod.environment == "prod"
+        assert collection_metadata_reader_prod.provider == "NSIDC_CPRD"
+        assert collection_metadata_reader_prod._get_edl_environment() == "ops"
 
     def test_initialization_int_environment(self):
         """Test CMR reader handles 'int' environment as UAT."""
-        reader = CollectionReader(environment="int")
+        reader = CollectionMetadataReader(environment="int")
         assert reader.environment == "int"
         assert reader.provider == "NSIDC_CUAT"
         assert reader._get_edl_environment() == "uat"
 
     def test_initialization_case_insensitive(self):
         """Test CMR reader handles uppercase environment names."""
-        reader_uat = CollectionReader(environment="UAT")
+        reader_uat = CollectionMetadataReader(environment="UAT")
         assert reader_uat.environment == "uat"
         assert reader_uat.provider == "NSIDC_CUAT"
 
-        reader_prod = CollectionReader(environment="PROD")
+        reader_prod = CollectionMetadataReader(environment="PROD")
         assert reader_prod.environment == "prod"
         assert reader_prod.provider == "NSIDC_CPRD"
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
     def test_get_collection_metadata_success(
-        self, mock_search, mock_login, collection_reader_uat, sample_ummc_response
+        self, mock_search, mock_login, collection_metadata_reader_uat, sample_ummc_response
     ):
         """Test successful collection metadata retrieval."""
         # Setup mocks
@@ -186,10 +186,10 @@ class TestCollectionReader:
         mock_search.return_value = sample_ummc_response
 
         # Call the method
-        metadata = collection_reader_uat.get_collection_metadata("SNEX23_SSADUCk", "1")
+        metadata = collection_metadata_reader_uat.get_collection_metadata("SNEX23_SSADUCk", "1")
 
         # Verify the results
-        assert isinstance(metadata, Collection)
+        assert isinstance(metadata, CollectionMetadata)
         assert metadata.short_name == "SNEX23_SSADUCk"
         assert metadata.version == "1"
         assert (
@@ -228,34 +228,34 @@ class TestCollectionReader:
 
     @patch("earthaccess.login")
     def test_get_collection_metadata_login_failure(
-        self, mock_login, collection_reader_uat
+        self, mock_login, collection_metadata_reader_uat
     ):
         """Test handling of Earthdata login failure."""
         mock_login.return_value = False
 
         with pytest.raises(Exception) as exc_info:
-            collection_reader_uat.get_collection_metadata("TEST", "1")
+            collection_metadata_reader_uat.get_collection_metadata("TEST", "1")
 
         assert "Earthdata login failed" in str(exc_info.value)
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
     def test_get_collection_metadata_empty_response(
-        self, mock_search, mock_login, collection_reader_uat
+        self, mock_search, mock_login, collection_metadata_reader_uat
     ):
         """Test handling of empty CMR response."""
         mock_login.return_value = True
         mock_search.return_value = []
 
         with pytest.raises(ValueError) as exc_info:
-            collection_reader_uat.get_collection_metadata("MISSING", "1")
+            collection_metadata_reader_uat.get_collection_metadata("MISSING", "1")
 
         assert "Empty UMM-C response" in str(exc_info.value)
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
     def test_get_collection_metadata_multiple_responses(
-        self, mock_search, mock_login, collection_reader_uat, sample_ummc_response
+        self, mock_search, mock_login, collection_metadata_reader_uat, sample_ummc_response
     ):
         """Test handling of multiple CMR responses."""
         mock_login.return_value = True
@@ -263,14 +263,14 @@ class TestCollectionReader:
         mock_search.return_value = sample_ummc_response * 2
 
         with pytest.raises(ValueError) as exc_info:
-            collection_reader_uat.get_collection_metadata("DUPLICATE", "1")
+            collection_metadata_reader_uat.get_collection_metadata("DUPLICATE", "1")
 
         assert "Multiple UMM-C records" in str(exc_info.value)
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
     def test_get_collection_metadata_no_umm_key(
-        self, mock_search, mock_login, collection_reader_uat
+        self, mock_search, mock_login, collection_metadata_reader_uat
     ):
         """Test handling of response without umm key (legacy format)."""
         mock_login.return_value = True
@@ -279,7 +279,7 @@ class TestCollectionReader:
             {"ShortName": "LEGACY", "Version": "1", "EntryTitle": "Legacy Collection"}
         ]
 
-        metadata = collection_reader_uat.get_collection_metadata("LEGACY", "1")
+        metadata = collection_metadata_reader_uat.get_collection_metadata("LEGACY", "1")
 
         assert metadata.short_name == "LEGACY"
         assert metadata.version == "1"
@@ -291,14 +291,14 @@ class TestCollectionReader:
         self,
         mock_search,
         mock_login,
-        collection_reader_uat,
+        collection_metadata_reader_uat,
         sample_ummc_single_temporal,
     ):
         """Test parsing of single temporal value."""
         mock_login.return_value = True
         mock_search.return_value = sample_ummc_single_temporal
 
-        metadata = collection_reader_uat.get_collection_metadata("TEST_COLLECTION", "1")
+        metadata = collection_metadata_reader_uat.get_collection_metadata("TEST_COLLECTION", "1")
 
         assert metadata.temporal_extent == ["2023-06-15T12:00:00.000Z"]
         assert metadata.temporal_extent_error is None
@@ -306,13 +306,13 @@ class TestCollectionReader:
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
     def test_multiple_temporal_extents_error(
-        self, mock_search, mock_login, collection_reader_uat, ummc_multi_temporal_extent
+        self, mock_search, mock_login, collection_metadata_reader_uat, ummc_multi_temporal_extent
     ):
         """Test error handling for multiple temporal extents."""
         mock_login.return_value = True
         mock_search.return_value = ummc_multi_temporal_extent
 
-        metadata = collection_reader_uat.get_collection_metadata("TEST", "1")
+        metadata = collection_metadata_reader_uat.get_collection_metadata("TEST", "1")
 
         assert metadata.temporal_extent_error is not None
         assert "must only contain one temporal extent" in metadata.temporal_extent_error
@@ -320,13 +320,13 @@ class TestCollectionReader:
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
     def test_multiple_temporal_ranges_error(
-        self, mock_search, mock_login, collection_reader_uat, ummc_multi_temporal_range
+        self, mock_search, mock_login, collection_metadata_reader_uat, ummc_multi_temporal_range
     ):
         """Test error handling for multiple temporal ranges."""
         mock_login.return_value = True
         mock_search.return_value = ummc_multi_temporal_range
 
-        metadata = collection_reader_uat.get_collection_metadata("TEST", "1")
+        metadata = collection_metadata_reader_uat.get_collection_metadata("TEST", "1")
 
         assert metadata.temporal_extent_error is not None
         assert "must only contain one temporal range" in metadata.temporal_extent_error
@@ -334,13 +334,13 @@ class TestCollectionReader:
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
     def test_missing_optional_fields(
-        self, mock_search, mock_login, collection_reader_uat, minimal_ummc_response
+        self, mock_search, mock_login, collection_metadata_reader_uat, minimal_ummc_response
     ):
         """Test handling of missing optional fields."""
         mock_login.return_value = True
         mock_search.return_value = minimal_ummc_response
 
-        metadata = collection_reader_uat.get_collection_metadata("MINIMAL", "1")
+        metadata = collection_metadata_reader_uat.get_collection_metadata("MINIMAL", "1")
 
         assert metadata.short_name == "MINIMAL"
         assert metadata.version == "1"
@@ -355,17 +355,17 @@ class TestCollectionReader:
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
     def test_caching_behavior(
-        self, mock_search, mock_login, collection_reader_uat, sample_ummc_response
+        self, mock_search, mock_login, collection_metadata_reader_uat, sample_ummc_response
     ):
         """Test that results are cached after first call."""
         mock_login.return_value = True
         mock_search.return_value = sample_ummc_response
 
         # First call
-        metadata1 = collection_reader_uat.get_collection_metadata("CACHED", "1")
+        metadata1 = collection_metadata_reader_uat.get_collection_metadata("CACHED", "1")
 
         # Second call - should use cache
-        metadata2 = collection_reader_uat.get_collection_metadata("CACHED", "1")
+        metadata2 = collection_metadata_reader_uat.get_collection_metadata("CACHED", "1")
 
         # Results should be identical
         assert metadata1 is metadata2
@@ -377,14 +377,14 @@ class TestCollectionReader:
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
     def test_version_as_integer(
-        self, mock_search, mock_login, collection_reader_uat, sample_ummc_response
+        self, mock_search, mock_login, collection_metadata_reader_uat, sample_ummc_response
     ):
         """Test that integer versions are converted to strings."""
         mock_login.return_value = True
         mock_search.return_value = sample_ummc_response
 
         # Call with integer version
-        metadata = collection_reader_uat.get_collection_metadata("TEST", 1)
+        metadata = collection_metadata_reader_uat.get_collection_metadata("TEST", 1)
 
         # Should still work and store as string
         assert metadata.version == "1"
@@ -396,49 +396,49 @@ class TestCollectionReader:
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
-    def test_invalid_ummc_format(self, mock_search, mock_login, collection_reader_uat):
+    def test_invalid_ummc_format(self, mock_search, mock_login, collection_metadata_reader_uat):
         """Test handling of invalid UMM-C format."""
         mock_login.return_value = True
         # Return a string instead of dict
         mock_search.return_value = [{"umm": "invalid string format"}]
 
         with pytest.raises(ValueError) as exc_info:
-            collection_reader_uat.get_collection_metadata("INVALID", "1")
+            collection_metadata_reader_uat.get_collection_metadata("INVALID", "1")
 
         assert "Invalid UMM-C format" in str(exc_info.value)
 
-    def test_extract_nested_value_missing_keys(self, collection_reader_uat):
+    def test_extract_nested_value_missing_keys(self, collection_metadata_reader_uat):
         """Test _extract_nested_value handles missing keys gracefully."""
         test_data = {"Level1": {"Level2": {"Level3": "found_value"}}}
 
         # Test successful extraction
-        value = collection_reader_uat._extract_nested_value(
+        value = collection_metadata_reader_uat._extract_nested_value(
             test_data, ["Level1", "Level2", "Level3"]
         )
         assert value == "found_value"
 
         # Test missing key at various levels
         assert (
-            collection_reader_uat._extract_nested_value(test_data, ["Missing"]) is None
+            collection_metadata_reader_uat._extract_nested_value(test_data, ["Missing"]) is None
         )
         assert (
-            collection_reader_uat._extract_nested_value(
+            collection_metadata_reader_uat._extract_nested_value(
                 test_data, ["Level1", "Missing"]
             )
             is None
         )
         assert (
-            collection_reader_uat._extract_nested_value(
+            collection_metadata_reader_uat._extract_nested_value(
                 test_data, ["Level1", "Level2", "Missing"]
             )
             is None
         )
 
         # Test with empty dict
-        assert collection_reader_uat._extract_nested_value({}, ["Any", "Key"]) is None
+        assert collection_metadata_reader_uat._extract_nested_value({}, ["Any", "Key"]) is None
 
         # Test with None input
-        assert collection_reader_uat._extract_nested_value(None, ["Any"]) is None
+        assert collection_metadata_reader_uat._extract_nested_value(None, ["Any"]) is None
 
 
 class TestConvenienceFunction:
@@ -451,9 +451,9 @@ class TestConvenienceFunction:
         mock_login.return_value = True
         mock_search.return_value = minimal_ummc_response
 
-        metadata = get_collection("uat", "TEST", "1")
+        metadata = get_collection_metadata("uat", "TEST", "1")
 
-        assert isinstance(metadata, Collection)
+        assert isinstance(metadata, CollectionMetadata)
         assert metadata.short_name == "TEST"
         assert metadata.version == "1"
 
@@ -470,9 +470,9 @@ class TestConvenienceFunction:
         mock_login.return_value = True
         mock_search.return_value = minimal_ummc_response
 
-        metadata = get_collection("prod", "TEST", "2")
+        metadata = get_collection_metadata("prod", "TEST", "2")
 
-        assert isinstance(metadata, Collection)
+        assert isinstance(metadata, CollectionMetadata)
         assert metadata.short_name == "TEST"
         assert metadata.version == "2"
 

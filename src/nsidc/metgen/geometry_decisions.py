@@ -11,14 +11,14 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 from nsidc.metgen.config import Config
-from nsidc.metgen.models import Collection, GeometrySource, GeometrySpec, GeometryType
+from nsidc.metgen.models import CollectionMetadata, GeometrySource, GeometrySpec, GeometryType
 
 logger = logging.getLogger(__name__)
 
 
 def determine_geometry_spec(
     configuration: Config,
-    collection: Collection,
+    collection: CollectionMetadata,
     granule_name: str,
     data_files: Set[Path],
     spatial_files: Optional[List[Path]] = None,
@@ -74,7 +74,7 @@ def determine_geometry_spec(
     return _granule_metadata_geometry_spec(collection)
 
 
-def _collection_geometry_spec(collection: Collection) -> GeometrySpec:
+def _collection_geometry_spec(collection: CollectionMetadata) -> GeometrySpec:
     """Create geometry spec for collection-based geometry."""
     # Collection geometry is always a bounding box in CARTESIAN representation
     return GeometrySpec(
@@ -84,7 +84,7 @@ def _collection_geometry_spec(collection: Collection) -> GeometrySpec:
     )
 
 
-def _spo_geometry_spec(collection: Collection) -> GeometrySpec:
+def _spo_geometry_spec(collection: CollectionMetadata) -> GeometrySpec:
     """
     Create geometry spec for .spo file based geometry.
 
@@ -122,7 +122,7 @@ def _spo_geometry_spec(collection: Collection) -> GeometrySpec:
     )
 
 
-def _spatial_geometry_spec(collection: Collection) -> GeometrySpec:
+def _spatial_geometry_spec(collection: CollectionMetadata) -> GeometrySpec:
     """
     Create geometry spec for .spatial file based geometry.
 
@@ -172,7 +172,7 @@ def _spatial_geometry_spec(collection: Collection) -> GeometrySpec:
         )
 
 
-def _granule_metadata_geometry_spec(collection: Collection) -> GeometrySpec:
+def _granule_metadata_geometry_spec(collection: CollectionMetadata) -> GeometrySpec:
     """
     Create geometry spec for granule metadata based geometry.
 

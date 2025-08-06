@@ -16,7 +16,7 @@ from nsidc.metgen.geometry_decisions import (
     GeometryType,
     determine_geometry_spec,
 )
-from nsidc.metgen.models import Collection
+from nsidc.metgen.models import CollectionMetadata
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def config():
 @pytest.fixture
 def collection():
     """Create a test collection with spatial representation."""
-    return Collection(
+    return CollectionMetadata(
         short_name="TEST",
         version="1",
         entry_title="Test Collection",
@@ -64,7 +64,7 @@ def collection():
 @pytest.fixture
 def collection_cartesian():
     """Create a test collection with cartesian representation."""
-    return Collection(
+    return CollectionMetadata(
         short_name="TEST",
         version="1",
         entry_title="Test Collection",
@@ -83,7 +83,7 @@ def collection_cartesian():
 @pytest.fixture
 def collection_no_spatial():
     """Create a test collection without spatial representation."""
-    return Collection(
+    return CollectionMetadata(
         short_name="TEST",
         version="1",
         entry_title="Test Collection",
