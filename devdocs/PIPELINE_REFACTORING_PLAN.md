@@ -97,7 +97,7 @@ graph TD
 ```
 1. Configuration Phase
    ├─ Read configuration (Configuration Reader)
-   ├─ Invoke CMR reader for collection metadata
+   ├─ Invoke reader for collection metadata
 
 2. Pipeline Construction Phase
    ├─ Choose geometry strategy
@@ -144,16 +144,15 @@ MetGenC will support custom readers for unsupported file types through configura
 
 This implementation strategy focuses on extracting and refactoring existing code incrementally, prioritizing architectural improvements that enable extensibility while maintaining backward compatibility.
 
-### Phase 1: CMR Reader Extraction
-**Standalone Value**: Testable CMR integration, early collection metadata access
+### Phase 1: Collection Metadata Reader Extraction
+**Standalone Value**: Early collection metadata access, remove caching (not needed), more testable by mocking CMR responses
 
-1. **Extract CMR reader** from utilities into standalone module
-2. **Place CMR read after config** but before running any part of the pipeline
-3. **Create CMR metadata dataclass** to hold collection information
-4. **Add CMR caching** to avoid repeated API calls
-5. **Create mock CMR reader** for testing
+1. **Extract Collection Metadata reader that calls CMR** from utilities into standalone module
+2. **Place Collection Metadata read after config** but before running any part of the pipeline
+3. **Create Collection Metadata dataclass** to hold collection metadata attributes
+4. **Mock CMR responses** for testing
 
-**Benefit if stopped here**: CMR logic is isolated and testable, collection metadata available for all decisions
+**Benefit if stopped here**: CMR integration is isolated as an implementation detail and more testable, collection metadata read once & available for all decisions
 
 ### Phase 2: Geometry Specification Extraction
 **Standalone Value**: Clean separation of geometry decision-making from execution
@@ -182,7 +181,6 @@ This implementation strategy focuses on extracting and refactoring existing code
 2. **Define `TemporalSpec` dataclass** to capture decisions:
    - Source: where to get temporal data (granule metadata, premet file, collection)
    - Type: what temporal type to create (single datetime, range datetime)
-   - Additional configuration specific to the temporal type
 3. **Create `determine_temporal_spec()` function** that:
    - Takes configuration, collection metadata, and available files
    - Returns a complete specification of temporal decisions
