@@ -8,7 +8,7 @@ import pytest
 from funcy import identity, partial
 
 from nsidc.metgen import config, constants, metgen
-from nsidc.metgen.models import Collection
+from nsidc.metgen.models import CollectionMetadata
 
 # Unit tests for the 'metgen' module functions.
 #
@@ -41,7 +41,7 @@ def test_config():
 
 @pytest.fixture
 def test_collection():
-    return Collection(
+    return CollectionMetadata(
         short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
     )
 
@@ -403,7 +403,7 @@ def test_no_attempt_to_match_empty_ancillary_files():
 def test_stage_files(m1, m2, m3, test_config):
     granule = metgen.Granule(
         "foo",
-        Collection(
+        CollectionMetadata(
             short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
         ),
         uuid="abcd-1234",
@@ -427,7 +427,7 @@ def test_returns_datetime_range():
 def test_s3_object_path_has_no_leading_slash():
     granule = metgen.Granule(
         "foo",
-        Collection(
+        CollectionMetadata(
             short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
         ),
         uuid="abcd-1234",
@@ -440,7 +440,7 @@ def test_s3_url_simple_case():
     staging_bucket_name = "xyzzy-bucket"
     granule = metgen.Granule(
         "foo",
-        Collection(
+        CollectionMetadata(
             short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
         ),
         uuid="abcd-1234",
