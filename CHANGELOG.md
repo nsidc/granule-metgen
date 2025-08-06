@@ -1,4 +1,4 @@
-## v1.9.0rc4
+## v1.9.0
 
 * Adds an experimental script that generates premet & spatial files for OLVIS1A granules
 * Adds the ability for the operator to override the default minimum distance tolerance between points
