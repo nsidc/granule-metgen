@@ -13,10 +13,10 @@ from typing import Optional, Union
 import earthaccess
 
 from nsidc.metgen import constants
-from nsidc.metgen.models import Collection
+from nsidc.metgen.models import CollectionMetadata
 
 
-class CollectionReader:
+class CollectionMetadataReader:
     """
     Reader class for retrieving and parsing collection metadata.
     """
@@ -47,7 +47,7 @@ class CollectionReader:
     @lru_cache(maxsize=128)
     def get_collection_metadata(
         self, short_name: str, version: Union[str, int]
-    ) -> Collection:
+    ) -> CollectionMetadata:
         """
         Retrieve collection metadata from CMR.
 
@@ -58,7 +58,7 @@ class CollectionReader:
             version: Collection version (e.g., "1" or 1)
 
         Returns:
-            Collection object containing parsed collection metadata
+            CollectionMetadata object containing parsed collection metadata
 
         Raises:
             Exception: If Earthdata login fails or CMR query returns invalid data
@@ -127,7 +127,7 @@ class CollectionReader:
 
     def _parse_ummc_to_metadata(
         self, ummc: dict, short_name: str, version: str
-    ) -> Collection:
+    ) -> CollectionMetadata:
         """
         Parse UMM-C record into structured metadata.
 
@@ -137,13 +137,13 @@ class CollectionReader:
             version: Collection version
 
         Returns:
-            Populated Collection object
+            Populated CollectionMetadata object
         """
         # Extract temporal extent and check for errors
         temporal_extent, temporal_error = self._parse_temporal_extent(ummc)
 
         # Build the metadata object
-        return Collection(
+        return CollectionMetadata(
             short_name=short_name,
             version=version,
             entry_title=ummc.get("EntryTitle", f"{short_name}.{version}"),
@@ -241,9 +241,9 @@ class CollectionReader:
         return current
 
 
-def get_collection(
+def get_collection_metadata(
     environment: str, short_name: str, version: Union[str, int]
-) -> Collection:
+) -> CollectionMetadata:
     """
     Retrieve collection metadata for the specified collection.
 
@@ -256,7 +256,7 @@ def get_collection(
         version: Collection version
 
     Returns:
-        Collection object
+        CollectionMetadata object
     """
-    reader = CollectionReader(environment)
+    reader = CollectionMetadataReader(environment)
     return reader.get_collection_metadata(short_name, version)

@@ -9,7 +9,7 @@ from typing import Optional
 
 
 @dataclasses.dataclass
-class Collection:
+class CollectionMetadata:
     """
     Collection metadata relevant to generating UMM-G content.
 
