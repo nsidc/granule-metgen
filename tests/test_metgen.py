@@ -441,8 +441,22 @@ def test_matches_ancillary_files(granuleid, spatial_files, expected):
     )
 
 
-def test_no_additional_attributes():
-    assert metgen.populate_additional_attributes(None) == ""
+def test_no_premet_content():
+    assert metgen.populate_additional_attributes(None, "SomeKey") == ""
+
+
+def test_no_matching_premet_key():
+    assert (
+        metgen.populate_additional_attributes({"MyKey": "MyValue"}, "UnmatchedKey")
+        == ""
+    )
+
+
+def test_a_matching_premet_key():
+    assert (
+        metgen.populate_additional_attributes({"MyKey": "MyValue"}, "MyKey")
+        == '"MyKey": "MyValue",'
+    )
 
 
 def test_no_attempt_to_match_empty_ancillary_files():
