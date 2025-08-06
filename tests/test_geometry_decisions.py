@@ -104,8 +104,10 @@ class TestGeometryDecisions:
         )
 
         assert spec.source == GeometrySource.NOT_PROVIDED
-        assert spec.geometry_type == GeometryType.NONE
-        assert spec.representation is None
+        assert spec.representation == "NONE"
+        # Test the callable
+        assert spec.get_geometry_type(0) == GeometryType.NONE
+        assert spec.get_geometry_type(10) == GeometryType.NONE
 
     def test_collection_geometry_override(self, config, collection):
         """Test when collection geometry override is enabled."""
@@ -119,11 +121,13 @@ class TestGeometryDecisions:
         )
 
         assert spec.source == GeometrySource.COLLECTION
-        assert spec.geometry_type == GeometryType.BOUNDING_BOX
         assert spec.representation == "CARTESIAN"
+        # Collection always returns bounding box
+        assert spec.get_geometry_type(0) == GeometryType.BOUNDING_BOX
+        assert spec.get_geometry_type(10) == GeometryType.BOUNDING_BOX
 
     def test_spatial_file_match(self, config, collection):
-        """Test when a matching spatial file is found."""
+        """Test when .spatial files exist."""
         spatial_files = [
             Path("/data/test_granule.nc.spatial"),
             Path("/data/other_granule.nc.spatial"),
@@ -138,28 +142,11 @@ class TestGeometryDecisions:
         )
 
         assert spec.source == GeometrySource.SPATIAL_FILE
-        assert spec.geometry_type == GeometryType.POLYGON
         assert spec.representation == "GEODETIC"
-        assert spec.spatial_filename == "/data/test_granule.nc.spatial"
-
-    def test_spatial_file_no_match(self, config, collection):
-        """Test when no matching spatial file is found."""
-        spatial_files = [
-            Path("/data/other_granule.nc.spatial"),
-            Path("/data/another_granule.nc.spatial"),
-        ]
-
-        spec = determine_geometry_spec(
-            config,
-            collection,
-            "test_granule",
-            {Path("test_granule.nc")},
-            spatial_files,
-        )
-
-        assert spec.source == GeometrySource.GRANULE_METADATA
-        assert spec.geometry_type == GeometryType.POLYGON
-        assert spec.representation == "GEODETIC"
+        # Test geodetic .spatial rules
+        assert spec.get_geometry_type(1) == GeometryType.POINT
+        assert spec.get_geometry_type(2) == GeometryType.POLYGON
+        assert spec.get_geometry_type(5) == GeometryType.POLYGON
 
     def test_granule_metadata_default(self, config, collection):
         """Test default case extracting from granule metadata."""
@@ -171,8 +158,10 @@ class TestGeometryDecisions:
         )
 
         assert spec.source == GeometrySource.GRANULE_METADATA
-        assert spec.geometry_type == GeometryType.POLYGON
         assert spec.representation == "GEODETIC"
+        # Granule metadata with geodetic always returns polygon
+        assert spec.get_geometry_type(0) == GeometryType.POLYGON
+        assert spec.get_geometry_type(100) == GeometryType.POLYGON
 
     def test_cartesian_representation(self, config, collection_cartesian):
         """Test with cartesian spatial representation."""
@@ -184,8 +173,10 @@ class TestGeometryDecisions:
         )
 
         assert spec.source == GeometrySource.GRANULE_METADATA
-        assert spec.geometry_type == GeometryType.POLYGON
         assert spec.representation == "CARTESIAN"
+        # Granule metadata with cartesian always returns bounding box
+        assert spec.get_geometry_type(0) == GeometryType.BOUNDING_BOX
+        assert spec.get_geometry_type(100) == GeometryType.BOUNDING_BOX
 
     def test_empty_spatial_files(self, config, collection):
         """Test with empty spatial files list."""
@@ -198,7 +189,7 @@ class TestGeometryDecisions:
         )
 
         assert spec.source == GeometrySource.GRANULE_METADATA
-        assert spec.geometry_type == GeometryType.POLYGON
+        assert spec.representation == "GEODETIC"
 
     def test_none_spatial_files(self, config, collection):
         """Test with None spatial files."""
@@ -211,25 +202,7 @@ class TestGeometryDecisions:
         )
 
         assert spec.source == GeometrySource.GRANULE_METADATA
-        assert spec.geometry_type == GeometryType.POLYGON
-
-    def test_multiple_data_files(self, config, collection):
-        """Test with multiple science data files."""
-        data_files = {
-            Path("test_granule_01.nc"),
-            Path("test_granule_02.nc"),
-            Path("test_granule_03.nc"),
-        }
-
-        spec = determine_geometry_spec(
-            config,
-            collection,
-            "test_granule",
-            data_files,
-        )
-
-        assert spec.source == GeometrySource.GRANULE_METADATA
-        assert spec.geometry_type == GeometryType.POLYGON
+        assert spec.representation == "GEODETIC"
 
     @patch("nsidc.metgen.geometry_decisions.logger")
     def test_logging_no_spatial_representation(
@@ -265,7 +238,7 @@ class TestGeometryDecisions:
 
     @patch("nsidc.metgen.geometry_decisions.logger")
     def test_logging_spatial_file(self, mock_logger, config, collection):
-        """Test that appropriate logging occurs when spatial file is found."""
+        """Test that appropriate logging occurs when spatial files exist."""
         spatial_files = [Path("/data/test_granule.nc.spatial")]
 
         determine_geometry_spec(
@@ -277,7 +250,7 @@ class TestGeometryDecisions:
         )
 
         mock_logger.debug.assert_called_with(
-            "Found spatial file /data/test_granule.nc.spatial for test_granule"
+            "Processing with .spatial file rules for test_granule"
         )
 
     @patch("nsidc.metgen.geometry_decisions.logger")
@@ -294,11 +267,15 @@ class TestGeometryDecisions:
             "Will extract geometry from granule metadata for test_granule"
         )
 
-    def test_spatial_file_partial_match(self, config, collection):
-        """Test that spatial file matching requires full granule name."""
+
+class TestSpoFileHandling:
+    """Test .spo file handling according to README rules."""
+
+    def test_spo_file_with_geodetic(self, config, collection):
+        """Test .spo file with geodetic representation (valid case)."""
         spatial_files = [
-            Path("/data/test.nc.spatial"),  # Partial match
-            Path("/data/test_granule_v2.nc.spatial"),  # Contains but not exact
+            Path("/data/test_granule.nc.spo"),
+            Path("/data/test_granule.nc.spatial"),  # Should prefer .spo
         ]
 
         spec = determine_geometry_spec(
@@ -309,6 +286,181 @@ class TestGeometryDecisions:
             spatial_files,
         )
 
-        # Should not match partial names
-        assert spec.source == GeometrySource.GRANULE_METADATA
-        assert spec.spatial_filename is None
+        assert spec.source == GeometrySource.SPATIAL_FILE
+        assert spec.representation == "GEODETIC"
+        # Test .spo rules - valid polygon
+        assert spec.get_geometry_type(3) == GeometryType.POLYGON
+        assert spec.get_geometry_type(10) == GeometryType.POLYGON
+        # Test invalid point counts
+        with pytest.raises(ValueError, match="at least 3 points"):
+            spec.get_geometry_type(2)
+        with pytest.raises(ValueError, match="at least 3 points"):
+            spec.get_geometry_type(1)
+
+    @patch("nsidc.metgen.geometry_decisions.logger")
+    def test_spo_file_with_cartesian_error(
+        self, mock_logger, config, collection_cartesian
+    ):
+        """Test .spo file with cartesian representation (error case)."""
+        spatial_files = [Path("/data/test_granule.nc.spo")]
+
+        spec = determine_geometry_spec(
+            config,
+            collection_cartesian,
+            "test_granule",
+            {Path("test_granule.nc")},
+            spatial_files,
+        )
+
+        # Should return error state
+        assert spec.source == GeometrySource.NOT_PROVIDED
+        assert spec.representation == "CARTESIAN"
+        assert spec.get_geometry_type(10) == GeometryType.NONE
+
+        # Should log error
+        mock_logger.error.assert_called()
+        error_msg = mock_logger.error.call_args[0][0]
+        assert ".spo files require GEODETIC" in error_msg
+
+    def test_spo_file_priority_over_spatial(self, config, collection):
+        """Test that .spo files have priority over .spatial files."""
+        spatial_files = [
+            Path("/data/test_granule.nc.spatial"),
+            Path("/data/test_granule.nc.spo"),
+            Path("/data/other_granule.nc.spatial"),
+        ]
+
+        spec = determine_geometry_spec(
+            config,
+            collection,
+            "test_granule",
+            {Path("test_granule.nc")},
+            spatial_files,
+        )
+
+        assert spec.source == GeometrySource.SPATIAL_FILE
+        # Should have .spo rules (error on <=2 points)
+        with pytest.raises(ValueError, match="at least 3 points"):
+            spec.get_geometry_type(2)
+
+    @patch("nsidc.metgen.geometry_decisions.logger")
+    def test_logging_spo_file_found(self, mock_logger, config, collection):
+        """Test logging when .spo files exist."""
+        spatial_files = [Path("/data/test_granule.nc.spo")]
+
+        determine_geometry_spec(
+            config,
+            collection,
+            "test_granule",
+            {Path("test_granule.nc")},
+            spatial_files,
+        )
+
+        mock_logger.debug.assert_any_call(
+            "Processing with .spo file rules for test_granule"
+        )
+
+
+class TestSpatialFileWithSpoDistinction:
+    """Test .spatial file handling when .spo files might also exist."""
+
+    def test_spatial_file_with_cartesian(self, config, collection_cartesian):
+        """Test .spatial file with cartesian."""
+        spatial_files = [Path("/data/test_granule.nc.spatial")]
+
+        spec = determine_geometry_spec(
+            config,
+            collection_cartesian,
+            "test_granule",
+            {Path("test_granule.nc")},
+            spatial_files,
+        )
+
+        assert spec.source == GeometrySource.SPATIAL_FILE
+        assert spec.representation == "CARTESIAN"
+        # Test cartesian .spatial rules
+        with pytest.raises(ValueError, match="single point with CARTESIAN"):
+            spec.get_geometry_type(1)
+        assert spec.get_geometry_type(2) == GeometryType.BOUNDING_BOX
+        with pytest.raises(ValueError, match="Only 2 points"):
+            spec.get_geometry_type(3)
+
+    def test_spatial_file_with_geodetic(self, config, collection):
+        """Test .spatial file with geodetic."""
+        spatial_files = [Path("/data/test_granule.nc.spatial")]
+
+        spec = determine_geometry_spec(
+            config,
+            collection,
+            "test_granule",
+            {Path("test_granule.nc")},
+            spatial_files,
+        )
+
+        assert spec.source == GeometrySource.SPATIAL_FILE
+        assert spec.representation == "GEODETIC"
+        # Test geodetic .spatial rules
+        assert spec.get_geometry_type(1) == GeometryType.POINT
+        assert spec.get_geometry_type(2) == GeometryType.POLYGON
+        assert spec.get_geometry_type(10) == GeometryType.POLYGON
+        with pytest.raises(ValueError, match="no points found"):
+            spec.get_geometry_type(0)
+
+    def test_no_spo_fallback_to_spatial(self, config, collection):
+        """Test that collection uses .spo rules when any .spo files exist."""
+        spatial_files = [
+            Path("/data/test_granule.nc.spatial"),
+            Path("/data/other_granule.nc.spo"),  # Different granule
+        ]
+
+        spec = determine_geometry_spec(
+            config,
+            collection,
+            "test_granule",
+            {Path("test_granule.nc")},
+            spatial_files,
+        )
+
+        # Should have .spo rules since .spo files exist in collection
+        with pytest.raises(ValueError, match="at least 3 points"):
+            spec.get_geometry_type(1)
+
+    def test_only_spatial_files_no_spo(self, config, collection):
+        """Test .spatial rules when only .spatial files exist (no .spo)."""
+        spatial_files = [
+            Path("/data/test_granule.nc.spatial"),
+            Path("/data/other_granule.nc.spatial"),
+        ]
+
+        spec = determine_geometry_spec(
+            config,
+            collection,
+            "test_granule",
+            {Path("test_granule.nc")},
+            spatial_files,
+        )
+
+        # Should have .spatial rules (no .spo files in collection)
+        assert spec.get_geometry_type(1) == GeometryType.POINT
+        assert spec.get_geometry_type(2) == GeometryType.POLYGON
+
+    def test_mixed_file_types(self, config, collection):
+        """Test handling of mixed .spo and .spatial files."""
+        spatial_files = [
+            Path("/data/granule1.nc.spo"),
+            Path("/data/granule2.nc.spatial"),
+            Path("/data/test_granule.nc.spatial"),
+            Path("/data/granule3.nc.spo"),
+        ]
+
+        spec = determine_geometry_spec(
+            config,
+            collection,
+            "test_granule",
+            {Path("test_granule.nc")},
+            spatial_files,
+        )
+
+        # Should have .spo rules since .spo files exist in the collection
+        with pytest.raises(ValueError, match="at least 3 points"):
+            spec.get_geometry_type(1)
