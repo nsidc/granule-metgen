@@ -11,7 +11,12 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 from nsidc.metgen.config import Config
-from nsidc.metgen.models import CollectionMetadata, TemporalSource, TemporalSpec, TemporalType
+from nsidc.metgen.models import (
+    CollectionMetadata,
+    TemporalSource,
+    TemporalSpec,
+    TemporalType,
+)
 
 logger = logging.getLogger(__name__)
 

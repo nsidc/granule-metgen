@@ -11,7 +11,12 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 from nsidc.metgen.config import Config
-from nsidc.metgen.models import CollectionMetadata, GeometrySource, GeometrySpec, GeometryType
+from nsidc.metgen.models import (
+    CollectionMetadata,
+    GeometrySource,
+    GeometrySpec,
+    GeometryType,
+)
 
 logger = logging.getLogger(__name__)
 
