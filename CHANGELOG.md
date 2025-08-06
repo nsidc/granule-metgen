@@ -4,6 +4,7 @@
 * Adds the ability for the operator to override the default minimum distance tolerance between points
 * Fixes a regression where the flightline polygon would sometimes be mistakenly oriented clockwise
 * Add optional spatial polygon generation for flightline data with optimized coverage and vertex limits. (Issue-156)
+* Improves performance of flightlines that have many points (Issue-218)
 * Fix UMM-G `RangeDateTimes` template error.
 * Refine search for `AdditionalAttribute` values in `premet` files.
 * Add an integration test suite for all collections. See the [integration test README](tests/integration/README.md)
