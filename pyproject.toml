@@ -69,7 +69,7 @@ serialize = [
 ]
 search = "{current_version}"
 replace = "{new_version}"
-regex = false
+regex = true
 ignore_missing_version = false
 ignore_missing_files = false
 tag = true
@@ -94,12 +94,7 @@ replace = 'version = "{new_version}"'
 
 [[tool.bumpversion.files]]
 filename = "CHANGELOG.md"
-search = "UNRELEASED"
-replace = "v{new_version}"
-
-[[tool.bumpversion.files]]
-filename = "CHANGELOG.md"
-search = "v{current_version}"
+search = "\\bUNRELEASED\\b|\\bv{current_version}\\b"
 replace = "v{new_version}"
 
 [[tool.bumpversion.files]]
