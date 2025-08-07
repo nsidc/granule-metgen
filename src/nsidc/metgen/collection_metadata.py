@@ -7,7 +7,6 @@ parsed into a structured dataclass for use throughout the metgen pipeline.
 """
 
 import logging
-from functools import lru_cache
 from typing import Optional, Union
 
 import earthaccess
@@ -44,7 +43,6 @@ class CollectionMetadataReader:
         """Get the Earthdata Login system object."""
         return earthaccess.PROD if self.environment == "prod" else earthaccess.UAT
 
-    @lru_cache(maxsize=128)
     def get_collection_metadata(
         self, short_name: str, version: Union[str, int]
     ) -> CollectionMetadata:
@@ -66,7 +64,9 @@ class CollectionMetadataReader:
         version_str = str(version)
 
         # Attempt Earthdata login
-        if not earthaccess.login(system=self._get_earthaccess_system()):
+        if not earthaccess.login(
+            strategy="environment", system=self._get_earthaccess_system()
+        ):
             raise Exception(
                 f"Earthdata login failed, cannot retrieve UMM-C metadata for "
                 f"{short_name}.{version_str}"
@@ -113,6 +113,12 @@ class CollectionMetadataReader:
             raise ValueError(
                 f"Multiple UMM-C records returned from CMR for {short_name}.{version}, "
                 "none will be used."
+            )
+
+        # Check that the response item is a dict before extracting
+        if not isinstance(response[0], dict) or "umm" not in response[0]:
+            raise ValueError(
+                f"No UMM-C content in CMR response for {short_name}.{version}"
             )
 
         # Extract the UMM-C content

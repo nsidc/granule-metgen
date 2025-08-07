@@ -233,7 +233,9 @@ class TestCollectionMetadataReader:
         assert metadata.raw_ummc["ShortName"] == "SNEX23_SSADUCk"
 
         # Verify mocks were called correctly
-        mock_login.assert_called_once_with(system=earthaccess.UAT)
+        mock_login.assert_called_once_with(
+            strategy="environment", system=earthaccess.UAT
+        )
         mock_search.assert_called_once_with(
             short_name="SNEX23_SSADUCk",
             version="1",
@@ -288,21 +290,20 @@ class TestCollectionMetadataReader:
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
-    def test_get_collection_metadata_no_umm_key(
+    def test_get_collection_metadata_response_without_umm_key(
         self, mock_search, mock_login, collection_metadata_reader_uat
     ):
-        """Test handling of response without umm key (legacy format)."""
+        """Test that response without 'umm' key raises ValueError."""
         mock_login.return_value = True
-        # Response without umm key - should still work
+        # Response without umm key should raise exception
         mock_search.return_value = [
-            {"ShortName": "LEGACY", "Version": "1", "EntryTitle": "Legacy Collection"}
+            {"ShortName": "TEST", "Version": "1", "EntryTitle": "Test Collection"}
         ]
 
-        metadata = collection_metadata_reader_uat.get_collection_metadata("LEGACY", "1")
+        with pytest.raises(ValueError) as exc_info:
+            collection_metadata_reader_uat.get_collection_metadata("TEST", "1")
 
-        assert metadata.short_name == "LEGACY"
-        assert metadata.version == "1"
-        assert metadata.entry_title == "Legacy Collection"
+        assert "No UMM-C content in CMR response" in str(exc_info.value)
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
@@ -386,36 +387,6 @@ class TestCollectionMetadataReader:
         assert metadata.processing_level_id is None
         assert metadata.collection_data_type is None
         assert metadata.temporal_extent_error is None
-
-    @patch("earthaccess.login")
-    @patch("earthaccess.search_datasets")
-    def test_caching_behavior(
-        self,
-        mock_search,
-        mock_login,
-        collection_metadata_reader_uat,
-        sample_ummc_response,
-    ):
-        """Test that results are cached after first call."""
-        mock_login.return_value = True
-        mock_search.return_value = sample_ummc_response
-
-        # First call
-        metadata1 = collection_metadata_reader_uat.get_collection_metadata(
-            "CACHED", "1"
-        )
-
-        # Second call - should use cache
-        metadata2 = collection_metadata_reader_uat.get_collection_metadata(
-            "CACHED", "1"
-        )
-
-        # Results should be identical
-        assert metadata1 is metadata2
-
-        # Login and search should only be called once due to caching
-        mock_login.assert_called_once()
-        mock_search.assert_called_once()
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
@@ -513,7 +484,9 @@ class TestConvenienceFunction:
         assert metadata.version == "1"
 
         # Should use UAT environment
-        mock_login.assert_called_once_with(system=earthaccess.UAT)
+        mock_login.assert_called_once_with(
+            strategy="environment", system=earthaccess.UAT
+        )
         mock_search.assert_called_once()
         call_args = mock_search.call_args[1]
         assert call_args["provider"] == "NSIDC_CUAT"
@@ -532,7 +505,9 @@ class TestConvenienceFunction:
         assert metadata.version == "2"
 
         # Should use production environment
-        mock_login.assert_called_once_with(system=earthaccess.PROD)
+        mock_login.assert_called_once_with(
+            strategy="environment", system=earthaccess.PROD
+        )
         mock_search.assert_called_once()
         call_args = mock_search.call_args[1]
         assert call_args["provider"] == "NSIDC_CPRD"
