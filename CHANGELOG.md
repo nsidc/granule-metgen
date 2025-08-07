@@ -1,4 +1,4 @@
-## v1.10.0
+## v1.10.1rc0
 
 * Retrieve platform/instrument/sensor information if it exists in the premet
   file and include it in UMM-G output. (Issue-227)
