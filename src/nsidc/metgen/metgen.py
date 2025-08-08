@@ -38,7 +38,6 @@ from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws, config, constants
 from nsidc.metgen.collection_metadata import get_collection_metadata
-from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.geometry_decisions import determine_geometry_spec
 from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.readers import generic, registry, utilities
@@ -303,7 +302,6 @@ def process(configuration: config.Config) -> None:
     ) + validate_collection_temporal(configuration, collection)
     if errors:
         raise config.ValidationError(errors)
-
 
     # Determine geometry and temporal specifications for debugging
     # This is a demonstration of the new specification system
@@ -1227,12 +1225,18 @@ def _demonstrate_specifications(
         return
 
     # Get ancillary files
-    premet_files = ancillary_files(
-        configuration.premet_dir, [constants.PREMET_SUFFIX]
-    ) if configuration.premet_dir else None
-    spatial_files = ancillary_files(
-        configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
-    ) if configuration.spatial_dir else None
+    premet_files = (
+        ancillary_files(configuration.premet_dir, [constants.PREMET_SUFFIX])
+        if configuration.premet_dir
+        else None
+    )
+    spatial_files = (
+        ancillary_files(
+            configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
+        )
+        if configuration.spatial_dir
+        else None
+    )
 
     # Get first granule key for demonstration
     granule_keys_set = granule_keys(configuration, file_list)

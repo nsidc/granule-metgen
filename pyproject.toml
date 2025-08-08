@@ -135,6 +135,9 @@ pythonpath = ["src"]
 addopts = [
     "--import-mode=importlib",
 ]
+filterwarnings = [
+    "ignore:datetime.datetime.utcnow\\(\\) is deprecated:DeprecationWarning:botocore.auth",
+]
 
 [tool.poetry.scripts]
 metgenc = 'nsidc.metgen.cli:cli'
