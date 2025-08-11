@@ -13,7 +13,5 @@ def simple_collection_metadata():
     that can be used as-is, or as a base for more specific tests.
     """
     return CollectionMetadata(
-        short_name="ABCD",
-        version="2",
-        entry_title="Test Collection ABCD V002"
+        short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
     )

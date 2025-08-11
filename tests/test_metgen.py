@@ -8,7 +8,6 @@ import pytest
 from funcy import identity, partial
 
 from nsidc.metgen import config, constants, metgen
-from nsidc.metgen.models import CollectionMetadata
 
 # Unit tests for the 'metgen' module functions.
 #
@@ -37,8 +36,6 @@ def test_config():
         number=3,
         dry_run=False,
     )
-
-
 
 
 @pytest.fixture
@@ -542,7 +539,9 @@ def test_gsr_is_required(test_config, simple_collection_metadata):
     assert re.search("GranuleSpatialRepresentation not available", " ".join(errors))
 
 
-def test_cartesian_required_for_collection_geometry(test_config, simple_collection_metadata):
+def test_cartesian_required_for_collection_geometry(
+    test_config, simple_collection_metadata
+):
     test_config.collection_geometry_override = True
     simple_collection_metadata.spatial_extent = ["one extent"]
     simple_collection_metadata.granule_spatial_representation = constants.GEODETIC
@@ -569,15 +568,21 @@ def test_only_one_bounding_rectangle_allowed_in_spatial_extent(
     assert re.search("spatial extent must only contain one", " ".join(errors))
 
 
-def test_collection_temporal_ignored_if_no_override(test_config, simple_collection_metadata):
+def test_collection_temporal_ignored_if_no_override(
+    test_config, simple_collection_metadata
+):
     test_config.collection_temporal_override = False
     simple_collection_metadata.temporal_extent_error = "Very bad temporal error"
-    errors = metgen.validate_collection_temporal(test_config, simple_collection_metadata)
+    errors = metgen.validate_collection_temporal(
+        test_config, simple_collection_metadata
+    )
     assert not errors
 
 
 def test_collection_temporal_errors_returned(test_config, simple_collection_metadata):
     test_config.collection_temporal_override = True
     simple_collection_metadata.temporal_extent_error = "Very bad temporal error"
-    errors = metgen.validate_collection_temporal(test_config, simple_collection_metadata)
+    errors = metgen.validate_collection_temporal(
+        test_config, simple_collection_metadata
+    )
     assert errors[0] == "Very bad temporal error"

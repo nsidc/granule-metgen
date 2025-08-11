@@ -4,7 +4,6 @@ from unittest.mock import mock_open, patch
 import pytest
 
 from nsidc.metgen import constants, metgen
-from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.readers import utilities
 
 # Unit tests for the 'utilities' module functions.
@@ -236,7 +235,9 @@ def test_spo_is_geodetic():
 
 
 @patch("nsidc.metgen.readers.utilities.points_from_collection")
-def test_uses_spatial_from_collection(collection_handler_mock, collection_spatial, simple_collection_metadata):
+def test_uses_spatial_from_collection(
+    collection_handler_mock, collection_spatial, simple_collection_metadata
+):
     simple_collection_metadata.spatial_extent = collection_spatial
     fake_granule = metgen.Granule("fake_granule", collection=simple_collection_metadata)
 
