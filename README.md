@@ -13,7 +13,7 @@
   * [Running MetGenC: Its Commands In-depth](#running-metgenc-its-commands-in-depth)
     + [help](#help)
     + [init](#init)
-      - [Optional Configuration Elements](#optional-configuration-elements)
+      - [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
       - [Granule and Browse regex](#granule-and-browse-regex)
         * [Example: Use of granule_regex](#example-use-of-granule_regex)
       - [Using Premet and Spatial Files](#using-premet-and-spatial-files)
@@ -169,15 +169,15 @@ Notes column key:
 
  OC = Optional configuration attributes (or elements of them) that may be represented
    in an .ini file in order to allow "nearly" compliant netCDF files to be run with MetGenC
-   without premet/spatial files. See [Optional Configuration Elements](#optional-configuration-elements)
+   without premet/spatial files. See [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
 
  P = Premet file attributes that may be specified in a premet file; when used, a
   `premet_dir`path must be defined in the .ini file.
   
- 1 = Used to populate the production date and time values in UMM-G output; the OC .ini
-  attribte is also `date_modified` = \<value\>. If a netCDF file doesn't have a date_modified
-  global attribute, but does have a date_created, add date_modified attribute to the
-  data set .ini file and set it's value to that of the file's date_created value.
+ 1 = Used to populate the ProductionDateTime field in UMM-G files when the global attributes
+  date_modified or date_created are absent from a netCDF file. The date_modified ini file attribute
+  is also a required .ini file attribute when running MetGenC on collections not comprising
+  netCDF files See: [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
   
  2 = Used to populate the time begin and end UMM-G values; OC .ini attribute for
   time_coverage_start is `time_start_regex` = \<value\>, and for time_coverage_end the
@@ -203,7 +203,7 @@ Notes column key:
  7 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
-
+ 
 ### Query a netCDF file for presence of MetGenC-Required Attributes
 On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
 can run ncdump to check whether a netCDF representative of the collection's files contains the
@@ -343,7 +343,7 @@ Example running **init**
 
     $ metgenc init -c ./init/<name of config file to create or modify>.ini
 
-#### Optional Configuration Elements
+#### Required and Optional Configuration Elements
 Some attribute values may be read from the .ini file if the values
 can't be gleaned from—or don't exist in—the science file(s), but whose 
 values are known for the data set. Use of these elements can be typical 
@@ -356,16 +356,19 @@ See this project's GitHub file, `fixtures/test.ini` for examples.
 
 | .ini element          | .ini section | Attribute absent from netCDF file the .ini attribute stands in for | Attribute populated in UMMG | Note |
 | -----------------------|-------------- | ------------------- | ---------------------------| ---- |
-| date_modified          | Collection    | date_modified       | ProductionDateTime | 1    |
+| date_modified          | Collection    | date_modified       | ProductionDateTime | 1, R    |
 | time_start_regex       | Collection    | time_coverage_start | BeginningDateTime | 2    |
 | time_coverage_duration | Collection    | time_coverage_end   | EndingDateTime | 3    |
 | pixel_size             | Collection    | GeoTransform        | n/a | 4    |
 
-1. For ease, set this to be the year-month-day MetGenC is run (e.g., date_modified =
-2025-07-22); this value is a constant that will be added to all ummg file's ProductionDateTime
-container.
-   * This attribute should be used with "nearly" compliant netCDF files that don't have global
-  attributes containing `date_modified`, and it will need to be used with non-netCDF file types.
+R = Required for all non-netCDF file types (e.g., csv, .tif, .h5, etc) and netCDF files missing
+    the global attribute specified 
+1. Set this to be the YYYY-MM-DD that you're running MetGenC (e.g., date_modified =
+2025-08-07); this value is a constant that will populate ProductionDateTime in all ummg files.
+   * The ProductionDateTime field in a ummg file mustn't show as "None"; if it does, Cumulus
+     will throw ingest errors stating that ProductionDateTime can't be "None".
+   * This attribute should be used with "nearly" compliant netCDF files wherein their global
+  attributes are missing the `date_modified` or `date_created` attribtes.
 2. This regex attribute leverages a netCDF's file name containing a date to populate ummg files'
 TemporalExtent field attribute, BeginningDateTime. Must match using the named group `(?P<time_coverage_start>)`.
    * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
