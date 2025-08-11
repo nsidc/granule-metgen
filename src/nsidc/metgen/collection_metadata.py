@@ -49,8 +49,6 @@ class CollectionMetadataReader:
         """
         Retrieve collection metadata from CMR.
 
-        This method is cached to avoid repeated API calls for the same collection.
-
         Args:
             short_name: Collection short name (e.g., "SNEX23_SSADUCk")
             version: Collection version (e.g., "1" or 1)
