@@ -83,7 +83,7 @@ class CollectionMetadataReader:
         # Validate and parse response
         ummc = self._validate_cmr_response(cmr_response, short_name, version_str)
 
-        return self._parse_ummc_to_metadata(ummc, short_name, version_str)
+        return self._parse_ummc_metadata(ummc, short_name, version_str)
 
     def _validate_cmr_response(
         self, response: list, short_name: str, version: str
@@ -129,7 +129,7 @@ class CollectionMetadataReader:
 
         return ummc
 
-    def _parse_ummc_to_metadata(
+    def _parse_ummc_metadata(
         self, ummc: dict, short_name: str, version: str
     ) -> CollectionMetadata:
         """
@@ -159,9 +159,6 @@ class CollectionMetadataReader:
             ),
             temporal_extent=temporal_extent,
             temporal_extent_error=temporal_error,
-            processing_level_id=ummc.get("ProcessingLevel", {}).get("Id"),
-            collection_data_type=ummc.get("CollectionDataType"),
-            raw_ummc=ummc,
         )
 
     def _parse_temporal_extent(

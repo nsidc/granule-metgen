@@ -212,8 +212,6 @@ class TestCollectionMetadataReader:
             == "SnowEx23 Snow Sensor Array Duck Pass Time Series V001"
         )
         assert metadata.granule_spatial_representation == "GEODETIC"
-        assert metadata.processing_level_id == "3"
-        assert metadata.collection_data_type == "SCIENCE_QUALITY"
 
         # Check spatial extent
         assert metadata.spatial_extent is not None
@@ -227,10 +225,6 @@ class TestCollectionMetadataReader:
             metadata.temporal_extent[0]["BeginningDateTime"]
             == "2023-01-01T00:00:00.000Z"
         )
-
-        # Check raw UMM-C is preserved
-        assert metadata.raw_ummc is not None
-        assert metadata.raw_ummc["ShortName"] == "SNEX23_SSADUCk"
 
         # Verify mocks were called correctly
         mock_login.assert_called_once_with(
@@ -384,8 +378,6 @@ class TestCollectionMetadataReader:
         assert metadata.granule_spatial_representation is None
         assert metadata.spatial_extent is None
         assert metadata.temporal_extent is None
-        assert metadata.processing_level_id is None
-        assert metadata.collection_data_type is None
         assert metadata.temporal_extent_error is None
 
     @patch("earthaccess.login")

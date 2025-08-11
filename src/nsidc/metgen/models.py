@@ -29,10 +29,3 @@ class CollectionMetadata:
     # Temporal information
     temporal_extent: Optional[list] = None
     temporal_extent_error: Optional[str] = None
-
-    # Additional metadata
-    processing_level_id: Optional[str] = None
-    collection_data_type: Optional[str] = None
-
-    # Raw UMM-C record for future extensibility
-    raw_ummc: Optional[dict] = None
