@@ -1,6 +1,6 @@
 - [MetGenC](#metgenc)
   * [Level of Support](#level-of-support)
-  * [Before Running MetGenC on the VM: Tips and Assumptions](#before-running-metgenc-on-the-vm-tips-and-assumptions)
+  * [Accessing the MetGenC VM and Tips and Assumptions](#accessing-the-metgenc-vm-and-tips-and-assumptions)
   * [CMR Authentication and use of Collection Metadata](#cmr-authentication-and-use-of-collection-metadata)
   * [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
   * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
@@ -67,7 +67,7 @@ the repository and submit a pull request.
 See the [LICENSE](LICENSE.md) for details on permissions and warranties. Please contact
 nsidc@nsidc.org for more information.
 
-## Before Running MetGenC on the VM: Tips and Assumptions
+## Accessing the MetGenC VM and Tips and Assumptions
 * from nusnow:
         $ vssh staging sipsmetgen
 
