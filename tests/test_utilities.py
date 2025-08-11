@@ -236,12 +236,9 @@ def test_spo_is_geodetic():
 
 
 @patch("nsidc.metgen.readers.utilities.points_from_collection")
-def test_uses_spatial_from_collection(collection_handler_mock, collection_spatial):
-    collection = CollectionMetadata(
-        short_name="ABCD", version="2", entry_title="ABCD.2"
-    )
-    collection.spatial_extent = collection_spatial
-    fake_granule = metgen.Granule("fake_granule", collection=collection)
+def test_uses_spatial_from_collection(collection_handler_mock, collection_spatial, simple_collection_metadata):
+    simple_collection_metadata.spatial_extent = collection_spatial
+    fake_granule = metgen.Granule("fake_granule", collection=simple_collection_metadata)
 
     utilities.external_spatial_values(True, constants.CARTESIAN, fake_granule)
     assert collection_handler_mock.called

@@ -39,11 +39,6 @@ def test_config():
     )
 
 
-@pytest.fixture
-def test_collection():
-    return CollectionMetadata(
-        short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
-    )
 
 
 @pytest.fixture
@@ -400,12 +395,10 @@ def test_no_attempt_to_match_empty_ancillary_files():
 @patch("nsidc.metgen.metgen.s3_object_path", return_value="/some/path")
 @patch("nsidc.metgen.aws.stage_file", return_value=True)
 @patch("builtins.open", new_callable=mock_open, read_data="data")
-def test_stage_files(m1, m2, m3, test_config):
+def test_stage_files(m1, m2, m3, test_config, simple_collection_metadata):
     granule = metgen.Granule(
         "foo",
-        CollectionMetadata(
-            short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
-        ),
+        simple_collection_metadata,
         uuid="abcd-1234",
         data_filenames={"file1", "file2", "file3"},
         browse_filenames={"browse1", "browse2", "browse3"},
@@ -424,25 +417,21 @@ def test_returns_datetime_range():
     assert result_json["RangeDateTime"]["EndingDateTime"] == "456"
 
 
-def test_s3_object_path_has_no_leading_slash():
+def test_s3_object_path_has_no_leading_slash(simple_collection_metadata):
     granule = metgen.Granule(
         "foo",
-        CollectionMetadata(
-            short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
-        ),
+        simple_collection_metadata,
         uuid="abcd-1234",
     )
     expected = "external/ABCD/2/abcd-1234/xyzzy.bin"
     assert metgen.s3_object_path(granule, "xyzzy.bin") == expected
 
 
-def test_s3_url_simple_case():
+def test_s3_url_simple_case(simple_collection_metadata):
     staging_bucket_name = "xyzzy-bucket"
     granule = metgen.Granule(
         "foo",
-        CollectionMetadata(
-            short_name="ABCD", version="2", entry_title="Test Collection ABCD V002"
-        ),
+        simple_collection_metadata,
         uuid="abcd-1234",
     )
     expected = "s3://xyzzy-bucket/external/ABCD/2/abcd-1234/xyzzy.bin"
@@ -548,47 +537,47 @@ def test_dummy_json_used(mock_validate, mock_open):
         )
 
 
-def test_gsr_is_required(test_config, test_collection):
-    errors = metgen.validate_collection_spatial(test_config, test_collection)
+def test_gsr_is_required(test_config, simple_collection_metadata):
+    errors = metgen.validate_collection_spatial(test_config, simple_collection_metadata)
     assert re.search("GranuleSpatialRepresentation not available", " ".join(errors))
 
 
-def test_cartesian_required_for_collection_geometry(test_config, test_collection):
+def test_cartesian_required_for_collection_geometry(test_config, simple_collection_metadata):
     test_config.collection_geometry_override = True
-    test_collection.spatial_extent = ["one extent"]
-    test_collection.granule_spatial_representation = constants.GEODETIC
-    errors = metgen.validate_collection_spatial(test_config, test_collection)
+    simple_collection_metadata.spatial_extent = ["one extent"]
+    simple_collection_metadata.granule_spatial_representation = constants.GEODETIC
+    errors = metgen.validate_collection_spatial(test_config, simple_collection_metadata)
     assert re.search("GranuleSpatialRepresentation must be", " ".join(errors))
 
 
 def test_spatial_extent_is_required_for_collection_geometry(
-    test_config, test_collection
+    test_config, simple_collection_metadata
 ):
     test_config.collection_geometry_override = True
-    test_collection.granule_spatial_representation = constants.CARTESIAN
-    errors = metgen.validate_collection_spatial(test_config, test_collection)
+    simple_collection_metadata.granule_spatial_representation = constants.CARTESIAN
+    errors = metgen.validate_collection_spatial(test_config, simple_collection_metadata)
     assert re.search("Collection must include a spatial extent", " ".join(errors))
 
 
 def test_only_one_bounding_rectangle_allowed_in_spatial_extent(
-    test_config, test_collection
+    test_config, simple_collection_metadata
 ):
     test_config.collection_geometry_override = True
-    test_collection.granule_spatial_representation = constants.CARTESIAN
-    test_collection.spatial_extent = ["extent one", "extent two"]
-    errors = metgen.validate_collection_spatial(test_config, test_collection)
+    simple_collection_metadata.granule_spatial_representation = constants.CARTESIAN
+    simple_collection_metadata.spatial_extent = ["extent one", "extent two"]
+    errors = metgen.validate_collection_spatial(test_config, simple_collection_metadata)
     assert re.search("spatial extent must only contain one", " ".join(errors))
 
 
-def test_collection_temporal_ignored_if_no_override(test_config, test_collection):
+def test_collection_temporal_ignored_if_no_override(test_config, simple_collection_metadata):
     test_config.collection_temporal_override = False
-    test_collection.temporal_extent_error = "Very bad temporal error"
-    errors = metgen.validate_collection_temporal(test_config, test_collection)
+    simple_collection_metadata.temporal_extent_error = "Very bad temporal error"
+    errors = metgen.validate_collection_temporal(test_config, simple_collection_metadata)
     assert not errors
 
 
-def test_collection_temporal_errors_returned(test_config, test_collection):
+def test_collection_temporal_errors_returned(test_config, simple_collection_metadata):
     test_config.collection_temporal_override = True
-    test_collection.temporal_extent_error = "Very bad temporal error"
-    errors = metgen.validate_collection_temporal(test_config, test_collection)
+    simple_collection_metadata.temporal_extent_error = "Very bad temporal error"
+    errors = metgen.validate_collection_temporal(test_config, simple_collection_metadata)
     assert errors[0] == "Very bad temporal error"
