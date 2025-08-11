@@ -69,8 +69,13 @@ nsidc@nsidc.org for more information.
 
 ## Accessing the MetGenC VM and Tips and Assumptions
 * from nusnow:
-        $ vssh staging sipsmetgen
+  `$ vssh staging sipsmetgen`
 
+* the one swell foop command line to kick off everything you need to run MetGenC:
+  ```
+  cd metgenc;source .venv/bin/activate;source metgenc-env.sh cumulus-uat;export EARTHDATA_USERNAME=<your uname>;export EARTHDATA_PASSWORD=<your pw>
+  ```
+Commands within the above one-liner detailed:
 * CD Into and Activate the venv:
 
         $ cd metgenc
