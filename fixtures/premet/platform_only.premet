@@ -1,0 +1,7 @@
+Container = LeadingAttribute
+LeadingAttributeName = test_leading_attribute
+LeadingAttributeValue = test_leading_attribute_value
+Container=AssociatedPlatformInstrumentSensor
+AssociatedPlatformShortName=P-3B
+AssociatedInstrumentShortName=LVIS-Camera
+AssociatedSensorShortName=LVIS-Camera
