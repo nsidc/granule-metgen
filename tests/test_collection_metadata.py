@@ -186,50 +186,151 @@ class TestCollectionMetadataReader:
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
-    def test_get_collection_metadata_success(
+    def test_get_collection_metadata_returns_correct_type(
         self,
         mock_search,
         mock_login,
         collection_metadata_reader_uat,
         sample_ummc_response,
     ):
-        """Test successful collection metadata retrieval."""
-        # Setup mocks
+        """Test that get_collection_metadata returns a CollectionMetadata instance."""
         mock_login.return_value = True
         mock_search.return_value = sample_ummc_response
 
-        # Call the method
         metadata = collection_metadata_reader_uat.get_collection_metadata(
             "SNEX23_SSADUCk", "1"
         )
 
-        # Verify the results
         assert isinstance(metadata, CollectionMetadata)
+
+    @patch("earthaccess.login")
+    @patch("earthaccess.search_datasets")
+    def test_get_collection_metadata_basic_fields(
+        self,
+        mock_search,
+        mock_login,
+        collection_metadata_reader_uat,
+        sample_ummc_response,
+    ):
+        """Test that basic collection metadata fields are correctly parsed."""
+        mock_login.return_value = True
+        mock_search.return_value = sample_ummc_response
+
+        metadata = collection_metadata_reader_uat.get_collection_metadata(
+            "SNEX23_SSADUCk", "1"
+        )
+
         assert metadata.short_name == "SNEX23_SSADUCk"
         assert metadata.version == "1"
         assert (
             metadata.entry_title
             == "SnowEx23 Snow Sensor Array Duck Pass Time Series V001"
         )
+
+    @patch("earthaccess.login")
+    @patch("earthaccess.search_datasets")
+    def test_get_collection_metadata_spatial_representation(
+        self,
+        mock_search,
+        mock_login,
+        collection_metadata_reader_uat,
+        sample_ummc_response,
+    ):
+        """Test that granule spatial representation is correctly extracted."""
+        mock_login.return_value = True
+        mock_search.return_value = sample_ummc_response
+
+        metadata = collection_metadata_reader_uat.get_collection_metadata(
+            "SNEX23_SSADUCk", "1"
+        )
+
         assert metadata.granule_spatial_representation == "GEODETIC"
 
-        # Check spatial extent
+    @patch("earthaccess.login")
+    @patch("earthaccess.search_datasets")
+    def test_get_collection_metadata_spatial_extent(
+        self,
+        mock_search,
+        mock_login,
+        collection_metadata_reader_uat,
+        sample_ummc_response,
+    ):
+        """Test that spatial extent is correctly parsed."""
+        mock_login.return_value = True
+        mock_search.return_value = sample_ummc_response
+
+        metadata = collection_metadata_reader_uat.get_collection_metadata(
+            "SNEX23_SSADUCk", "1"
+        )
+
         assert metadata.spatial_extent is not None
         assert len(metadata.spatial_extent) == 1
         assert metadata.spatial_extent[0]["WestBoundingCoordinate"] == -119.5
+        assert metadata.spatial_extent[0]["NorthBoundingCoordinate"] == 37.8
+        assert metadata.spatial_extent[0]["EastBoundingCoordinate"] == -119.0
+        assert metadata.spatial_extent[0]["SouthBoundingCoordinate"] == 37.5
 
-        # Check temporal extent
+    @patch("earthaccess.login")
+    @patch("earthaccess.search_datasets")
+    def test_get_collection_metadata_temporal_extent(
+        self,
+        mock_search,
+        mock_login,
+        collection_metadata_reader_uat,
+        sample_ummc_response,
+    ):
+        """Test that temporal extent is correctly parsed."""
+        mock_login.return_value = True
+        mock_search.return_value = sample_ummc_response
+
+        metadata = collection_metadata_reader_uat.get_collection_metadata(
+            "SNEX23_SSADUCk", "1"
+        )
+
         assert metadata.temporal_extent is not None
         assert len(metadata.temporal_extent) == 1
         assert (
             metadata.temporal_extent[0]["BeginningDateTime"]
             == "2023-01-01T00:00:00.000Z"
         )
+        assert (
+            metadata.temporal_extent[0]["EndingDateTime"] == "2023-12-31T23:59:59.999Z"
+        )
 
-        # Verify mocks were called correctly
+    @patch("earthaccess.login")
+    @patch("earthaccess.search_datasets")
+    def test_get_collection_metadata_earthdata_login_called(
+        self,
+        mock_search,
+        mock_login,
+        collection_metadata_reader_uat,
+        sample_ummc_response,
+    ):
+        """Test that Earthdata login is called with correct parameters."""
+        mock_login.return_value = True
+        mock_search.return_value = sample_ummc_response
+
+        collection_metadata_reader_uat.get_collection_metadata("SNEX23_SSADUCk", "1")
+
         mock_login.assert_called_once_with(
             strategy="environment", system=earthaccess.UAT
         )
+
+    @patch("earthaccess.login")
+    @patch("earthaccess.search_datasets")
+    def test_get_collection_metadata_search_called_correctly(
+        self,
+        mock_search,
+        mock_login,
+        collection_metadata_reader_uat,
+        sample_ummc_response,
+    ):
+        """Test that earthaccess.search_datasets is called with correct parameters."""
+        mock_login.return_value = True
+        mock_search.return_value = sample_ummc_response
+
+        collection_metadata_reader_uat.get_collection_metadata("SNEX23_SSADUCk", "1")
+
         mock_search.assert_called_once_with(
             short_name="SNEX23_SSADUCk",
             version="1",
