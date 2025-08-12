@@ -1,3 +1,8 @@
+## UNRELEASED
+
+* Issue-233: Simplified our plans for incrementally improving the processing pipeline. See
+  the [Pipeline Refactoring Plan](devdocs/PIPELINE_REFACTORING_PLAN.md)
+
 ## v1.10.1
 
 * Retrieve platform/instrument/sensor information if it exists in the premet
