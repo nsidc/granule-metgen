@@ -60,7 +60,6 @@ def extract_metadata(
         geom = spatial_values(netcdf, configuration, gsr)
 
     return {
-        "production_date_time": date_modified(netcdf, configuration),
         "temporal": temporal,
         "geometry": geom,
     }
@@ -308,23 +307,6 @@ def thinned_perimeter(rawx, rawy, pad=0):
         + [(pt.x, pt.y) for pt in rightpts]
         + [(pt.x, pt.y) for pt in toppts]
     )
-
-
-# if no date modified in netcdf global attributes, then retrieve from configuration
-# should errors be added to ledger for summary purposes, or simply plopped into log?
-def date_modified(netcdf, configuration):
-    if "date_modified" in netcdf.attrs.keys():
-        datetime_str = netcdf.attrs["date_modified"]
-    else:
-        datetime_str = configuration.date_modified
-
-    if datetime_str:
-        return utilities.ensure_iso_datetime(datetime_str)
-    else:
-        log_and_raise_error(
-            "NetCDF file does not have `date_modified` global attribute. \
-Set `date_modified` in the configuration file."
-        )
 
 
 def log_and_raise_error(err):

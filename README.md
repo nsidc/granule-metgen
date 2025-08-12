@@ -168,6 +168,10 @@ science files.
 | grid_mapping_name (variable)  |      | RequiredC      | R+               | 3       |
 | crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 4       |
 | GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 5, OC   |
+| geospatial_lon_min (global)   | R    |                | R                | |
+| geospatial_lon_max (global)   | R    |                | R                | |
+| geospatial_lat_min (global)   | R    |                | R                | |
+| geospatial_lat_max (global)   | R    |                | R                | |
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 6       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
 
@@ -229,11 +233,7 @@ ncdump -h <file name.nc> | grep -e date_modified -e date_created -e time_coverag
 | axis (variable)               |      | R              |                  |
 | geospatial_bounds (global)    | R    |                | R                |
 | geospatial_bounds_crs (global)| R    |                | R                |
-| geospatial_lat_min (global)   | R    |                | R                |
-| geospatial_lat_max (global)   | R    |                | R                |
 | geospatial_lat_units (global) | R    |                | R                |
-| geospatial_lon_min (global)   | R    |                | R                |
-| geospatial_lon_max (global)   | R    |                | R                |
 | geospatial_lon_units (global) | R    |                | R                |
 
 ### Attribute Reference links
