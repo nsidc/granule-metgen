@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Issue-241: Extract Collection Metadata Reader (Pipeline Story #2)
+
 ## v1.10.1
 
 * Retrieve platform/instrument/sensor information if it exists in the premet
