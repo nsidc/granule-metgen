@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nsidc-metgenc"
-version = "1.9.0rc4"
+version = "1.10.1"
 description = "The nsidc-metgenc package enables data producers as well as Operations staff managing the data ingest workflow to create metadata files conforming to NASA's Common Metadata Repository UMM-G specification."
 authors = ["National Snow and Ice Data Center (NSIDC) <nsidc@nsidc.org>"]
 readme = "README.md"
@@ -53,7 +53,7 @@ requests = "^2.32.4"
 beautifulsoup4 = "^4.13.4"
 
 [tool.bumpversion]
-current_version = "1.9.0rc4"
+current_version = "1.10.1"
 parse = """(?x)
     (?P<major>0|[1-9]\\d*)\\.
     (?P<minor>0|[1-9]\\d*)\\.
@@ -69,7 +69,7 @@ serialize = [
 ]
 search = "{current_version}"
 replace = "{new_version}"
-regex = false
+regex = true
 ignore_missing_version = false
 ignore_missing_files = false
 tag = true
@@ -94,12 +94,7 @@ replace = 'version = "{new_version}"'
 
 [[tool.bumpversion.files]]
 filename = "CHANGELOG.md"
-search = "UNRELEASED"
-replace = "v{new_version}"
-
-[[tool.bumpversion.files]]
-filename = "CHANGELOG.md"
-search = "v{current_version}"
+search = "\\bUNRELEASED\\b|\\bv{current_version}\\b"
 replace = "v{new_version}"
 
 [[tool.bumpversion.files]]

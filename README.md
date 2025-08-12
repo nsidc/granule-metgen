@@ -1,10 +1,11 @@
 - [MetGenC](#metgenc)
   * [Level of Support](#level-of-support)
-  * [Before Running MetGenC on the VM: Tips and Assumptions](#before-running-metgenc-on-the-vm-tips-and-assumptions)
+  * [Accessing the MetGenC VM and Tips and Assumptions](#accessing-the-metgenc-vm-and-tips-and-assumptions)
   * [CMR Authentication and use of Collection Metadata](#cmr-authentication-and-use-of-collection-metadata)
   * [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
   * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
   * [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
+    + [Query a netCDF file for presence of MetGenC-Required Attributes](#query-a-netcdf-file-for-presence-of-metgenc-required-attributes)
     + [Attribute Reference links](#attribute-reference-links)
   * [Geometry Logic](#geometry-logic)
     + [Geometry Rules](#geometry-rules)
@@ -12,9 +13,10 @@
   * [Running MetGenC: Its Commands In-depth](#running-metgenc-its-commands-in-depth)
     + [help](#help)
     + [init](#init)
-      - [Optional Configuration Elements](#optional-configuration-elements)
+      - [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
       - [Granule and Browse regex](#granule-and-browse-regex)
-        * [Example: Use of granule_regex](#example-use-of-granule_regex)
+        * [Example 1: Use of granule_regex and browse_regex for a single-file granule with multiple browse images](#example-1-use-of-granule_regex-and-browse_regex-for-a-single-file-granule-with-multiple-browse-images)
+        * [Example 2: Use of granule_regex for a multi-file granule with no browse](#example-2-use-of-granule_regex-for-a-multi-file-granule-with-no-browse)
       - [Using Premet and Spatial Files](#using-premet-and-spatial-files)
       - [Setting Collection Spatial Extent as Granule Spatial Extent](#setting-collection-spatial-extent-as-granule-spatial-extent)
       - [Setting Collection Temporal Extent as Granule Temporal Extent](#setting-collection-temporal-extent-as-granule-temporal-extent)
@@ -66,10 +68,15 @@ the repository and submit a pull request.
 See the [LICENSE](LICENSE.md) for details on permissions and warranties. Please contact
 nsidc@nsidc.org for more information.
 
-## Before Running MetGenC on the VM: Tips and Assumptions
+## Accessing the MetGenC VM and Tips and Assumptions
 * from nusnow:
-        $ vssh staging sipsmetgen
+  `$ vssh staging sipsmetgen`
 
+* the one swell foop command line to kick off everything you need to run MetGenC:
+  ```
+  cd metgenc;source .venv/bin/activate;source metgenc-env.sh cumulus-uat;export EARTHDATA_USERNAME=<your uname>;export EARTHDATA_PASSWORD=<your pw>
+  ```
+Commands within the above one-liner detailed:
 * CD Into and Activate the venv:
 
         $ cd metgenc
@@ -168,15 +175,15 @@ Notes column key:
 
  OC = Optional configuration attributes (or elements of them) that may be represented
    in an .ini file in order to allow "nearly" compliant netCDF files to be run with MetGenC
-   without premet/spatial files. See [Optional Configuration Elements](#optional-configuration-elements)
+   without premet/spatial files. See [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
 
  P = Premet file attributes that may be specified in a premet file; when used, a
   `premet_dir`path must be defined in the .ini file.
   
- 1 = Used to populate the production date and time values in UMM-G output; the OC .ini
-  attribte is also `date_modified` = \<value\>. If a netCDF file doesn't have a date_modified
-  global attribute, but does have a date_created, add date_modified attribute to the
-  data set .ini file and set it's value to that of the file's date_created value.
+ 1 = Used to populate the ProductionDateTime field in UMM-G files when the global attributes
+  date_modified or date_created are absent from a netCDF file. The date_modified ini file attribute
+  is also a required .ini file attribute when running MetGenC on collections not comprising
+  netCDF files See: [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
   
  2 = Used to populate the time begin and end UMM-G values; OC .ini attribute for
   time_coverage_start is `time_start_regex` = \<value\>, and for time_coverage_end the
@@ -202,7 +209,17 @@ Notes column key:
  7 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
-   
+ 
+### Query a netCDF file for presence of MetGenC-Required Attributes
+On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
+can run ncdump to check whether a netCDF representative of the collection's files contains the
+MetGenC-required attributes. When not reported, that attribute will have to be accommodated by
+it's associated .ini attribute being added to the .ini file. See [Optional Configuration Elements](#optional-configuration-elements) 
+for full details/descriptions of these.
+```
+ncdump -h <file name.nc> | grep -e date_modified -e date_created -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
+```
+
 
 | netCDF file attributes not currently used by MetGenC | ACDD | CF Conventions | NSIDC Guidelines |
 | ----------------------------- | ---- | -------------- | ---------------- |
@@ -332,39 +349,52 @@ Example running **init**
 
     $ metgenc init -c ./init/<name of config file to create or modify>.ini
 
-#### Optional Configuration Elements
+#### Required and Optional Configuration Elements
 Some attribute values may be read from the .ini file if the values
 can't be gleaned from—or don't exist in—the science file(s), but whose 
 values are known for the data set. Use of these elements can be typical 
 for data sets comprising non-CF/non-NSIDC-compliant netCDF science files,
-as well as non-netCDF data sets comprising .tif, .csv, .h5, etc. This  
-approach assumes the attribute values are the same for all granules considering  
-there's only one .ini file for a given data set. The element values must 
-be manually added to the .ini file, as none of them are prompted for in the
-`metgenc init` functionality.
+as well as non-netCDF data sets comprising .tif, .csv, .h5, etc. The element
+values must be manually added to the .ini file, as none are prompted for 
+in the `metgenc init` functionality.
 
 See this project's GitHub file, `fixtures/test.ini` for examples.
 
-| .ini element          | .ini section | (NetCDF) Attribute  | Note |
-| -----------------------|-------------- | ------------------- | ---- |
-| date_modified          | Collection    | date_modified       | 1    |
-| time_start_regex       | Collection    | time_coverage_start | 2    |
-| time_coverage_duration | Collection    | time_coverage_end   | 3    |
-| pixel_size             | Collection    | GeoTransform        | 4    |
+| .ini element          | .ini section | Attribute absent from netCDF file the .ini attribute stands in for | Attribute populated in UMMG | Note |
+| -----------------------|-------------- | ------------------- | ---------------------------| ---- |
+| date_modified          | Collection    | date_modified       | ProductionDateTime | 1, R    |
+| time_start_regex       | Collection    | time_coverage_start | BeginningDateTime | 2    |
+| time_coverage_duration | Collection    | time_coverage_end   | EndingDateTime | 3    |
+| pixel_size             | Collection    | GeoTransform        | n/a | 4    |
 
-1. For ease, set this to be the year-month-day MetGenC is run (e.g., date_modified =
-2025-07-22); including a precise time value is unnecessary (we're breaking from how SIPSMetgen
-rolled here!).
-2. Matched against file name to determine time coverage start value. Must match using
-the named group `(?P<time_coverage_start>)`.
-3. Duration value applied to `time_coverage_start` to determine `time_coverage_end`. Must
-be a valid [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
-4. Rarely applicable for science files that aren't netCDF (.txt, .csv, .jpg, .tif, etc.). 
+R = Required for all non-netCDF file types (e.g., csv, .tif, .h5, etc) and netCDF files missing
+    the global attribute specified 
+1. Set this to be the YYYY-MM-DD that you're running MetGenC (e.g., date_modified =
+2025-08-07); this value is a constant that will populate ProductionDateTime in all UMMG files.
+   * The ProductionDateTime field in a UMMG file mustn't show as "None"; if it does, Cumulus
+     will throw ingest errors stating that ProductionDateTime can't be "None".
+   * This attribute should be used with "nearly" compliant netCDF files wherein their global
+  attributes are missing the `date_modified` or `date_created` attribtes.
+2. This regex attribute leverages a netCDF's file name containing a date to populate UMMG files'
+TemporalExtent field attribute, BeginningDateTime. Must match using the named group `(?P<time_coverage_start>)`.
+   * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
+   (csv, tif, etc.) since these should rely on premet files containing temporal details for each file. 
+3. The time_coverage_duration attribute value specifies the duration to be applied to the `time_coverage_start`
+value to generate correct EndingDateTime values in UMMG files; this value is a constant that will
+be applied to each time_start_regex value gleaned from files. Must be a valid
+[ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
+   * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
+   (csv, tif, etc.) since these should rely on premet files containing temporal details for each file. 
+5. Rarely applicable for science files that aren't gridded netCDF (.txt, .csv, .jpg, .tif, etc.); this
+value is a constant that will be applied to all granule-level metadata. 
 
 #### Granule and Browse regex
-To identify browse files and declare a file name pattern when necessary
-for grouping files in a granule and/or browse with files in a granule, two 
-further .ini elements are available: 
+For data sets comprising multi-file granules (with or without browse), or single-file
+granules with browse, browse_regex and granule_regex are the configuration elements to
+use (neither need to be included in the .ini for collections comprising single-file granules
+without browse). Use of browse_regex facilitates identifying the browse images so they're
+classified as such in the CNM. Use of granule_regex defines a file name pattern to appropriately
+group files by the element common for the multiple files to be grouped within each granule: 
 | .ini element | .ini section | Note |
 | ------------- | ------------- | ---- |
 | browse_regex  | Collection    | 1    |
@@ -374,16 +404,26 @@ Note column:
 1. The file name pattern identifying a browse file. The default is `_brws`. This element is
  prompted for as one of the `metgenc init` prompts.
 2. The file name pattern identifying related files. Must  capture all text
- comprising the granule name in UMM-G and CNM output, and must provide a match
- using the named group `(?P<granuleid>)`. This value must be added manually; it
- is **not** included in the `metgenc init` prompts.
+ in file names that will result in a globally unique: product/name (in CNM), and
+ Identifier (as the IdentifierType: ProducerGranuleId in UMM-G) generated for each file,
+ relying on the named group `(?P<granuleid>)` within the regex tp provide a match. This init
+ elementvalue must be added manually as it's **not** included in the `metgenc init` prompts.
 
-##### Example: Use of `granule_regex` 
-Given the `granule_regex`:
+##### Example 1: Use of `granule_regex` and `browse_regex` for a single-file granule with multiple browse images 
+Given the .ini file's Source and Collection contents:
+
 ```
+[Source]
+data_dir = ./data/0081DUCk
+
+[Collection]
+auth_id = NSIDC-0081DUCk
+version = 2
+provider = DPT
+browse_regex = _brws
 granule_regex = (NSIDC0081_SEAICE_PS_)(?P<granuleid>[NS]{1}\d{2}km_\d{8})(_v2.0_)(?:F\d{2}_)?(DUCk)
 ```
-And two granules and their browse files:
+And two granules + their associated browse files:
 ```
 NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_DUCk.nc
 NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F16_DUCk_brws.png
@@ -395,14 +435,51 @@ NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F17_DUCk_brws.png
 NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F18_DUCk_brws.png
 ```
 
-- `(?:F\d{2}_)?` will match the `F16_`, `F17_` and `F18_` strings in the browse
-file names, but the match will not be captured due to to the `?:` elements, and will
-not appear in the granule name recorded in the UMM-G and CNM output.
-- `N25km_20211101` and `S25km_20211102` will match the named capture group `granuleid`.
-Each of those strings uniquely identify all files associated with a given granule.
-- `NSIDC0081_SEAICE_PS_`, `_v2.0_` and `DUCk` will be combined with the `granuleid`
-text to form the granule name recorded in the UMM-G and CNM output (in the case of
-single-file granules, the file extension will be added to the granule name).
+The browse_regex:
+This simply identifies the piece of the file names used to differentiate the browse image files from the science files, in this case: `browse_regex = _brws`.
+
+The granule_regex sections:
+- `(NSIDC0081_SEAICE_PS_)`, `(_v2.0_)`, and `(DUCk)` identify the 1st, 3rd, and 4th (the last) _Capture Groups_ to parse the constants to be included in each granule name: authID, version ID, and DUCk (the latter only relevant for early CUAT testing). 
+
+- The _Named Capture Group granuleid_ `(?P<granuleid>[NS]{1}\d{2}km_\d{8})` matches the region, resolution, and date elements unique to each file name to be included in each granule name, e.g., `N25km_20211101` and `S25km_20211102`. 
+
+- `(?:F\d{2}_)?` matches the F16_, F17_, and F18_ strings in the browse file names, to acknowledge their existence so the regex will work appropriately with all files in the collection BUT the `(?:F\d{2}_)?` represents a _Non-capture Group_; these elements will be matched but won't be included in the granule name.
+
+- Thus, NSIDC0081_SEAICE_PS_, \_v2.0_, and DUCk will be combined with the granuleid capture group element to become the producerGranuleId reflected for each granule in EDSC's Granules listing. This will globally, uniquely identify all granules associated with a given collection from any other files in other collections in CUAT or CPROD. In this case that's `NSIDC0081_SEAICE_PS_N25km_20211105_v2.0_DUCk.nc` and `NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc`. These are reflected in the CNM as the product/name value, and the UMMG as the Identifier value.
+
+##### Example 2: Use of granule_regex for a multi-file granule with no browse
+
+Given the Config file Source and Collection contents:
+
+```
+[Source]
+data_dir = data/IPFLT1B_DUCk
+premet_dir = premet/ipflt1b
+spatial_dir = spatial/ipflt1b
+
+[Collection]
+auth_id = IPFLT1B_DUCk
+version = 1
+provider = OIB; metgenc version 1.10.0rc0
+date_modified = 2025-08-04
+granule_regex = (IPFLT1B_)(?P<granuleid>.+?(?=_)_)?(DUCk)
+```
+And a multi-file granule comprising the following files:
+```
+IPFLT1B_20101226_085033_DUCk.dbf
+IPFLT1B_20101226_085033_DUCk.kml
+IPFLT1B_20101226_085033_DUCk.shp
+IPFLT1B_20101226_085033_DUCk.shx
+IPFLT1B_20101226_085033_DUCk.txt
+```
+The granule_regex sections:
+
+- `(IPFLT1B_)`, and `(DUCk)` identify the 1st and 3rd (the last) _Capture Groups_ to parse the constants to be included in each granule name: authID, and DUCk.
+
+- The _Named Capture Group granuleid_ `(?P<granuleid>.+?(?=_)_)?` matches the unique date range contained in each file name to be included in each granule name, e.g., `IPFLT1B_20101226_085033_`. 
+
+- Thus, IPFLT1B_ and DUCk are combined with the granuleid capture group element to become the producerGranuleId reflected for each granule in EDSC's Granules listing. This will globally, uniquely identify all granules associated with a given collection from any other files in other collections in CUAT or CPROD. In this case that's `IPFLT1B_20101226_085033_DUCk`. This is reflected in the CNM as the product/name value, and the UMMG as the Identifier value.
+Note: Ideally there would also be a version ID in this file name, but version wasn't assigned in most IceBridge collection granule names. 
 
 #### Using Premet and Spatial files
 When necessary, the following two .ini elements can be used to define paths
@@ -428,7 +505,7 @@ use the collection's spatial extent for each granule.
 #### Setting Collection Temporal Extent as Granule Temporal Extent
 RARELY APPLICABLE (if ever)!! An operator may set an .ini flag to indicate
 that a collection's temporal extent should be used to populate every granule
-via granule-level ummg json to be the same TemporalExtent (SingleDateTime or 
+via granule-level UMMG json to be the same TemporalExtent (SingleDateTime or 
 BeginningDateTime and EndingDateTime) as what's defined for the collection. 
 In other words, every granule in a collection would display the same start 
 and end times in EDSC. In most collections, this is likely ill-advised use case.
@@ -460,7 +537,7 @@ When a granule has an associated `.spatial` file containing geodetic point data 
 
 
 ##### Example Spatial Polygon Generation Configuration
-Example showing content added to an .ini file, having edited the CMR default vertex tolerance (distance between two vertices) to decrease the precision of the GPoly coordinate pairs listed in the ummg json files MetGenC generates:
+Example showing content added to an .ini file, having edited the CMR default vertex tolerance (distance between two vertices) to decrease the precision of the GPoly coordinate pairs listed in the UMMG json files MetGenC generates:
 ```ini
 [Spatial]
 spatial_polygon_enabled = true
@@ -549,7 +626,7 @@ Using configuration:
 * data_dir:, auth_id:, version:, provider:, local_output_dir:, and ummg_dir: (which is relative to the local_output_dir) are set by the operator in the config file.
 * kinesis_stream_name: and staging_bucket_name: could be changed by the operator in the config file, but should be left as-is!
 * write_cnm_file:, and overwrite_ummg: are editable by operators in the config file
-  * write_cnm_file: can be set here as `true` or `false`. Setting this to `true` when testing allows you to visually qc cnm content as well as run `metgenc validate` to assure they're valid for ingest. Once known to be valid, and you're ready to ingest data end-to-end, this can be edited to `false` to prevent cnm files from being written locally if desired. They'll always be sent to AWS regardless of the value being `true` or `false`.
+  * write_cnm_file: can be set here as `true` or `false`. Setting this to `true` when testing allows you to visually qc CNM content as well as run `metgenc validate` to assure they're valid for ingest. Once known to be valid, and you're ready to ingest data end-to-end, this can be edited to `false` to prevent CNM from being written locally if desired. They'll always be sent to AWS regardless of the value being `true` or `false`.
   * overwrite_ummg: when set to `true` will overwrite any existing UMM-G files for a data set present in the vm's MetGenC venv output/ummg directory. If set to `false` any existing files would be preserved, and only new files would be written.
 * checksum_type: is another config file entry that could be changed by the operator, but should be left as-is!
 * number: 1000000 is the default max granule count for ingest. This value is not found in the config file, thus it can only be changed by a DUCk developer if necessary.
@@ -576,9 +653,9 @@ Options:
 ```
 The **process** command can be run either with or without specifying the `-d` / `--dry-run` option.
 * When the dry run option is specified _and_ the `-wc` / `--write-cnm` option is invoked, or your config
-file contains `write_cnm_file = true` (instead of `= false`), CNM files will be written locally to the output/cnm
+file contains `write_cnm_file = true` (instead of `= false`), CNM will be written locally to the output/cnm
 directory. This promotes operators having the ability to validate and visually QC their content before letting them guide ingest to CUAT.
-* When run without the dry run option, metgenc will transfer cnm messages to AWS, kicking off end-to-end ingest of
+* When run without the dry run option, metgenc will transfer CNM to AWS, kicking off end-to-end ingest of
 data and UMM-G files to CUAT.
 
 When MetGenC is run on the VM, it must be run at the root of the vm's virtual environment, `metgenc`.
@@ -586,7 +663,7 @@ When MetGenC is run on the VM, it must be run at the root of the vm's virtual en
 If running `metgenc process` fails, check for an error message in the metgenc.log to begin troubleshooting.
 
 #### Examples running process
-The following is an example of using the dry run option (-d) to generate UMM-G and write cnm as files (-wc) for three granules (-n 3):
+The following is an example of using the dry run option (-d) to generate UMM-G and write CNM as files (-wc) for three granules (-n 3):
 
     $ metgenc process -c ./init/test.ini -d -n 3 -wc
 
@@ -616,7 +693,7 @@ to set up communications between MetGenC and AWS is easy to do, but thankfully, 
 
 ### validate
 
-The **validate** command lets you review the JSON cnm or UMM-G output files created by
+The **validate** command lets you review the JSON CNM or UMM-G output files created by
 running `process`.
 
 ```
@@ -634,17 +711,17 @@ Options:
 
 #### Example running validate
 
-    $ metgenc validate -c init/modscg.ini -t ummg (adding the -t ummg option will validate all UMM-G files; -t cnm will validate all cnm files that have been written locally)
-    $ metgenc validate -c init/modscg.ini (without the -t option specified, just all locally written cnm files will be validated)
+    $ metgenc validate -c init/modscg.ini -t ummg (adding the -t ummg option will validate all UMM-G files; -t cnm will validate all CNM that have been written locally)
+    $ metgenc validate -c init/modscg.ini (without the -t option specified, just all locally written CNM will be validated)
 
 The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file at a time:
 
-    $ check-jsonschema --schemafile <path to schema file> <path to cnm or UMM-G file to check>
+    $ check-jsonschema --schemafile <path to schema file> <path to CNM or UMM-G file to check>
 
 ### Pretty-print a json file in your shell
 This is not a MetGenC command, but it's a handy way to `cat` a file and omit having
 to wade through unformatted json chaos:
-`cat <UMM-G or cnm file name> | jq "."`
+`cat <UMM-G or CNM file name> | jq "."`
 
 e.g., `cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "."` will
 pretty-print the contents of that json file in your shell!

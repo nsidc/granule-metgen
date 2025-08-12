@@ -736,7 +736,12 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         gsr, summary["geometry"], configuration, spatial_content
     )
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
-    summary["additional_attributes"] = populate_additional_attributes(premet_content)
+    summary["additional_attributes"] = populate_additional_attributes(
+        premet_content, constants.UMMG_ADDITIONAL_ATTRIBUTES
+    )
+    summary["platforms"] = populate_additional_attributes(
+        premet_content, constants.UMMG_PLATFORM
+    )
     summary["ummg_schema_version"] = constants.UMMG_JSON_SCHEMA_VERSION
 
     # Populate the body template
@@ -1059,24 +1064,22 @@ def populate_temporal(datetime_values):
         )
 
 
-def populate_additional_attributes(premet_content):
+def populate_additional_attributes(premet_content, ummg_key):
     """
-    Return a string representation of any additional attributes that were found in a premet file.
+    Return a string representation of any additional attributes or platform information
+    found in a premet file.
     """
     if premet_content is None:
         return ""
 
-    if constants.UMMG_ADDITIONAL_ATTRIBUTES in premet_content:
-        # Setting this up as a generic key-value in the template because I didn't
-        # want to put the constant value in the template as well.
-        # TODO: Get rid of all of this repetition of the constant! Also, should
-        # the "populate" methods be in utilities, not here?
+    if ummg_key in premet_content:
+        # This is set up as a generic key-value output in the template so the same template
+        # can be used for additional attributes and platforms.
+        # TODO: Should the "populate" methods be in utilities, not here?
         return ummg_additional_attributes_template().safe_substitute(
             {
-                "key": constants.UMMG_ADDITIONAL_ATTRIBUTES,
-                "attributes": json.dumps(
-                    premet_content[constants.UMMG_ADDITIONAL_ATTRIBUTES]
-                ),
+                "key": ummg_key,
+                "attributes": json.dumps(premet_content[ummg_key]),
             }
         )
 
