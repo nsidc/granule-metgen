@@ -1,6 +1,8 @@
 ## UNRELEASED
 
 * Issue-241: Extract Collection Metadata Reader (Pipeline Story #2)
+* Issue-233: Simplified our plans for incrementally improving the processing pipeline. See
+  the [Pipeline Refactoring Plan](devdocs/PIPELINE_REFACTORING_PLAN.md)
 
 ## v1.10.1
 
