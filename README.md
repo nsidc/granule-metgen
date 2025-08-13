@@ -162,17 +162,17 @@ science files.
 
 | Attribute used by MetGenC (location in netCDF file)   | ACDD | CF Conventions | NSIDC Guidelines | Notes   |
 | ----------------------------- | ---- | -------------- | ---------------- | ------- |
-| time_coverage_start (global)  | R    |                | R                | 2, OC, P   |
-| time_coverage_end (global)    | R    |                | R                | 2, OC, P   |
-| grid_mapping_name (variable)  |      | RequiredC      | R+               | 3       |
-| crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 4       |
-| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 5, OC   |
+| time_coverage_start (global)  | R    |                | R                | 1, OC, P   |
+| time_coverage_end (global)    | R    |                | R                | 1, OC, P   |
+| grid_mapping_name (variable)  |      | RequiredC      | R+               | 2       |
+| crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 3       |
+| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 4, OC   |
 | geospatial_lon_min (global)   | R    |                | R                | |
 | geospatial_lon_max (global)   | R    |                | R                | |
 | geospatial_lat_min (global)   | R    |                | R                | |
 | geospatial_lat_max (global)   | R    |                | R                | |
-| standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 6       |
-| standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
+| standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 5       |
+| standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 6       |
 
 Notes column key:
 
@@ -183,28 +183,28 @@ Notes column key:
  P = Premet file attributes that may be specified in a premet file; when used, a
   `premet_dir`path must be defined in the .ini file.
 
- 2 = Used to populate the time begin and end UMM-G values; OC .ini attribute for
+ 1 = Used to populate the time begin and end UMM-G values; OC .ini attribute for
   time_coverage_start is `time_start_regex` = \<value\>, and for time_coverage_end the
   .ini attribute is `time_coverage_duration` = \<value\>.
 
- 3 = A grid mapping variable is required if the horizontal spatial coordinates are not
+ 2 = A grid mapping variable is required if the horizontal spatial coordinates are not
    longitude and latitude and the intent of the data provider is to geolocate
    the data. `grid_mapping` and `grid_mapping_name` allow programmatic identification of
    the variable holding information about the horizontal coordinate reference system.
 
- 4 = The `crs_wkt` ("coordinate referenc system well known text") value is handed to the
+ 3 = The `crs_wkt` ("coordinate referenc system well known text") value is handed to the
    `CRS` and `Transformer` modules in `pyproj` to conveniently deal
    with the reprojection of (y,x) values to EPSG 4326 (lon, lat) values.
 
- 5 = The `GeoTransform` value provides the pixel size per data value, which is then used
+ 4 = The `GeoTransform` value provides the pixel size per data value, which is then used
    to calculate the padding added to x and y values to create a GPolygon enclosing all
    of the data; OC .ini attribute is `pixel_size` = <value>.
 
- 6 = The values of the coordinate variable identified by the `standard_name` attribute
+ 5 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_x_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
- 7 = The values of the coordinate variable identified by the `standard_name` attribute
+ 6 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
@@ -354,7 +354,7 @@ in the `metgenc init` functionality.
 
 See this project's GitHub file, `fixtures/test.ini` for examples.
 
-| .ini element          | .ini section | Attribute absent from netCDF file the .ini attribute stands in for | Attribute populated in UMMG | Note |
+| .ini element           | .ini section | Attribute absent from netCDF file the .ini attribute stands in for | Attribute populated in UMMG | Note |
 | -----------------------|-------------- | ------------------- | ---------------------------| ---- |
 | time_start_regex       | Collection    | time_coverage_start | BeginningDateTime | 1    |
 | time_coverage_duration | Collection    | time_coverage_end   | EndingDateTime | 2    |
@@ -362,16 +362,19 @@ See this project's GitHub file, `fixtures/test.ini` for examples.
 
 R = Required for all non-netCDF file types (e.g., csv, .tif, .h5, etc) and netCDF files missing
     the global attribute specified
+
 1. This regex attribute leverages a netCDF's file name containing a date to populate UMMG files'
 TemporalExtent field attribute, BeginningDateTime. Must match using the named group `(?P<time_coverage_start>)`.
    * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
    (csv, tif, etc.) since these should rely on premet files containing temporal details for each file.
+
 2. The time_coverage_duration attribute value specifies the duration to be applied to the `time_coverage_start`
 value to generate correct EndingDateTime values in UMMG files; this value is a constant that will
 be applied to each time_start_regex value gleaned from files. Must be a valid
 [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
    * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
    (csv, tif, etc.) since these should rely on premet files containing temporal details for each file.
+
 3. Rarely applicable for science files that aren't gridded netCDF (.txt, .csv, .jpg, .tif, etc.); this
 value is a constant that will be applied to all granule-level metadata.
 
