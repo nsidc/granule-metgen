@@ -4,8 +4,8 @@
   the [Pipeline Refactoring Plan](devdocs/PIPELINE_REFACTORING_PLAN.md)
 * Issue-169: Allow operator to specify which science (data) file should be scraped for
   metadata in the case of a granule with multiple science files.
-* Add regex to version bump configuration for this (`CHANGELOG.md`) file, and to update
-  configuration to insert the date of the version bump.
+* Update version bump configuration to deal with either unreleased or release candidate
+  entries in this (`CHANGELOG.md`) file, and to insert the date of the version bump.
 * Issue-250: Use the current date/time to populate `ProductionDateTime` in UMM-G
   output for all collections.
 
