@@ -2,276 +2,300 @@
 
 ## Overview
 
-This document outlines a plan to incrementally refactor the MetGenC pipeline to separate decision-making from execution, implement immutable data structures, and disentangle reading/writing from processing components.
+This document outlines a plan to refactor the MetGenC pipeline to create a composable, testable, and maintainable architecture.
 
 ## Current Pipeline Issues
 
-The current pipeline has several architectural characteristics:
+The current pipeline has several architectural limitations:
 
-1. **Mixed concerns**: Decision-making and execution are intertwined throughout the operations
+1. **Mixed concerns**: Decision-making and execution are intertwined throughout operations
 2. **Embedded I/O**: Reading and writing occur within pipeline operations rather than at boundaries
 3. **Mutable state**: The `Granule` dataclass is modified throughout the pipeline
 4. **Tight coupling**: Components depend heavily on each other and configuration state
+5. **Limited composability**: Pipeline stages cannot be easily rearranged or tested in isolation
+6. **Side-effect entanglement**: Business logic is mixed with I/O operations
+7. **Not extensible**: Users can't provide their own code or scripts to extend MetGenC
 
-## Key Benefit Goals
+## Goals
 
-1. **Separation of Concerns**: Decision-making is isolated from execution
-2. **Immutable Data**: All data structures are immutable, preventing side effects
-3. **Testability**: Each phase can be tested independently with predictable inputs/outputs
-4. **Maintainability**: Clear boundaries between reading, processing, building, and writing
-5. **Flexibility**: New readers, processors, or outputs can be added without affecting other phases
-6. **Error Handling**: Failures are contained within phases and can be handled appropriately
+1. **Functional Composition**: Pipeline stages compose functionally with explicit state threading
+2. **Side-Effect Isolation**: All side-effects are specified as data and executed separately
+3. **Immutable State**: Pipeline context and data flow through stages immutably
+4. **Dynamic Pipeline Construction**: Pipeline is built dynamically based on configuration and collection metadata
+5. **Comprehensive Auditing**: Processing ledger tracks all operations for debugging and monitoring
+6. **Separate Rules from Execution**: Explicit rules for geometry & temporal metadata are evaluated in one place
+7. **Testability**: Each stage can be tested with mock state, no I/O required
+8. **Extensible**: Users can provide simple shell scripts or Python code to extent MetGenC on the fly
 
 ## Success Criteria
 
-- [ ] All I/O operations occur only at pipeline boundaries
-- [ ] Decision-making is separated from execution
-- [ ] All data structures are immutable
-- [ ] Each pipeline phase can be tested independently
+- [ ] Geometry extent source & type rules are evaluated before processing granules
+- [ ] Temporal extent source & type rules are evaluated beffore processing granules
+- [ ] All side-effects are deferred until the execution phase
+- [ ] Pipeline stages are pure functions that return (result, new_state) tuples
+- [ ] Pipeline can be constructed dynamically based on configuration
+- [ ] Processing ledger provides complete audit trail
+- [ ] Each granule's processing is independent and parallelizable
 - [ ] Existing functionality is preserved
 - [ ] Performance is maintained or improved
-- [ ] Code coverage remains above 90%
+- [ ] Code coverage target >= 80%
+- [ ] Users can extend MetGenC without modifying source code
+- [ ] Custom readers can be configured for any file format
+- [ ] Extension mechanism is documented and has examples
 
 ## Risk Mitigation
 
-1. **Feature Flags**: Toggle between old/new implementations -- either through CLI or .INI
-2. **Gradual Migration**: One component / feature at a time
-3. **Comprehensive Testing**: Test each change thoroughly
-4. **Performance Monitoring**: Track pipeline performance throughout migration
+1. **Incremental Extraction**: Extract existing logic rather than rewriting
+2. **Maintain Compatibility**: Existing pipeline continues to work
+3. **Test Each Phase**: Ensure extracted components work identically
+4. **Simplified State Pattern**: Use a pragmatic Python approach to thread state through functions
+5. **Performance Monitoring**: Track pipeline performance throughout migration
 
-This refactoring plan ensures the pipeline becomes more maintainable, testable, and extensible while minimizing risk through incremental changes that preserve existing functionality.
+## Architecture Evolution
 
-## New Pipeline Architecture
+### Current Architecture (Before)
 
-### Pipeline Diagram
+```mermaid
+graph TD
+    subgraph "Current Monolithic Pipeline"
+        Config[Configuration File] --> Pipeline[Main Pipeline]
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    DECISION PHASE                               │
-├─────────────────────────────────────────────────────────────────┤
-│ 1. Configuration Analysis                                       │
-│    └─ Parse config → Determine processing strategy              │
-│                                                                 │
-│ 2. File Discovery & Grouping                                   │
-│    └─ Scan directories → Group related files                   │
-│                                                                 │
-│ 3. Reader Selection                                             │
-│    └─ Analyze file types → Select appropriate readers          │
-│                                                                 │
-│ 4. Geometry Strategy                                            │
-│    └─ Analyze spatial config → Choose geometry approach        │
-│                                                                 │
-│ 5. Template Selection                                           │
-│    └─ Based on outputs → Select UMM-G/CNM templates           │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     READING PHASE                              │
-├─────────────────────────────────────────────────────────────────┤
-│ 1. Collection Metadata Reader                                  │
-│    └─ CMR API → Collection info                                │
-│                                                                 │
-│ 2. Premet File Reader                                          │
-│    └─ Parse premet files → Temporal/additional attributes      │
-│                                                                 │
-│ 3. Spatial File Reader                                         │
-│    └─ Parse spatial/spo files → Coordinate data               │
-│                                                                 │
-│ 4. Science Data Reader                                         │
-│    └─ Extract metadata from NetCDF/CSV → Temporal/spatial     │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   PROCESSING PHASE                             │
-├─────────────────────────────────────────────────────────────────┤
-│ 1. Temporal Processor                                          │
-│    └─ Merge temporal data → Normalized temporal extent         │
-│                                                                 │
-│ 2. Spatial Processor                                           │
-│    └─ Process coordinates → Geometry (point/bbox/polygon)      │
-│                                                                 │
-│ 3. Metadata Merger                                             │
-│    └─ Combine all sources → Complete granule metadata          │
-│                                                                 │
-│ 4. Validation Processor                                        │
-│    └─ Validate against schemas → Validated metadata            │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    BUILDING PHASE                              │
-├─────────────────────────────────────────────────────────────────┤
-│ 1. UMM-G Builder                                               │
-│    └─ Apply templates → UMM-G JSON                            │
-│                                                                 │
-│ 2. CNM Builder                                                 │
-│    └─ Apply templates → CNM JSON                              │
-│                                                                 │
-│ 3. Output Organizer                                           │
-│    └─ Prepare file operations → File operation list            │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    WRITING PHASE                               │
-├─────────────────────────────────────────────────────────────────┤
-│ 1. Local File Writer                                           │
-│    └─ Write UMM-G/CNM files → Local filesystem                │
-│                                                                 │
-│ 2. AWS Stager                                                  │
-│    └─ Upload files → S3 staging area                          │
-│                                                                 │
-│ 3. Notification Publisher                                      │
-│    └─ Send CNM messages → Kinesis stream                      │
-└─────────────────────────────────────────────────────────────────┘
+        Pipeline --> FileDisc[File Discovery]
+        FileDisc --> ReadOps[Read Operations]
+
+        subgraph "Tightly Coupled Readers"
+            NetCDF[NetCDF Reader<br/>- Read file<br/>- Extract temporal<br/>- Extract spatial<br/>- Extract attributes]
+            CSV[CSV Reader<br/>- Read file<br/>- Extract all metadata]
+            SnowEx[SnowEx Reader<br/>- Read file<br/>- Extract all metadata]
+        end
+
+        ReadOps --> NetCDF
+        ReadOps --> CSV
+        ReadOps --> SnowEx
+
+        NetCDF --> Extract[Extract Metadata]
+        CSV --> Extract
+        SnowEx --> Extract
+
+        Extract --> |"Mutable State"| Process[Process Metadata]
+        Process --> |"Direct Write"| WriteFiles[Write Files]
+        Process --> |"Direct Upload"| AWS[AWS Operations]
+
+        CMRUtil[CMR in Utilities<br/>Mixed with Logic] -.-> Process
+    end
+
+    %% Problems/Issues - Light orange with dark text
+    style Pipeline fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    style Extract fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    style Process fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    style CMRUtil fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
 ```
 
-### Core Data Structures (Immutable)
+### New Pipeline Architecture
 
-```python
-@dataclass(frozen=True)
-class ProcessingDecisions:
-    reader_strategy: ReaderStrategy
-    geometry_strategy: GeometryStrategy
-    template_strategy: TemplateStrategy
-    output_strategy: OutputStrategy
+```mermaid
+graph TD
+    subgraph "New Pipeline Architecture"
+        subgraph Planning["Planning Stage - Pure Functions, No Side Effects"]
+            Config[Configuration File] --> ReadConfig[Read Configuration]
+            ReadConfig --> ReadCMR[Read Collection Metadata]
+            ReadCMR --> EvalGeo[Evaluate Geometry Rules]
+            EvalGeo --> EvalTemp[Evaluate Temporal Rules]
+            EvalTemp --> BuildOps[Build Operations Spec<br/>Per Granule]
 
-@dataclass(frozen=True)
-class SourceData:
-    collection_metadata: CollectionMetadata
-    premet_data: Optional[PremetData]
-    spatial_data: Optional[SpatialData]
-    science_metadata: ScienceMetadata
+            ReadConfig -.-> ConfigData[Configuration]
+            ReadCMR -.-> CMRData[Collection Metadata]
+            EvalGeo -.-> GeomSpec[Geometry Spec<br/>- Source: where to get data<br/>- Type: point/polygon/bbox]
+            EvalTemp -.-> TempSpec[Temporal Spec<br/>- Source: where to get data<br/>- Type: single/range datetime]
+            BuildOps -.-> OpsSpec[Operations Spec<br/>Per Granule]
+        end
 
-@dataclass(frozen=True)
-class ProcessedMetadata:
-    temporal_extent: TemporalExtent
-    spatial_extent: SpatialExtent
-    additional_attributes: dict
-    file_metadata: dict
+        Planning --> Execution
 
-@dataclass(frozen=True)
-class BuildOutputs:
-    ummg_content: str
-    cnm_content: str
-    file_operations: List[FileOperation]
+        subgraph Execution["Execution Stage - Side Effects"]
+            Iterator[Iterate Over Operations Specs]
+            Iterator --> Evaluate[Evaluate Granule's<br/>Operations Spec]
+            Evaluate --> Operations[Perform Operations<br/>with side-effects]
+            Operations --> RecordResults[Record Results]
+
+            RecordResults -.-> Ledger[Processing Ledger<br/>Per Granule Results]
+        end
+
+        Execution --> Summary
+
+        subgraph Summary["Summary Stage - Reporting"]
+            Summarize[Summarize Results]
+            Summarize --> WriteLog[Write Log]
+
+            WriteLog -.-> LogFile[Log File]
+            WriteLog -.-> Report[Display Report]
+        end
+    end
+
+    %% Processing steps - Light blue with dark text
+    style ReadConfig fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
+    style ReadCMR fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
+    style EvalGeo fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
+    style EvalTemp fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
+    style BuildOps fill:#E8F4FD,stroke:#1976D2,stroke-width:2px,color:#000
+
+    %% Execution steps with side effects - Light orange with dark text
+    style Iterator fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    style Evaluate fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    style Operations fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    style RecordResults fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+
+    %% Summary steps - Light green with dark text
+    style Summarize fill:#F1F8E9,stroke:#33691E,stroke-width:2px,color:#000
+    style WriteLog fill:#F1F8E9,stroke:#33691E,stroke-width:2px,color:#000
+
+    %% Data structures - Light gray with dark text
+    style ConfigData fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    style CMRData fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    style GeomSpec fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    style TempSpec fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    style OpsSpec fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    style Ledger fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    style LogFile fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+    style Report fill:#F5F5F5,stroke:#424242,stroke-width:2px,color:#000
+
+    %% Input - White with dark border
+    style Config fill:#FFFFFF,stroke:#000000,stroke-width:2px,color:#000
 ```
 
-## User Stories with Behavioral Acceptance Tests
+## Implementation Strategy - Incremental Extraction and Refactoring
 
-### Story 1: Data Reading Isolation
-**As a** MetGenC developer, **I can** process science data files through dedicated readers that only handle data extraction, **so that** I/O operations are isolated from business logic and data sources can be easily mocked for testing.
+### Overview
 
-**Acceptance Tests:**
-- Given a NetCDF file with temporal metadata, when I use the science data reader, then I receive immutable ScienceMetadata without any file system side effects
-- Given CMR API credentials, when I use the collection metadata reader, then I receive immutable CollectionMetadata without coupling to pipeline operations
-- Given premet and spatial files, when I use their respective readers, then I receive immutable PremetData and SpatialData independently of other pipeline components
+This implementation strategy focuses on extracting and refactoring existing code incrementally, prioritizing architectural improvements that enable extensibility while maintaining backward compatibility.
 
-### Story 2: Decision Making Separation
-**As a** MetGenC maintainer, **I can** analyze configuration requirements in a dedicated decision phase, **so that** processing strategies are determined upfront and execution logic is decoupled from decision logic.
+### Phase 1: Collection Metadata Reader Extraction
+**Standalone Value**: Early collection metadata access, remove caching (not needed), more testable by mocking CMR responses
 
-**Acceptance Tests:**
-- Given a configuration file, when I run the decision phase, then I receive a ProcessingDecisions object that specifies all strategies without executing any operations
-- Given different collection types, when I analyze processing requirements, then the decision phase selects appropriate readers, geometry strategies, and templates without performing I/O
-- Given invalid configuration, when I run the decision phase, then it fails fast with clear error messages before any processing begins
+1. **Extract Collection Metadata reader that calls CMR** from utilities into standalone module
+2. **Place Collection Metadata read after config** but before running any part of the pipeline
+3. **Create Collection Metadata dataclass** to hold collection metadata attributes
+4. **Mock CMR responses** for testing
 
-### Story 3: Immutable Data Flow
-**As a** MetGenC developer, **I can** process metadata through immutable data structures, **so that** I eliminate side effects and can safely parallelize operations without state corruption.
+**Benefit if stopped here**: CMR integration is isolated as an implementation detail and more testable; collection metadata read once & available for all decisions
 
-**Acceptance Tests:**
-- Given a Granule dataclass, when I attempt to modify its fields, then the system prevents mutation and requires creating new instances
-- Given source data from multiple readers, when I process it through the pipeline, then each stage returns new immutable objects without modifying inputs
-- Given concurrent processing of multiple granules, when operations run in parallel, then no race conditions occur due to shared mutable state
+### Phase 2a Geometry Specification Extraction
+**Standalone Value**: Clean separation of geometry decision-making from execution
 
-### Story 4: Processing and I/O Separation
-**As a** MetGenC operator, **I can** run metadata processing independently of file operations, **so that** I can validate processing logic without touching the file system or AWS services.
+1. **Extract geometry decision logic** from current pipeline
+2. **Define `GeometrySpec` dataclass** to capture decisions:
+   - Source: where to get geometry data (granule metadata, spatial file, collection)
+   - Type: what geometry type to create (point, polygon, bounding box)
+   - Representation: coordinate system (geodetic, cartesian)
+3. **Create `determine_geometry_spec()` function** that:
+   - Takes configuration, collection metadata, and available files
+   - Returns a complete specification of geometry decisions
+   - Contains all business rules for geometry selection
+4. **Document decision rules** clearly:
+   - Priority order for data sources
+   - Fallback logic
+   - Override conditions
+5. **Add `GeometrySpec` to pipeline context** for use in later phases
 
-**Acceptance Tests:**
-- Given immutable source data, when I run temporal and spatial processors, then I receive processed metadata without any file writes or AWS calls
-- Given processed metadata, when I use output builders, then I receive UMM-G and CNM content as strings without writing files
-- Given build outputs, when I use dedicated writers, then file operations and AWS staging occur only in the final phase
+**Benefit if stopped here**: Geometry decision logic is isolated from execution, making it testable and comprehensible
 
-### Story 5: Enhanced Pipeline Management
-**As a** MetGenC operator, **I can** orchestrate the entire pipeline with comprehensive monitoring and error handling, **so that** I have visibility into each phase
+### Phase 2b: Temporal Specification Extraction
+**Standalone Value**: Clean separation of temporal decision-making from execution
 
-**Acceptance Tests:**
-- Given a pipeline execution, when any phase fails, then I receive detailed error information with detailed error messages
-- Given pipeline execution, when I monitor progress, then I receive metrics for each phase including timing and success/failure rates
-- Given multiple granules, when I process them, then I can track individual granule progress and aggregate results
+1. **Extract temporal decision logic** from current pipeline
+2. **Define `TemporalSpec` dataclass** to capture decisions:
+   - Source: where to get temporal data (granule metadata, premet file, collection)
+   - Type: what temporal type to create (single datetime, range datetime)
+3. **Create `determine_temporal_spec()` function** that:
+   - Takes configuration, collection metadata, and available files
+   - Returns a complete specification of temporal decisions
+   - Encapsulates all business rules for temporal selection
+4. **Document decision rules** clearly:
+   - When to use single vs range datetime
+   - Collection temporal override logic
+   - Validation requirements
+5. **Add `TemporalSpec` to pipeline context** for use in later phases
 
-## Developer Implementation Guide
+**Benefit if stopped here**: Temporal decision logic is isolated from execution, testable independently
 
-### Story 1: Data Reading Isolation
-- **Goal**: Extract all data reading operations into dedicated readers that return immutable data structures
-- **Tasks**:
-  - Create `CollectionMetadata`, `PremetData`, `SpatialData`, `ScienceMetadata` immutable dataclasses
-  - Extract `collection_from_cmr()` into `readers/cmr_reader.py`
-  - Move premet parsing from `utilities.py` to `readers/premet_reader.py`
-  - Move spatial/spo parsing from `utilities.py` to `readers/spatial_reader.py`
-  - Refactor science data readers to return immutable structures
-  - Update tests to mock readers independently
-- **Risk**: Low - isolated file parsing and network operations
+### Phase 3: Pipeline Creation
+**Standalone Value**: Organized pipeline with clear data flow
 
-### Story 2: Decision Making Separation
-- **Goal**: Create a dedicated decision phase that analyzes configuration and determines processing strategies
-- **Tasks**:
-  - Create `ReaderStrategy`, `GeometryStrategy`, `TemplateStrategy`, `OutputStrategy` classes
-  - Create `pipeline_decisions.py` with `analyze_processing_requirements()` function
-  - Move all configuration-based decision logic from operations into decision phase
-  - Create `ProcessingDecisions` immutable dataclass to hold all strategies
-  - Create `ProcessingContext` that combines decisions with source data
-  - Refactor operations to accept context instead of configuration directly
-- **Risk**: Medium - affects core processing logic and touches all operations
+1. **Create `Pipeline`** class containing:
+   - Configuration
+   - Collection metadata (from Phase 1)
+   - Geometry specification (from Phase 2a)
+   - Temporal specification (from Phase 2b)
+   - Reader registry
+   - Processing ledger
+2. **Create new `Pipeline` class** that uses state
+3. **Update pipeline operations** to use specifications:
+   - Operations read the specs to know what to do
+   - Specs tell WHERE to get data and WHAT type to create
+   - Operations handle the HOW of extraction and formatting
+4. **Ensure all actions are pure functions** that return new state
 
-### Story 3: Immutable Data Flow
-- **Goal**: Convert all data structures to immutable and implement functional pipeline patterns
-- **Tasks**:
-  - Add `@dataclass(frozen=True)` to `Collection`, `Granule`, and all data classes
-  - Update all operations to return new instances instead of modifying existing ones
-  - Fix all mutation patterns throughout codebase
-  - Replace recorder pattern with functional composition
-  - Implement proper error handling for functional pipeline
-  - Ensure each stage takes immutable input and returns immutable output
-- **Risk**: High - breaks existing mutation patterns and requires complete pipeline rewrite
+**Benefit if stopped here**: Clear separation between decision-making (specs) and execution (operations)
 
-### Story 4: Processing and I/O Separation
-- **Goal**: Isolate all processing logic from I/O operations and move I/O to pipeline boundaries
-- **Tasks**:
-  - Create `temporal_processor.py`, `spatial_processor.py`, `metadata_merger.py` with pure functions
-  - Move processing logic out of `create_ummg()` into dedicated processors
-  - Create `ummg_builder.py`, `cnm_builder.py` for template application
-  - Move template population out of operations into builders
-  - Create `file_writer.py`, `aws_writer.py` for final phase I/O
-  - Extract file writing and AWS operations from pipeline operations
-  - Implement batch operations for efficiency
-- **Risk**: High - core business logic changes with medium risk for isolated template and I/O logic
+### Phase 4: Reader Interface Definition
+**Standalone Value**: Standardized interface for all metadata extraction
 
-### Story 5: Enhanced Pipeline Management
-- **Goal**: Create comprehensive pipeline orchestration with monitoring and error handling
-- **Tasks**:
-  - Create `PipelineOrchestrator` class to manage all phases
-  - Implement proper error handling mechanisms
-  - Add pipeline monitoring and metrics collection
-  - Replace current logging with structured result collection
-  - Add detailed success/failure reporting with granule-level tracking
-  - Implement pipeline performance metrics and timing
-- **Risk**: Low - new functionality that enhances existing capabilities
+1. **Define new granular reader interfaces**:
+   - `TemporalReader`: Extracts temporal metadata
+   - `SpatialReader`: Extracts spatial metadata
+   - `AttributeReader`: Extracts general metadata/attributes
+2. **Create `ReaderRegistry`** to manage reader selection
+3. **Define reader selection logic** based on file types
+4. **Update pipeline state** to include reader registry
 
-## Implementation Strategy
+**Benefit if stopped here**: Clear contract for all readers, foundation for extensibility
 
-### Backward Compatibility
-- Each story maintains existing CLI interface
-- No breaking changes to configuration format
-- Existing behavior preserved throughout transition
+### Phase 5: Existing Reader Adaptation
+**Standalone Value**: All readers use consistent interface
 
-### Incremental Testing
-- Add comprehensive tests for each extracted component
-- Goal of test coverage above 90% from refactoring
-- Add integration tests for new pipeline phases
+1. **Refactor `NetCDFReader`** to implement new interfaces:
+   - Split into temporal, spatial, and attribute readers
+2. **Refactor `Generic`** reader to implement new interfaces
+2. **Refactor `CSVReader`** similarly (***Maybe***)
+3. **Refactor `SnowExReader`** similarly (***Maybe***)
+4. **Update reader registry** with refactored readers
+5. **Remove old reader code**
 
-### Feature Flags
-- Use configuration to toggle between old/new implementations during transition
-- Allow gradual rollout of new pipeline components
-- Provide fallback mechanisms for critical operations
+**Benefit if stopped here**: Consistent reader architecture throughout the system
+
+### Phase 6: Specify/Execute Separation
+**Standalone Value**: Pure pipeline logic with deferred execution
+
+1. **Define side effect specifications**:
+   - `CreateUMMG`, `CreateCNM`, `WriteFile`, `S3Upload`, `SendMessage`
+2. **Modify pipeline to return specifications** instead of executing
+3. **Create planning pipeline** process granules to collect all specifications
+4. **Create execution pipeline** iterate over specifications to execute with side-effects
+5. **Update ledger** during execution phase
+
+**Benefit if stopped here**: Complete separation of pure logic from side effects
+
+### Phase 7: Custom Reader Implementation
+**Standalone Value**: Support for any file format without code changes
+
+1. **Implement custom reader base classes**:
+   - `CustomTemporalReader`
+   - `CustomSpatialReader`
+   - `CustomAttributeReader`
+2. **Add configuration parsing** for custom readers
+3. **Implement subprocess execution** with JSON output parsing
+4. **Add timeout and error handling**
+5. **Create example custom readers** and documentation
+6. **Register custom readers** in the reader registry
+
+**Benefit if stopped here**: Users can extend MetGenC to support any file format
+
+## Custom Reader Extension System Notes
+
+The custom reader feature enables several important scenarios:
+
+1. **Legacy Formats**: Support proprietary or legacy file formats without modifying MetGenC
+2. **Rapid Prototyping**: Test new file formats before building native support
+3. **Mission-Specific Formats**: Handle specialized formats for specific missions
+4. **External Tools**: Leverage existing command-line tools (e.g., GDAL, NCO utilities)
+5. **Language Flexibility**: Write readers in Python or shell scripts
