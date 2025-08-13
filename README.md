@@ -70,7 +70,7 @@ nsidc@nsidc.org for more information.
 
 ## Accessing the MetGenC VM and Tips and Assumptions
 * from nusnow:
-  `$ vssh staging sipsmetgen`
+  `$ vssh staging metgenc`
 
 * the one swell foop command line to kick off everything you need to run MetGenC:
   ```
@@ -364,7 +364,7 @@ R = Required for all non-netCDF file types (e.g., csv, .tif, .h5, etc) and netCD
     the global attribute specified
 
 1. This regex attribute leverages a netCDF's file name containing a date to populate UMMG files'
-TemporalExtent field attribute, BeginningDateTime. Must match using the named group `(?P<time_coverage_start>)`.
+   TemporalExtent field attribute, BeginningDateTime. Must match using the named group `(?P<time_coverage_start>)`.
    * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
    (csv, tif, etc.) since these should rely on premet files containing temporal details for each file.
 
