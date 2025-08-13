@@ -70,7 +70,7 @@ nsidc@nsidc.org for more information.
 
 ## Accessing the MetGenC VM and Tips and Assumptions
 * from nusnow:
-  `$ vssh staging sipsmetgen`
+  `$ vssh staging metgenc`
 
 * the one swell foop command line to kick off everything you need to run MetGenC:
   ```
