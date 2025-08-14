@@ -1,3 +1,8 @@
+## UNRELEASED
+
+* Reverted regex search in version bumping; require new "unreleased" entry for
+  each release.
+
 ## v1.10.2rc0 (2025-08-14)
 
 * Issue-233: Simplified our plans for incrementally improving the processing pipeline. See
@@ -10,12 +15,14 @@
   configuration to insert the date of the version bump.
 * This release was created from branch `v1.10rc`.
 
-## v1.10.2rc0 (2025-08-14)
+## v1.10.1
 
 * Retrieve platform/instrument/sensor information if it exists in the premet
   file and include it in UMM-G output. (Issue-227)
 * Treat equivalent begin and end date/times in `premet` files as a single time
   value. (Issue-221)
+* This release was created from branch `v1.10rc`, resulting in an out-of-order
+  release number.
 
 ## v1.9.0
 
