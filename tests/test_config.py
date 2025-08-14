@@ -44,6 +44,7 @@ def expected_keys():
             "date_modified",
             "browse_regex",
             "granule_regex",
+            "reference_file_regex",
             "spatial_polygon_enabled",
             "spatial_polygon_target_coverage",
             "spatial_polygon_max_vertices",

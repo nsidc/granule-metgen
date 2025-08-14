@@ -54,7 +54,10 @@ polygon, metadata = create_flightline_polygon(lon_array, lat_array)
 
 ## Integration with MetGenC
 
-The module integrates seamlessly with MetGenC's spatial processing through the existing `populate_spatial()` function. When spatial polygon generation is enabled and `.spatial` files are present, the optimized polygon generation automatically replaces the basic point-to-point method.
+The module integrates seamlessly with MetGenC's spatial processing through the
+existing `populate_spatial()` function. When spatial polygon generation is
+enabled and `.spatial` files are present, the optimized polygon generation
+automatically replaces the basic point-to-point method.
 
 ## Dependencies
 

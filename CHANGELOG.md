@@ -2,6 +2,10 @@
 
 * Issue-233: Simplified our plans for incrementally improving the processing pipeline. See
   the [Pipeline Refactoring Plan](devdocs/PIPELINE_REFACTORING_PLAN.md)
+* Allow operator to specify which science (data) file should be scraped for
+  metadata in the case of a granule with multiple science files. (Issue-169)
+* Add regex to version bump configuration for this (`CHANGELOG.md`) file, and to update
+  configuration to insert the date of the version bump.
 
 ## v1.10.1
 
