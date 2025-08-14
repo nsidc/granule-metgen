@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.10.2rc1 (2025-08-14)
 
 * Reverted regex search in version bumping; require new "unreleased" entry for
   each release.
