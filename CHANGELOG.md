@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.10.2rc0 (2025-08-14)
 
 * Issue-233: Simplified our plans for incrementally improving the processing pipeline. See
   the [Pipeline Refactoring Plan](devdocs/PIPELINE_REFACTORING_PLAN.md)
@@ -10,7 +10,7 @@
   configuration to insert the date of the version bump.
 * This release was created from branch `v1.10rc`.
 
-## v1.10.1
+## v1.10.2rc0 (2025-08-14)
 
 * Retrieve platform/instrument/sensor information if it exists in the premet
   file and include it in UMM-G output. (Issue-227)
