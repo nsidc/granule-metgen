@@ -1,3 +1,8 @@
+## UNRELEASED
+
+* Issue-169 patch: Use reference data file to identify the file reader.
+
+
 ## v1.10.2rc1 (2025-08-14)
 
 * Reverted regex search in version bumping; require new "unreleased" entry for
