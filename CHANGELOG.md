@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.10.2rc2 (2025-08-15)
 
 * Issue-169 patch: Use reference data file to identify the file reader.
 
