@@ -2,6 +2,8 @@
 
 * Issue-233: Simplified our plans for incrementally improving the processing pipeline. See
   the [Pipeline Refactoring Plan](devdocs/PIPELINE_REFACTORING_PLAN.md)
+* Issue-254: Added integration test for IPFLT1B; Simplified code that caused a bug when
+  determining the granule key based on a regex.
 
 ## v1.10.1
 
