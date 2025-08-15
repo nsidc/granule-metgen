@@ -31,7 +31,6 @@ from funcy import (
     first,
     get_in,
     last,
-    notnone,
     partial,
     rcompose,
     take,
@@ -649,12 +648,10 @@ def granule_keys_from_regex(granule_regex: str, file_list: list) -> set:
     """
     Identify granules based on a "granuleid" regex match group
     """
-    pipeline = rcompose(
-        partial(re.search, granule_regex),
-        lambda match: match.group("granuleid") if match is not None else None,
-    )
-    results = [pipeline(f.name) for f in file_list]
-    return set(filter(notnone, results))
+    pattern = re.compile(granule_regex)
+    return {
+        match.group("granuleid") for f in file_list if (match := pattern.search(f.name))
+    }
 
 
 def granule_keys_from_filename(browse_regex, file_list):
