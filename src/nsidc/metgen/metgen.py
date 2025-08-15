@@ -16,20 +16,15 @@ import re
 import sys
 import uuid
 from collections.abc import Callable
-from functools import cache
 from pathlib import Path
 from string import Template
-from typing import Optional
 
-import earthaccess
 import jsonschema
-from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
 from funcy import (
     all,
     concat,
     filter,
     first,
-    get_in,
     last,
     notnone,
     one,
@@ -44,8 +39,12 @@ from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import aws, config, constants
+from nsidc.metgen.collection_metadata import get_collection_metadata
+from nsidc.metgen.geometry_decisions import determine_geometry_spec
+from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.readers import generic, registry, utilities
 from nsidc.metgen.spatial import create_flightline_polygon
+from nsidc.metgen.temporal_decisions import determine_temporal_spec
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -244,25 +243,11 @@ def init_config(configuration_file):
 
 
 @dataclasses.dataclass
-class Collection:
-    """
-    Collection metadata relevant to generating UMM-G content
-    """
-
-    auth_id: str
-    version: int
-    granule_spatial_representation: Optional[str] = None
-    spatial_extent: Optional[list] = None
-    temporal_extent: Optional[list] = None
-    temporal_extent_error: Optional[str] = None
-
-
-@dataclasses.dataclass
 class Granule:
     """Granule to ingest"""
 
     producer_granule_id: str
-    collection: Maybe[Collection] = Maybe.empty
+    collection: Maybe[CollectionMetadata] = Maybe.empty
     data_filenames: set[str] = dataclasses.field(default_factory=set)
     browse_filenames: set[str] = dataclasses.field(default_factory=set)
     premet_filename: Maybe[str] = Maybe.empty
@@ -314,10 +299,33 @@ def process(configuration: config.Config) -> None:
     """
     # TODO: Do any prep actions, like mkdir, etc
 
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+
+    # Retrieve collection metadata once at the beginning
+    logger.info(
+        f"Retrieving collection metadata for {configuration.auth_id}.{configuration.version}"
+    )
+    collection = get_collection_metadata(
+        configuration.environment, configuration.auth_id, str(configuration.version)
+    )
+    logger.info(f"Successfully retrieved metadata for: {collection.entry_title}")
+
+    # Validate collection once at the beginning
+    errors = validate_collection_spatial(
+        configuration, collection
+    ) + validate_collection_temporal(configuration, collection)
+    if errors:
+        raise config.ValidationError(errors)
+
+    # Determine geometry and temporal specifications for debugging
+    # This is a demonstration of the new specification system
+    # Note: This does not modify the pipeline behavior yet
+    _demonstrate_specifications(configuration, collection)
+
     # Ordered list of operations to perform on each granule
+    # Use optimized operations that skip individual CMR calls
     operations = [
-        granule_collection,
-        validate_collection,
+        lambda cfg, g: associate_collection(g, collection),
         prepare_granule,
         find_existing_ummg,
         create_ummg,
@@ -454,157 +462,6 @@ def end_ledger(ledger: Ledger) -> Ledger:
 
 def null_operation(_: config.Config, granule: Granule) -> Granule:
     return granule
-
-
-def edl_login(environment):
-    """
-    Authenticate with Earthdata using user name and password retrieved
-    from environment variables.
-    """
-
-    logger = logging.getLogger(constants.ROOT_LOGGER)
-    try:
-        earthaccess.login(
-            strategy="environment", system=getattr(earthaccess, environment)
-        )
-        auth = True
-    except LoginStrategyUnavailable:
-        logger.info(
-            "Environment variables EARTHDATA_USERNAME and EARTHDATA_PASSWORD \
-are missing."
-        )
-        auth = False
-    except LoginAttemptFailure as e:
-        logger.info(e)
-        auth = False
-
-    return auth
-
-
-def validate_cmr_response(umm: list):
-    """
-    Confirm required elements exist in the UMM-C record returned from CMR.
-    """
-
-    if not umm:
-        raise config.ValidationError("Empty UMM-C response from CMR.")
-
-    if len(umm) > 1:
-        raise config.ValidationError(
-            "Multiple UMM-C records returned from CMR, none will be used."
-        )
-
-    if not isinstance(umm[0], dict) or "umm" not in umm[0]:
-        raise config.ValidationError("No UMM-C content in CMR response.")
-
-    ummc = umm[0]["umm"]
-    if not isinstance(ummc, dict):
-        raise config.ValidationError("Malformed UMM-C content returned from CMR.")
-
-    return ummc
-
-
-def ummc_content(ummc: dict, keys: list) -> str | list | dict:
-    """
-    Look for list of keys in a UMM-C record and log the status.
-    """
-    val = None
-    logger = logging.getLogger(constants.ROOT_LOGGER)
-
-    if ummc is None:
-        return val
-
-    try:
-        val = get_in(ummc, keys)
-        logger.debug(f"{'/'.join(keys)} information in umm-c response from CMR: {val}")
-    except KeyError:
-        logger.info(f"No {'/'.join(keys)} information in umm-c response from CMR.")
-
-    return val
-
-
-def edl_environment(environment):
-    """
-    Map a cumulus ingest environment to the environment string needed for
-    Earthdata login via earthaccess.
-    """
-    if environment.lower() != "prod":
-        environment = "uat"
-
-    return environment.upper()
-
-
-def edl_provider(environment):
-    """
-    Identify CMR provider based on application environment.
-    """
-    return (
-        constants.CMR_PROD_PROVIDER
-        if environment.lower() == "prod"
-        else constants.CMR_UAT_PROVIDER
-    )
-
-
-@cache
-def collection_from_cmr(environment: str, auth_id: str, version: int):
-    """
-    Retrieve collection metadata in UMM-C format if it exists.
-    """
-
-    logger = logging.getLogger(constants.ROOT_LOGGER)
-
-    # Setting has_granules to None should find collections both with and
-    # without associated granules.
-    if edl_login(edl_environment(environment)):
-        logger.info("Earthdata login succeeded.")
-        cmr_response = earthaccess.search_datasets(
-            short_name=auth_id,
-            version=version,
-            has_granules=None,
-            provider=edl_provider(environment),
-        )
-    else:
-        raise Exception(
-            f"Earthdata login failed, cannot retrieve UMM-C metadata for {auth_id}.{version}."
-        )
-
-    ummc = validate_cmr_response(cmr_response)
-
-    temporal_extent, temporal_extent_error = temporal_from_ummc(ummc)
-
-    # FYI: data format (e.g. NetCDF) is available in the umm-c response in
-    # ArchiveAndDistributionInformation should we decide to use it.
-    return Collection(
-        auth_id,
-        version,
-        granule_spatial_representation=ummc_content(
-            ummc, constants.GRANULE_SPATIAL_REP_PATH
-        ),
-        spatial_extent=ummc_content(ummc, constants.SPATIAL_EXTENT_PATH),
-        temporal_extent=temporal_extent,
-        temporal_extent_error=temporal_extent_error,
-    )
-
-
-def temporal_from_ummc(ummc):
-    temporal_extent = ummc_content(ummc, constants.TEMPORAL_EXTENT_PATH)
-
-    if len(temporal_extent) > 1:
-        # No need to dig further -- collection temporal information can't be used for granule metadata.
-        return (
-            temporal_extent,
-            "Collection metadata must only contain one temporal extent when collection_temporal_override is set.",
-        )
-
-    # Look for range or single value in the first temporal_extent element
-    temporal_details = ummc_temporal_details(temporal_extent[0])
-    if len(temporal_details) > 1:
-        return (
-            temporal_details,
-            "Collection metadata must only contain one temporal range or a single temporal value when collection_temporal_override is set.",
-        )
-
-    return temporal_details, None
 
 
 def grouped_granule_files(configuration: config.Config) -> list[tuple]:
@@ -773,16 +630,14 @@ def derived_granule_name(granule_regex: str, data_file_paths: set) -> str:
         return os.path.basename(a_file_path)
 
 
-def granule_collection(configuration: config.Config, granule: Granule) -> Granule:
+def associate_collection(granule: Granule, collection: CollectionMetadata) -> Granule:
     """
-    Associate collection information with the Granule.
+    Associate pre-fetched collection information with the Granule.
+
+    This is used when collection metadata has been fetched once at the
+    beginning of processing, avoiding repeated CMR calls.
     """
-    return dataclasses.replace(
-        granule,
-        collection=collection_from_cmr(
-            configuration.environment, configuration.auth_id, configuration.version
-        ),
-    )
+    return dataclasses.replace(granule, collection=collection)
 
 
 def validate_collection(configuration: config.Config, granule: Granule) -> Granule:
@@ -813,15 +668,6 @@ def validate_collection_temporal(configuration, collection):
     return []
 
 
-def ummc_temporal_details(temporal_extent: dict) -> list:
-    """
-    Get range or single temporal value details from the previously-extracted temporal extent object.
-    """
-    return ummc_content(
-        temporal_extent, constants.TEMPORAL_SINGLE_PATH
-    ) or ummc_content(temporal_extent, constants.TEMPORAL_RANGE_PATH)
-
-
 def validate_collection_spatial(configuration, collection):
     """
     Ensure granule spatial representation exists, and verify the collection
@@ -832,7 +678,7 @@ def validate_collection_spatial(configuration, collection):
     # GranuleSpatialRepresentation must exist.
     if not collection.granule_spatial_representation:
         errors.append(
-            f"{constants.GRANULE_SPATIAL_REP} not available in UMM-C metadata for {collection.auth_id}.{collection.version}."
+            f"{constants.GRANULE_SPATIAL_REP} not available in UMM-C metadata for {collection.short_name}.{collection.version}."
         )
 
     # If collection spatial extent is to be applied to granules, the spatial extent may
@@ -1109,7 +955,7 @@ def s3_object_path(granule, filename):
     """
     prefix = Template("external/${auth_id}/${version}/${uuid}/").safe_substitute(
         {
-            "auth_id": granule.collection.auth_id,
+            "auth_id": granule.collection.short_name,
             "version": granule.collection.version,
             "uuid": granule.uuid,
         }
@@ -1384,3 +1230,76 @@ def apply_schema(schema, json_file, dummy_json):
             )
 
     return True
+
+
+def _demonstrate_specifications(
+    configuration: config.Config, collection: CollectionMetadata
+) -> None:
+    """
+    Demonstrate the new specification system by determining specs for the first granule.
+
+    This function is for debugging and does not modify pipeline behavior.
+    It will be removed once the pipeline is updated to use specifications.
+    """
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+
+    # Get the first granule's files to demonstrate
+    file_list = [p for p in Path(configuration.data_dir).glob("*")]
+    if not file_list:
+        logger.debug("No files found to demonstrate specifications")
+        return
+
+    # Get ancillary files
+    premet_files = (
+        ancillary_files(configuration.premet_dir, [constants.PREMET_SUFFIX])
+        if configuration.premet_dir
+        else None
+    )
+    spatial_files = (
+        ancillary_files(
+            configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
+        )
+        if configuration.spatial_dir
+        else None
+    )
+
+    # Get first granule key for demonstration
+    granule_keys_set = granule_keys(configuration, file_list)
+    if not granule_keys_set:
+        logger.debug("No granule keys found to demonstrate specifications")
+        return
+
+    first_granule_key = next(iter(granule_keys_set))
+
+    # Determine geometry specification
+    geometry_spec = determine_geometry_spec(
+        configuration,
+        collection,
+        first_granule_key,
+        set(file_list),
+        spatial_files,
+    )
+
+    # Determine temporal specification
+    temporal_spec = determine_temporal_spec(
+        configuration,
+        collection,
+        first_granule_key,
+        set(file_list),
+        premet_files,
+    )
+
+    # Log the specifications for debugging
+    logger.info("=== Specification Demonstration ===")
+    logger.info(f"Granule: {first_granule_key}")
+    logger.info(
+        f"Geometry Spec: source={geometry_spec.source.value}, type={geometry_spec.geometry_type.value}"
+    )
+    if geometry_spec.spatial_filename:
+        logger.info(f"  Spatial file: {geometry_spec.spatial_filename}")
+    logger.info(
+        f"Temporal Spec: source={temporal_spec.source.value}, type={temporal_spec.temporal_type.value}"
+    )
+    if temporal_spec.premet_filename:
+        logger.info(f"  Premet file: {temporal_spec.premet_filename}")
+    logger.info("=== End Specification Demo ===")
