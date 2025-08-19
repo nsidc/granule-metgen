@@ -1,3 +1,7 @@
+## v1.10.2 (2025-08-19)
+
+* Minor version release
+
 ## v1.10.2rc3 (2025-08-15)
 
 * Version bump to address PyPI build issue.
