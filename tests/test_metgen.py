@@ -39,36 +39,6 @@ def test_config():
 
 
 @pytest.fixture
-def multi_file_granule():
-    return {
-        "first_id": {
-            "size_in_bytes": 100,
-            "production_date_time": "then",
-            "temporal": "now",
-            "geometry": "big",
-        },
-        "second_id": {
-            "size_in_bytes": 200,
-            "production_date_time": "before",
-            "temporal": "after",
-            "geometry": "small",
-        },
-    }
-
-
-@pytest.fixture
-def single_file_granule():
-    return {
-        "first_id": {
-            "size_in_bytes": 150,
-            "production_date_time": "then",
-            "temporal": "now",
-            "geometry": "big",
-        }
-    }
-
-
-@pytest.fixture
 def file_list():
     file_list = [
         "aaa_gid1_bbb.nc",
@@ -90,21 +60,21 @@ def test_banner():
     assert len(metgen.banner()) > 0
 
 
-def test_size_is_zero_if_no_data_files():
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+def test_size_is_zero_if_no_data_files(simple_collection_metadata):
+    granule = metgen.Granule("foo", simple_collection_metadata, uuid="abcd-1234")
     assert granule.size() == 0
 
 
 @patch("nsidc.metgen.metgen.os.path.getsize", return_value=100)
-def test_gets_single_file_size(mock_size, single_file_granule):
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+def test_gets_single_file_size(mock_size, simple_collection_metadata):
+    granule = metgen.Granule("foo", simple_collection_metadata, uuid="abcd-1234")
     granule.data_filenames = {"/just/one/file"}
     assert granule.size() == 100
 
 
 @patch("nsidc.metgen.metgen.os.path.getsize", return_value=100)
-def test_sums_multiple_file_sizes(mock_size, multi_file_granule):
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+def test_sums_multiple_file_sizes(mock_size, simple_collection_metadata):
+    granule = metgen.Granule("foo", simple_collection_metadata, uuid="abcd-1234")
     granule.data_filenames = {"/first/file", "/second/file"}
     assert granule.size() == 200
 
