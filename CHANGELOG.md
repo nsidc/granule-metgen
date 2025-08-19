@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.11.0rc0 (2025-08-19)
 
 * Issue-241: Extract Collection Metadata Reader (Pipeline Story #2)
 * Issue-254: Added integration test for IPFLT1B; Simplified code that caused a bug when
