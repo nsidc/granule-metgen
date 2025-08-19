@@ -33,6 +33,7 @@ from funcy import (
     last,
     partial,
     rcompose,
+    some,
     take,
 )
 from jsonschema.exceptions import ValidationError
@@ -162,6 +163,11 @@ def init_config(configuration_file):
         "browse_regex",
         Prompt.ask("Browse regex", default=constants.DEFAULT_BROWSE_REGEX),
     )
+    cfg_parser.set(
+        constants.COLLECTION_SECTION_NAME,
+        "reference_file_regex",
+        Prompt.ask("Reference science file regex"),
+    )
     print()
 
     print()
@@ -259,6 +265,7 @@ class Granule:
     browse_filenames: set[str] = dataclasses.field(default_factory=set)
     premet_filename: Maybe[str] = Maybe.empty
     spatial_filename: Maybe[str] = Maybe.empty
+    reference_data_filename: str = dataclasses.field(default_factory=str)
     ummg_filename: Maybe[str] = Maybe.empty
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
@@ -266,6 +273,12 @@ class Granule:
     data_reader: Callable[[str, str, str, config.Config], dict] = (
         lambda auth_id, cfg: dict()
     )
+
+    def size(self):
+        if not self.data_filenames:
+            return 0
+
+        return sum(os.path.getsize(data_file) for data_file in self.data_filenames)
 
 
 @dataclasses.dataclass
@@ -331,9 +344,10 @@ def process(configuration: config.Config) -> None:
             browse_filenames=browse_files,
             premet_filename=premet_file,
             spatial_filename=spatial_file,
-            data_reader=data_reader(configuration.auth_id, data_files),
+            reference_data_filename=reference_data_file,
+            data_reader=data_reader(configuration.auth_id, reference_data_file),
         )
-        for name, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
+        for name, reference_data_file, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
             configuration
         )
     ]
@@ -344,16 +358,12 @@ def process(configuration: config.Config) -> None:
 
 
 def data_reader(
-    auth_id: str, data_files: set[str]
+    auth_id: str, data_file: str
 ) -> Callable[[str, str, str, config.Config], dict]:
     """
-    Determine which file reader to use for the given data files. This currently
-    is limited to handling one data file type (and one reader) per collection.
-    In a future issue, we may handle granules with multiple data file types per granule.
-    In that future work this needs to be refactored to handle this case.
+    Determine which file reader to use for the given data file.
     """
-    # Lookup based on an arbitrary data file in the set
-    _, extension = os.path.splitext(first(data_files))
+    _, extension = os.path.splitext(data_file)
 
     try:
         return registry.lookup(auth_id, extension)
@@ -612,6 +622,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
             granule_key,
             configuration.granule_regex or f"({granule_key})",
             configuration.browse_regex,
+            configuration.reference_file_regex,
             file_list,
             premet_file_list,
             spatial_file_list,
@@ -670,6 +681,7 @@ def granule_tuple(
     granule_key: str,
     granule_regex: str,
     browse_regex: str,
+    reference_file_regex: str,
     file_list: list,
     premet_list: list,
     spatial_list: list,
@@ -681,6 +693,7 @@ def granule_tuple(
         - A string used as the "identifier" (in UMMG output) and "name" (in CNM output).
           This is the granule file name in the case of a single data file granule,
           otherwise the common name elements of all files related to a granule.
+        - The name of the data file to use as the reference file
         - A set of one or more full paths to data file(s)
         - A set of zero or more full paths to associated browse file(s)
         - Path to an associated premet file (may be None or empty string)
@@ -698,11 +711,36 @@ def granule_tuple(
 
     return (
         derived_granule_name(granule_regex, data_file_paths),
+        reference_data_file(reference_file_regex, data_file_paths),
         data_file_paths,
         browse_file_paths,
         matched_ancillary_file(granule_key, premet_list),
         matched_ancillary_file(granule_key, spatial_list),
     )
+
+
+def reference_data_file(regex: str, data_files: set[Path]):
+    """
+    Identify the file to use as the "reference" file for purposes of
+    extracting granule metadata, in the case of a multi-science-file granule.
+    """
+    if not data_files:
+        return None
+
+    if len(data_files) == 1:
+        return first(data_files)
+
+    # Throw error if no regex and more than one data (science) file.
+    if not regex and len(data_files) > 1:
+        raise Exception(
+            "Granule has multiple science files but reference_file_regex is not set."
+        )
+
+    # Error if regex matches more than one file
+    if not one(lambda v: re.search(regex, v), data_files):
+        raise Exception("reference_file_regex does not match exactly one science file.")
+
+    return some(lambda v: re.search(regex, v), data_files)
 
 
 def matched_ancillary_file(granule_key: str, file_list: list[Path]) -> str:
@@ -863,33 +901,29 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         configuration.collection_geometry_override, gsr, granule
     )
 
-    # Populated metadata_details dict looks like:
+    # Populated summary dict looks like:
     # {
-    #   data_file: {
-    #       'size_in_bytes' => integer,
-    #       'production_date_time'  => iso datetime string,
-    #       'temporal' => an array of one (data represent a single point in time)
-    #                     or two (data cover a time range) datetime strings
-    #       'geometry' => an array of {'Longitude': x, 'Latitude': y} dicts
-    #   }
+    #     'size_in_bytes' => integer representing the sum of the sizes of
+    #                        *all* data files associated with the granule,
+    #     'production_date_time'  => iso datetime string,
+    #     'temporal' => an array of one (data represent a single point in time)
+    #                   or two (data cover a time range) datetime strings
+    #     'geometry' => an array of {'Longitude': x, 'Latitude': y} dicts
     # }
-    metadata_details = {}
-    for data_file in granule.data_filenames:
-        metadata_details[data_file] = {
-            "size_in_bytes": os.path.getsize(data_file),
-            "production_date_time": utilities.ensure_iso_datetime(
-                configuration.date_modified
-            ),
-        } | granule.data_reader(
-            data_file,
-            temporal_content,
-            spatial_content,
-            configuration,
-            gsr,
-        )
 
-    # Collapse information about (possibly) multiple files into a granule summary.
-    summary = metadata_summary(metadata_details)
+    summary = {
+        "production_date_time": utilities.ensure_iso_datetime(
+            configuration.date_modified
+        ),
+        "size_in_bytes": granule.size(),
+    } | granule.data_reader(
+        granule.reference_data_filename,
+        temporal_content,
+        spatial_content,
+        configuration,
+        gsr,
+    )
+
     summary["spatial_extent"] = populate_spatial(
         gsr, summary["geometry"], configuration, spatial_content
     )
@@ -1077,19 +1111,6 @@ def s3_object_path(granule, filename):
         }
     )
     return prefix + filename
-
-
-# size is a sum of all associated data file sizes.
-# all other attributes use the values from the first data file entry.
-def metadata_summary(details):
-    default = list(details.values())[0]
-
-    return {
-        "size_in_bytes": sum([x["size_in_bytes"] for x in details.values()]),
-        "production_date_time": default["production_date_time"],
-        "temporal": default["temporal"],
-        "geometry": default["geometry"],
-    }
 
 
 def checksum(file):

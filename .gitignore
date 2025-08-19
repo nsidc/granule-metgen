@@ -8,3 +8,4 @@ tmp
 tests/integration/workspace
 docs/build
 CLAUDE.md
+.pre-commit-config.yaml

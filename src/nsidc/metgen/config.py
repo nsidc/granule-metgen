@@ -46,6 +46,7 @@ class Config:
     date_modified: Optional[str] = None
     browse_regex: Optional[str] = None
     granule_regex: Optional[str] = None
+    reference_file_regex: Optional[str] = None
     spatial_polygon_enabled: Optional[bool] = False
     spatial_polygon_target_coverage: Optional[float] = None
     spatial_polygon_max_vertices: Optional[int] = None
@@ -282,6 +283,14 @@ def configuration(
                 environment,
                 "Collection",
                 "granule_regex",
+                str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "reference_file_regex",
                 str,
                 config_parser,
                 overrides,
