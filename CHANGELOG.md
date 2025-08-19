@@ -1,3 +1,8 @@
+## UNRELEASED
+
+* Issue-254: Added integration test for IPFLT1B; Simplified code that caused a bug when
+  determining the granule key based on a regex.
+
 ## v1.10.2 (2025-08-19)
 
 * Minor version release
@@ -9,7 +14,6 @@
 ## v1.10.2rc2 (2025-08-15)
 
 * Issue-169 patch: Use reference data file to identify the file reader.
-
 
 ## v1.10.2rc1 (2025-08-14)
 
