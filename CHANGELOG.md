@@ -1,3 +1,8 @@
+## UNRELEASED
+
+* Issue-254: Added integration test for IPFLT1B; Simplified code that caused a bug when
+  determining the granule key based on a regex.
+
 ## v1.10.2 (2025-08-19)
 
 * Minor version release
@@ -10,7 +15,6 @@
 
 * Issue-169 patch: Use reference data file to identify the file reader.
 
-
 ## v1.10.2rc1 (2025-08-14)
 
 * Reverted regex search in version bumping; require new "unreleased" entry for
@@ -20,8 +24,6 @@
 
 * Issue-233: Simplified our plans for incrementally improving the processing pipeline. See
   the [Pipeline Refactoring Plan](devdocs/PIPELINE_REFACTORING_PLAN.md)
-* Issue-254: Added integration test for IPFLT1B; Simplified code that caused a bug when
-  determining the granule key based on a regex.
 
 ## v1.10.0rc1 (2025-08-04)
 * Allow operator to specify which science (data) file should be scraped for
