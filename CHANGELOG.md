@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.10.2 (2025-08-19)
 
 * Minor version release
 
