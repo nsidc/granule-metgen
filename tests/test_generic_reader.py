@@ -107,5 +107,5 @@ def test_registry_fallback_to_generic():
         registry.lookup("UNKNOWN_COLLECTION", ".xyz")
 
     # Test that data_reader returns generic reader for unknown types
-    reader = metgen.data_reader("UNKNOWN_COLLECTION", {"file.xyz"})
+    reader = metgen.data_reader("UNKNOWN_COLLECTION", "file.xyz")
     assert reader == generic.extract_metadata

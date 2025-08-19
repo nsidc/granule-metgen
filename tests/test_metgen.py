@@ -90,21 +90,47 @@ def test_banner():
     assert len(metgen.banner()) > 0
 
 
-def test_gets_single_file_size(single_file_granule):
-    summary = metgen.metadata_summary(single_file_granule)
-    assert summary["size_in_bytes"] == 150
+def test_size_is_zero_if_no_data_files():
+    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    assert granule.size() == 0
 
 
-def test_sums_multiple_file_sizes(multi_file_granule):
-    summary = metgen.metadata_summary(multi_file_granule)
-    assert summary["size_in_bytes"] == 300
+@patch("nsidc.metgen.metgen.os.path.getsize", return_value=100)
+def test_gets_single_file_size(mock_size, single_file_granule):
+    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    granule.data_filenames = {"/just/one/file"}
+    assert granule.size() == 100
 
 
-def test_uses_first_file_as_default(multi_file_granule):
-    summary = metgen.metadata_summary(multi_file_granule)
-    assert summary["production_date_time"] == "then"
-    assert summary["temporal"] == "now"
-    assert summary["geometry"] == "big"
+@patch("nsidc.metgen.metgen.os.path.getsize", return_value=100)
+def test_sums_multiple_file_sizes(mock_size, multi_file_granule):
+    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    granule.data_filenames = {"/first/file", "/second/file"}
+    assert granule.size() == 200
+
+
+def test_ignores_regex_if_single_data_file():
+    reference_file = metgen.reference_data_file("important_file", {"/first/file"})
+    assert reference_file == "/first/file"
+
+
+def test_finds_reference_data_file_with_regex():
+    reference_file = metgen.reference_data_file(
+        "important_file", {"/first/file", "/second/important_file", "/third/file"}
+    )
+    assert re.match("/second/important_file", reference_file)
+
+
+def test_error_if_multiple_reference_file_matches():
+    with pytest.raises(Exception):
+        metgen.reference_data_file(
+            "important_file", {"/first/important_file", "/second/important_file"}
+        )
+
+
+def test_error_if_no_reference_file_matches():
+    with pytest.raises(Exception):
+        metgen.reference_data_file("important_file", {"/first/file", "/second/file"})
 
 
 def test_no_cartesian_points():
@@ -157,6 +183,7 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc.spatial"],
             (
                 "aaa_gid1_bbb.nc",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 set(),
                 "",
@@ -169,7 +196,7 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_browse_bbb.png"],
             [],
             ["aaa_gid1_ccc.nc.spatial"],
-            ("aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), "", ""),
+            ("aaa_gid1_bbb.nc", "aaa_gid1_bbb.nc", {"aaa_gid1_bbb.nc"}, set(), "", ""),
         ),
         (
             "aaa_gid1_bbb",
@@ -178,6 +205,7 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc.premet"],
             [],
             (
+                "aaa_gid1_bbb.nc",
                 "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 set(),
@@ -193,6 +221,7 @@ def test_granule_name_from_regex(regex):
             [],
             (
                 "aaa_gid1_bbb.nc",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 {"aaa_gid1_bbb_browse.png"},
                 "",
@@ -206,6 +235,7 @@ def test_granule_name_from_regex(regex):
             ["aaa_gid1_bbb.nc.premet"],
             [],
             (
+                "aaa_gid1_bbb.nc",
                 "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 {"aaa_gid1_bbb_browse.png"},
@@ -221,6 +251,7 @@ def test_granule_name_from_regex(regex):
             [],
             (
                 "aaa_gid1_bbb.nc",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc"},
                 {"aaa_gid1_bbb_browse.png"},
                 "",
@@ -235,6 +266,7 @@ def test_granule_name_from_regex(regex):
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
                 "",
@@ -249,6 +281,7 @@ def test_granule_name_from_regex(regex):
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
                 "aaa_gid1_bbb.premet",
@@ -263,6 +296,7 @@ def test_granule_name_from_regex(regex):
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_bbb_browse.png"},
                 "",
@@ -278,6 +312,7 @@ def test_granule_tuple_from_filenames(
         granuleid,
         f"({granuleid})",
         "browse",
+        ".nc",
         [Path(p) for p in data_files + browse_files],
         [Path(p) for p in premet_files],
         [Path(p) for p in spatial_files],
@@ -294,7 +329,14 @@ def test_granule_tuple_from_filenames(
             [],
             [],
             [],
-            ("aaa_gid1_bbb", {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"}, set(), "", ""),
+            (
+                "aaa_gid1_bbb",
+                "aaa_gid1_bbb.nc",
+                {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
+                set(),
+                "",
+                "",
+            ),
         ),
         (
             "gid1",
@@ -304,6 +346,7 @@ def test_granule_tuple_from_filenames(
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_bbb.nc",
                 {"aaa_gid1_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_browse_bbb.png"},
                 "aaa_gid1_bbb.premet",
@@ -318,6 +361,7 @@ def test_granule_tuple_from_filenames(
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_xx_bbb.nc",
                 {"aaa_gid1_xx_bbb.nc", "aaa_gid1_bbb.tif"},
                 {"aaa_gid1_browse_bbb.png"},
                 "aaa_gid1_xx_bbb.premet",
@@ -332,6 +376,7 @@ def test_granule_tuple_from_filenames(
             [],
             (
                 "aaa_gid1_bbb",
+                "aaa_gid1_zz_bbb.nc",
                 {"aaa_gid1_zz_bbb.nc", "aaa_gid1_xx_bbb.tif"},
                 {"aaa_gid1_browse_zz_bbb.png", "aaa_gid1_browse_yy_bbb.tif"},
                 "",
@@ -347,6 +392,7 @@ def test_granule_tuple_from_regex(
         granuleid,
         regex,
         "browse",
+        ".nc",
         [Path(p) for p in data_files + browse_files],
         [Path(p) for p in premet_files],
         [Path(p) for p in spatial_files],
@@ -394,7 +440,7 @@ def test_no_matching_premet_key():
 
 def test_a_matching_premet_key():
     assert (
-        metgen.populate_additional_attributes({"MyKey": "MyValue"}, "MyKey")
+        metgen.populate_additional_attributes({"MyKey": "MyValue"}, "MyKey").rstrip()
         == '"MyKey": "MyValue",'
     )
 
