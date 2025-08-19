@@ -8,6 +8,8 @@
   entries in this (`CHANGELOG.md`) file, and to insert the date of the version bump.
 * Issue-250: Use the current date/time to populate `ProductionDateTime` in UMM-G
   output for all collections.
+* Issue-251: Look for (and use if available) a `spatial_ref` attribute associated with
+  a NetCDF file's grid mapping variable if the variable doesn't have a `crs_wkt` attribute.
 
 ## v1.10.1
 

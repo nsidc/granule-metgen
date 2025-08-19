@@ -7,9 +7,9 @@ import logging
 import os.path
 import re
 
-import xarray as xr
 from dateutil.parser import parse
 from isoduration import parse_duration
+from netCDF4 import Dataset
 from pyproj import CRS, Transformer
 from shapely import LineString
 
@@ -32,18 +32,7 @@ def extract_metadata(
 
     # TODO: handle errors if any needed attributes don't exist.
     try:
-        # TODO: We are telling xarray not to decode times here in order to get around
-        #       what appears to be a bug affecting some datasets. Without this
-        #       (defaults to True), xarrray is unable to open impacted files and
-        #       throws an exception, indicating it is unable to apply the scale
-        #       and offset to the time. If this bug is fixed in xarray, remove
-        #       the decode_times parameter so that xarray will correctly apply
-        #       the scale and offset in those cases. Although we don't need
-        #       decoded time values at the moment, it seems the safer option for
-        #       our future selves & other devs.
-        # NOTE: We know this occurs with the NSIDC-0630 v2 collection, and it may
-        #       occur on others.
-        netcdf = xr.open_dataset(netcdf_path, decode_coords="all", decode_times=False)
+        netcdf = Dataset(netcdf_path)
     except Exception:
         raise Exception(f"Could not open netCDF file {netcdf_path}")
 
@@ -82,8 +71,8 @@ time_start_regex and time_coverage_duration are set in the configuration file."
 
 
 def time_coverage_start(netcdf_filename, netcdf, configuration):
-    if "time_coverage_start" in netcdf.attrs:
-        coverage_start = netcdf.attrs["time_coverage_start"]
+    if "time_coverage_start" in netcdf.ncattrs():
+        coverage_start = netcdf.getncattr("time_coverage_start")
 
     elif configuration.time_start_regex:
         m = re.match(configuration.time_start_regex, netcdf_filename)
@@ -106,8 +95,8 @@ def time_coverage_end(netcdf, configuration, time_coverage_start):
     TODO: Look for time_coverage_duration attribute in the netCDF file before
     using a value from the ini file.
     """
-    if "time_coverage_end" in netcdf.attrs:
-        return utilities.ensure_iso_datetime(netcdf.attrs["time_coverage_end"])
+    if "time_coverage_end" in netcdf.ncattrs():
+        return utilities.ensure_iso_datetime(netcdf.getncattr("time_coverage_end"))
 
     if configuration.time_coverage_duration and time_coverage_start:
         try:
@@ -132,9 +121,9 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     general-use module.
     """
 
-    grid_mapping_name = find_grid_mapping(netcdf)
-    xformer = crs_transformer(netcdf[grid_mapping_name])
-    pad = pixel_padding(netcdf[grid_mapping_name], configuration)
+    grid_var = find_grid_mapping_var(netcdf)
+    xformer = crs_transformer(find_grid_wkt(grid_var))
+    pad = pixel_padding(grid_var, configuration)
     xdata = find_coordinate_data_by_standard_name(netcdf, "projection_x_coordinate")
     ydata = find_coordinate_data_by_standard_name(netcdf, "projection_y_coordinate")
 
@@ -160,7 +149,7 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
 #   some projections, for example EASE-GRID2)
 # Also TODO: Find a more elegant way to handle these attributes.
 def bounding_rectangle_from_attrs(netcdf):
-    global_attrs = set(netcdf.attrs.keys())
+    global_attrs = set(netcdf.ncattrs())
     bounding_attrs = [
         "geospatial_lon_max",
         "geospatial_lat_max",
@@ -173,7 +162,7 @@ def bounding_rectangle_from_attrs(netcdf):
     LAT_MIN = 3
 
     def latlon_attr(index):
-        return float(round(netcdf.attrs[bounding_attrs[index]], 8))
+        return float(round(netcdf.getncattr(bounding_attrs[index]), 8))
 
     if set(bounding_attrs).issubset(global_attrs):
         return [
@@ -193,48 +182,60 @@ def distill_points(xdata, ydata, pad):
     return thinned_perimeter(xdata, ydata, pad)
 
 
-def find_grid_mapping(netcdf):
-    # We currently assume only one grid mapping variable exists, it's a
-    # data variable, and it has a grid_mapping_name attribute.
-    # Possible TODO: filter_by_attrs isn't really all that helpful since it doesn't
-    # return *just* the variable (coordinate or data variable) of interest. The
-    # subsequent "for" loop ensures the correct variable is actually identified.
-    # We could just stick with the "for" loop (or whatever would be python better
-    # practice).
-    grid_mapping_var = netcdf.filter_by_attrs(grid_mapping_name=lambda v: v is not None)
+def find_grid_mapping_var(netcdf):
+    # We currently assume only one grid mapping variable exists and it has a
+    # grid_mapping_name attribute.
+    grid_vars = netcdf.get_variables_by_attributes(
+        grid_mapping_name=lambda v: v is not None
+    )
 
-    if grid_mapping_var is None or grid_mapping_var.variables is None:
+    if not grid_vars:
         log_and_raise_error("No grid mapping exists to transform coordinates.")
+    elif len(grid_vars) > 1:
+        log_and_raise_error(
+            f"Found {len(grid_vars)} grid mapping variables; only one allowed."
+        )
 
-    for var in grid_mapping_var.variables:
-        if "crs_wkt" in netcdf[var].attrs:
-            return var
-
-    return None
+    return grid_vars[0]
 
 
-def crs_transformer(grid_mapping_var):
-    data_crs = CRS.from_wkt(grid_mapping_var.attrs["crs_wkt"])
+def find_grid_wkt(grid_var):
+    grid_var_attributes = grid_var.ncattrs()
+    if "crs_wkt" in grid_var_attributes:
+        return grid_var.getncattr("crs_wkt")
+    elif "spatial_ref" in grid_var_attributes:
+        return grid_var.getncattr("spatial_ref")
+    else:
+        log_and_raise_error(
+            "No crs_wkt or spatial_ref attribute exists in grid mapping variable."
+        )
+
+
+def crs_transformer(wkt):
+    data_crs = CRS.from_wkt(wkt)
     return Transformer.from_crs(data_crs, CRS.from_epsg(4326), always_xy=True)
 
 
 def find_coordinate_data_by_standard_name(netcdf, standard_name_value):
-    # TODO: See comments in find_grid_mapping re: use of filter_by_attrs
-    matched = netcdf.filter_by_attrs(standard_name=standard_name_value)
-    data = []
+    matched_vars = netcdf.get_variables_by_attributes(standard_name=standard_name_value)
 
-    if matched is not None and matched.coords is not None:
-        for coord in matched.coords:
-            if "standard_name" in netcdf[coord].attrs:
-                data = netcdf[coord].data
-                break
+    if not matched_vars:
+        log_and_raise_error(
+            f"Could not find a {standard_name_value} coordinate variable."
+        )
+    elif len(matched_vars) > 1:
+        log_and_raise_error(
+            f"Found {len(matched_vars)} {standard_name_value} coordinate variables; only one allowed."
+        )
 
-    return data
+    matched_vars[0].set_auto_mask(False)
+
+    return matched_vars[0][:]
 
 
-def pixel_padding(netcdf_var, configuration):
-    if "GeoTransform" in netcdf_var.attrs:
-        geotransform = netcdf_var.attrs["GeoTransform"]
+def pixel_padding(grid_var, configuration):
+    if "GeoTransform" in grid_var.ncattrs():
+        geotransform = grid_var.getncattr("GeoTransform")
         pixel_size = abs(float(geotransform.split()[1]))
     elif configuration.pixel_size is not None:
         pixel_size = configuration.pixel_size
