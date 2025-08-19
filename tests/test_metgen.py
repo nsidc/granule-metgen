@@ -39,96 +39,6 @@ def test_config():
 
 
 @pytest.fixture
-def test_collection():
-    return metgen.Collection("ABCD", 2)
-
-
-@pytest.fixture
-def multi_file_granule():
-    return {
-        "first_id": {
-            "size_in_bytes": 100,
-            "production_date_time": "then",
-            "temporal": "now",
-            "geometry": "big",
-        },
-        "second_id": {
-            "size_in_bytes": 200,
-            "production_date_time": "before",
-            "temporal": "after",
-            "geometry": "small",
-        },
-    }
-
-
-@pytest.fixture
-def single_file_granule():
-    return {
-        "first_id": {
-            "size_in_bytes": 150,
-            "production_date_time": "then",
-            "temporal": "now",
-            "geometry": "big",
-        }
-    }
-
-
-@pytest.fixture
-def fake_ummc_response():
-    return {
-        "ShortName": "BigData",
-        "Version": 1,
-        "TemporalExtents": ["then", "now"],
-        "SpatialExtent": {"here": "there"},
-    }
-
-
-@pytest.fixture
-def ummc_valid_temporal_extent():
-    return {
-        "TemporalExtents": [
-            {
-                "RangeDateTimes": [{"begin": 1, "end": 2}],
-            },
-        ]
-    }
-
-
-@pytest.fixture
-def ummc_multi_temporal_extent():
-    return {
-        "TemporalExtents": [
-            {
-                "RangeDateTimes": [{"begin": 1, "end": 2}],
-            },
-            {
-                "RangeDateTimes": [{"begin": 3, "end": 4}],
-            },
-        ]
-    }
-
-
-@pytest.fixture
-def ummc_multi_temporal_range():
-    return {
-        "TemporalExtents": [
-            {
-                "RangeDateTimes": [
-                    {
-                        "BeginningDateTime": "2021-11-01T00:00:00.000Z",
-                        "EndingDateTime": "2021-11-30T00:00:00.000Z",
-                    },
-                    {
-                        "BeginningDateTime": "2022-12-01T00:00:00.000Z",
-                        "EndingDateTime": "2022-12-31T00:00:00.000Z",
-                    },
-                ],
-            }
-        ]
-    }
-
-
-@pytest.fixture
 def file_list():
     file_list = [
         "aaa_gid1_bbb.nc",
@@ -150,21 +60,21 @@ def test_banner():
     assert len(metgen.banner()) > 0
 
 
-def test_size_is_zero_if_no_data_files():
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+def test_size_is_zero_if_no_data_files(simple_collection_metadata):
+    granule = metgen.Granule("foo", simple_collection_metadata, uuid="abcd-1234")
     assert granule.size() == 0
 
 
 @patch("nsidc.metgen.metgen.os.path.getsize", return_value=100)
-def test_gets_single_file_size(mock_size, single_file_granule):
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+def test_gets_single_file_size(mock_size, simple_collection_metadata):
+    granule = metgen.Granule("foo", simple_collection_metadata, uuid="abcd-1234")
     granule.data_filenames = {"/just/one/file"}
     assert granule.size() == 100
 
 
 @patch("nsidc.metgen.metgen.os.path.getsize", return_value=100)
-def test_sums_multiple_file_sizes(mock_size, multi_file_granule):
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+def test_sums_multiple_file_sizes(mock_size, simple_collection_metadata):
+    granule = metgen.Granule("foo", simple_collection_metadata, uuid="abcd-1234")
     granule.data_filenames = {"/first/file", "/second/file"}
     assert granule.size() == 200
 
@@ -512,10 +422,10 @@ def test_no_attempt_to_match_empty_ancillary_files():
 @patch("nsidc.metgen.metgen.s3_object_path", return_value="/some/path")
 @patch("nsidc.metgen.aws.stage_file", return_value=True)
 @patch("builtins.open", new_callable=mock_open, read_data="data")
-def test_stage_files(m1, m2, m3, test_config):
+def test_stage_files(m1, m2, m3, test_config, simple_collection_metadata):
     granule = metgen.Granule(
         "foo",
-        metgen.Collection("ABCD", 2),
+        simple_collection_metadata,
         uuid="abcd-1234",
         data_filenames={"file1", "file2", "file3"},
         browse_filenames={"browse1", "browse2", "browse3"},
@@ -534,15 +444,23 @@ def test_returns_datetime_range():
     assert result_json["RangeDateTime"]["EndingDateTime"] == "456"
 
 
-def test_s3_object_path_has_no_leading_slash():
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+def test_s3_object_path_has_no_leading_slash(simple_collection_metadata):
+    granule = metgen.Granule(
+        "foo",
+        simple_collection_metadata,
+        uuid="abcd-1234",
+    )
     expected = "external/ABCD/2/abcd-1234/xyzzy.bin"
     assert metgen.s3_object_path(granule, "xyzzy.bin") == expected
 
 
-def test_s3_url_simple_case():
+def test_s3_url_simple_case(simple_collection_metadata):
     staging_bucket_name = "xyzzy-bucket"
-    granule = metgen.Granule("foo", metgen.Collection("ABCD", 2), uuid="abcd-1234")
+    granule = metgen.Granule(
+        "foo",
+        simple_collection_metadata,
+        uuid="abcd-1234",
+    )
     expected = "s3://xyzzy-bucket/external/ABCD/2/abcd-1234/xyzzy.bin"
     assert metgen.s3_url(staging_bucket_name, granule, "xyzzy.bin") == expected
 
@@ -646,116 +564,55 @@ def test_dummy_json_used(mock_validate, mock_open):
         )
 
 
-@pytest.mark.parametrize(
-    "ingest_env,edl_env",
-    [("int", "UAT"), ("uat", "UAT"), ("prod", "PROD")],
-)
-def test_edl_login_environment(ingest_env, edl_env):
-    environment = metgen.edl_environment(ingest_env)
-    assert (environment) == edl_env
-
-    environment = metgen.edl_environment(ingest_env.upper())
-    assert (environment) == edl_env
-
-
-def test_handles_missing_ummc_key(fake_ummc_response):
-    assert metgen.ummc_content({}, ["fakekey"]) is None
-    assert metgen.ummc_content(fake_ummc_response, ["DOI"]) is None
-
-
-def test_finds_existing_ummc_key(fake_ummc_response):
-    assert metgen.ummc_content(fake_ummc_response, ["Version"]) == 1
-
-
-def test_looks_for_umm_dict(fake_ummc_response):
-    ummc = metgen.validate_cmr_response([{"umm": fake_ummc_response}])
-    assert ummc == fake_ummc_response
-
-
-@pytest.mark.parametrize(
-    "umm_content,error",
-    [
-        ([], "Empty UMM-C response from CMR."),
-        (
-            ["ummc1", "ummc2"],
-            "Multiple UMM-C records returned from CMR, none will be used.",
-        ),
-        (
-            ["ummc1"],
-            "No UMM-C content in CMR response.",
-        ),
-        (
-            [{"ummc1": "some ummc"}],
-            "No UMM-C content in CMR response.",
-        ),
-        (
-            [{"umm": "some ummc"}],
-            "Malformed UMM-C content returned from CMR.",
-        ),
-    ],
-)
-def test_umm_key_required(umm_content, error):
-    with pytest.raises(config.ValidationError) as exc_info:
-        metgen.validate_cmr_response(umm_content)
-    assert re.search(error, exc_info.value.args[0])
-
-
-def test_gsr_is_required(test_config, test_collection):
-    errors = metgen.validate_collection_spatial(test_config, test_collection)
+def test_gsr_is_required(test_config, simple_collection_metadata):
+    errors = metgen.validate_collection_spatial(test_config, simple_collection_metadata)
     assert re.search("GranuleSpatialRepresentation not available", " ".join(errors))
 
 
-def test_cartesian_required_for_collection_geometry(test_config, test_collection):
+def test_cartesian_required_for_collection_geometry(
+    test_config, simple_collection_metadata
+):
     test_config.collection_geometry_override = True
-    test_collection.spatial_extent = ["one extent"]
-    test_collection.granule_spatial_representation = constants.GEODETIC
-    errors = metgen.validate_collection_spatial(test_config, test_collection)
+    simple_collection_metadata.spatial_extent = ["one extent"]
+    simple_collection_metadata.granule_spatial_representation = constants.GEODETIC
+    errors = metgen.validate_collection_spatial(test_config, simple_collection_metadata)
     assert re.search("GranuleSpatialRepresentation must be", " ".join(errors))
 
 
 def test_spatial_extent_is_required_for_collection_geometry(
-    test_config, test_collection
+    test_config, simple_collection_metadata
 ):
     test_config.collection_geometry_override = True
-    test_collection.granule_spatial_representation = constants.CARTESIAN
-    errors = metgen.validate_collection_spatial(test_config, test_collection)
+    simple_collection_metadata.granule_spatial_representation = constants.CARTESIAN
+    errors = metgen.validate_collection_spatial(test_config, simple_collection_metadata)
     assert re.search("Collection must include a spatial extent", " ".join(errors))
 
 
 def test_only_one_bounding_rectangle_allowed_in_spatial_extent(
-    test_config, test_collection
+    test_config, simple_collection_metadata
 ):
     test_config.collection_geometry_override = True
-    test_collection.granule_spatial_representation = constants.CARTESIAN
-    test_collection.spatial_extent = ["extent one", "extent two"]
-    errors = metgen.validate_collection_spatial(test_config, test_collection)
+    simple_collection_metadata.granule_spatial_representation = constants.CARTESIAN
+    simple_collection_metadata.spatial_extent = ["extent one", "extent two"]
+    errors = metgen.validate_collection_spatial(test_config, simple_collection_metadata)
     assert re.search("spatial extent must only contain one", " ".join(errors))
 
 
-def test_collection_temporal_ignored_if_no_override(test_config, test_collection):
+def test_collection_temporal_ignored_if_no_override(
+    test_config, simple_collection_metadata
+):
     test_config.collection_temporal_override = False
-    test_collection.temporal_extent_error = "Very bad temporal error"
-    errors = metgen.validate_collection_temporal(test_config, test_collection)
+    simple_collection_metadata.temporal_extent_error = "Very bad temporal error"
+    errors = metgen.validate_collection_temporal(
+        test_config, simple_collection_metadata
+    )
     assert not errors
 
 
-def test_collection_temporal_errors_returned(test_config, test_collection):
+def test_collection_temporal_errors_returned(test_config, simple_collection_metadata):
     test_config.collection_temporal_override = True
-    test_collection.temporal_extent_error = "Very bad temporal error"
-    errors = metgen.validate_collection_temporal(test_config, test_collection)
+    simple_collection_metadata.temporal_extent_error = "Very bad temporal error"
+    errors = metgen.validate_collection_temporal(
+        test_config, simple_collection_metadata
+    )
     assert errors[0] == "Very bad temporal error"
-
-
-def test_only_one_collection_temporal_extent_allowed(ummc_multi_temporal_extent):
-    temporal_details, error = metgen.temporal_from_ummc(ummc_multi_temporal_extent)
-    assert re.search("one temporal extent", error)
-
-
-def test_only_one_collection_temporal_details_allowed(ummc_multi_temporal_range):
-    temporal_details, error = metgen.temporal_from_ummc(ummc_multi_temporal_range)
-    assert re.search("one temporal range or a single temporal", error)
-
-
-def test_valid_collection_temporal(ummc_valid_temporal_extent):
-    temporal_details, error = metgen.temporal_from_ummc(ummc_valid_temporal_extent)
-    assert not error
