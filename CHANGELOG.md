@@ -5,6 +5,20 @@
 * Issue-251: Look for (and use if available) a `spatial_ref` attribute associated with
   a NetCDF file's grid mapping variable if the variable doesn't have a `crs_wkt` attribute.
 
+## v1.11.0rc1 (2025-08-20)
+
+* Update templates to use `short_name` rather than `auth_id`.
+
+## v1.11.0rc0 (2025-08-19)
+
+* Issue-241: Extract Collection Metadata Reader (Pipeline Story #2)
+* Issue-254: Added integration test for IPFLT1B; Simplified code that caused a bug when
+  determining the granule key based on a regex.
+
+## v1.10.2 (2025-08-19)
+
+* Minor version release
+
 ## v1.10.2rc3 (2025-08-15)
 
 * Version bump to address PyPI build issue.
@@ -12,7 +26,6 @@
 ## v1.10.2rc2 (2025-08-15)
 
 * Issue-169 patch: Use reference data file to identify the file reader.
-
 
 ## v1.10.2rc1 (2025-08-14)
 
