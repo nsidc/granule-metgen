@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.11.0rc1 (2025-08-20)
 
 * Update templates to use `short_name` rather than `auth_id`.
 
