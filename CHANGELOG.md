@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Update templates to use `short_name` rather than `auth_id`.
+
 ## v1.11.0rc0 (2025-08-19)
 
 * Issue-241: Extract Collection Metadata Reader (Pipeline Story #2)
