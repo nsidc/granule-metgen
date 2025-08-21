@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.11.0rc2 (2025-08-21)
 
 * Issue-250: Use the current date/time to populate `ProductionDateTime` in UMM-G
   output for all collections.
