@@ -7,7 +7,7 @@
 
 ## v1.11.0rc1 (2025-08-20)
 
-* Update templates to use `short_name` rather than `auth_id`.
+* Issue-241 patch: Update templates to use `short_name` rather than `auth_id`.
 
 ## v1.11.0rc0 (2025-08-19)
 
