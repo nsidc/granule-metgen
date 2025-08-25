@@ -1,9 +1,6 @@
 from unittest.mock import Mock
 
-import pytest
-
-from nsidc.metgen import metgen
-from nsidc.metgen.readers import generic, registry
+from nsidc.metgen.readers import generic
 
 
 def test_generic_reader_extract_metadata():
@@ -94,14 +91,3 @@ def test_generic_reader_no_premet_no_spatial():
 
     assert metadata["temporal"] == []  # Empty temporal
     assert metadata["geometry"] == []  # Empty geometry
-
-
-def test_registry_fallback_to_generic():
-    """Test that registry falls back to generic reader for unknown file types."""
-    # Test unknown extension
-    with pytest.raises(KeyError):
-        registry.lookup("UNKNOWN_COLLECTION", ".xyz")
-
-    # Test that data_reader returns generic reader for unknown types
-    reader = metgen.data_reader("UNKNOWN_COLLECTION", "file.xyz")
-    assert reader == generic.extract_metadata

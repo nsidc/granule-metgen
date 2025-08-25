@@ -40,7 +40,7 @@ from rich.prompt import Confirm, Prompt
 from nsidc.metgen import aws, config, constants
 from nsidc.metgen.collection_metadata import get_collection_metadata
 from nsidc.metgen.models import CollectionMetadata
-from nsidc.metgen.readers import generic, registry, utilities
+from nsidc.metgen.readers import registry, utilities
 from nsidc.metgen.spatial import create_flightline_polygon
 
 # -------------------------------------------------------------------
@@ -346,8 +346,7 @@ def process(configuration: config.Config) -> None:
             browse_filenames=browse_files,
             premet_filename=premet_file,
             spatial_filename=spatial_file,
-            reference_data_filename=reference_data_file,
-            data_reader=data_reader(configuration.auth_id, reference_data_file),
+            data_reader=data_reader(data_files),
         )
         for name, reference_data_file, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
             configuration
@@ -359,18 +358,17 @@ def process(configuration: config.Config) -> None:
     summarize_results(results)
 
 
-def data_reader(
-    auth_id: str, data_file: str
-) -> Callable[[str, str, str, config.Config], dict]:
+def data_reader(data_files: set[str]) -> Callable[[str, str, str, config.Config], dict]:
     """
-    Determine which file reader to use for the given data file.
+    Determine which file reader to use for the given data files. This currently
+    is limited to handling one data file type (and one reader) per collection.
+    In a future issue, we may handle granules with multiple data file types per granule.
+    In that future work this needs to be refactored to handle this case.
     """
-    _, extension = os.path.splitext(data_file)
+    # Lookup based on an arbitrary data file in the set
+    _, extension = os.path.splitext(first(data_files))
 
-    try:
-        return registry.lookup(auth_id, extension)
-    except (KeyError, Exception):
-        return generic.extract_metadata
+    return registry.lookup(extension)
 
 
 # -------------------------------------------------------------------
