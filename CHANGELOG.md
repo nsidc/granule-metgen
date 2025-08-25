@@ -1,7 +1,6 @@
 ## UNRELEASED
 
 * Issue-259: Fix white space bug in handling of `.premet` contents.
-  files.
 
 ## v1.11.0rc1 (2025-08-20)
 
