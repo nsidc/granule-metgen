@@ -76,6 +76,8 @@ def premet_platform():
     "input,expected",
     [
         ("akey = somevalue", ["akey", "somevalue"]),
+        ("akey =  some longer value ", ["akey", "some longer value"]),
+        (" a longer key = somevalue", ["a longer key", "somevalue"]),
         ("adate =   2020-01-01", ["adate", "2020-01-01"]),
         ("alat=74.5", ["alat", "74.5"]),
         ("alon  =100", ["alon", "100"]),

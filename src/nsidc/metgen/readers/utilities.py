@@ -134,7 +134,11 @@ def check_premet_keys(entry_type, parsed, expected):
 
 
 def parse_premet_entry(pline: str):
-    return re.sub(r"\s+", "", pline).split("=")
+    """
+    Break up a "key = value" pair, removing any beginning/trailing whitespace from the string parts.
+    """
+    parts = pline.split("=")
+    return [p.strip() for p in parts]
 
 
 def ensure_iso_datetime(datetime_str):
