@@ -10,7 +10,6 @@ def test_generic_reader_extract_metadata():
     """Test that generic reader extracts metadata correctly."""
     # Mock configuration
     mock_config = Mock()
-    mock_config.date_modified = "2023-12-25T00:00:00.000Z"
 
     # Mock premet content with temporal data
     premet_content = [
@@ -38,7 +37,6 @@ def test_generic_reader_extract_metadata():
 def test_generic_reader_no_premet():
     """Test generic reader with no premet content but with spatial content."""
     mock_config = Mock()
-    mock_config.date_modified = "2023-12-25T00:00:00.000Z"
 
     # Mock spatial content
     spatial_content = [
@@ -61,7 +59,6 @@ def test_generic_reader_no_premet():
 def test_generic_reader_no_spatial():
     """Test generic reader with premet content but no spatial content."""
     mock_config = Mock()
-    mock_config.date_modified = "2023-12-25T00:00:00.000Z"
 
     # Mock premet content with temporal data
     premet_content = [
@@ -86,7 +83,6 @@ def test_generic_reader_no_spatial():
 def test_generic_reader_no_premet_no_spatial():
     """Test generic reader with neither premet nor spatial content."""
     mock_config = Mock()
-    mock_config.date_modified = "2023-12-25T00:00:00.000Z"
 
     metadata = generic.extract_metadata(
         "test_file.dat",

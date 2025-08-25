@@ -1,6 +1,13 @@
+## v1.11.0rc2 (2025-08-21)
+
+* Issue-250: Use the current date/time to populate `ProductionDateTime` in UMM-G
+  output for all collections.
+* Issue-251: Look for (and use if available) a `spatial_ref` attribute associated with
+  a NetCDF file's grid mapping variable if the variable doesn't have a `crs_wkt` attribute.
+
 ## v1.11.0rc1 (2025-08-20)
 
-* Update templates to use `short_name` rather than `auth_id`.
+* Issue-241 patch: Update templates to use `short_name` rather than `auth_id`.
 
 ## v1.11.0rc0 (2025-08-19)
 
