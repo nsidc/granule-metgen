@@ -752,10 +752,8 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     # }
 
     summary = {
-        "production_date_time": utilities.ensure_iso_datetime(
-            configuration.date_modified
-        ),
         "size_in_bytes": granule.size(),
+        "production_date_time": granule.submission_time,
     } | granule.data_reader(
         granule.reference_data_filename,
         temporal_content,

@@ -43,7 +43,6 @@ class Config:
     time_start_regex: Optional[str] = None
     time_coverage_duration: Optional[str] = None
     pixel_size: Optional[int] = None
-    date_modified: Optional[str] = None
     browse_regex: Optional[str] = None
     granule_regex: Optional[str] = None
     reference_file_regex: Optional[str] = None
@@ -260,14 +259,6 @@ def configuration(
                 "Collection",
                 "pixel_size",
                 int,
-                config_parser,
-                overrides,
-            ),
-            _get_configuration_value(
-                environment,
-                "Collection",
-                "date_modified",
-                str,
                 config_parser,
                 overrides,
             ),

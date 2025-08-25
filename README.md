@@ -163,14 +163,17 @@ science files.
 
 | Attribute used by MetGenC (location in netCDF file)   | ACDD | CF Conventions | NSIDC Guidelines | Notes   |
 | ----------------------------- | ---- | -------------- | ---------------- | ------- |
-| date_modified (global)        | S    |                | R                | 1, OC   |
-| time_coverage_start (global)  | R    |                | R                | 2, OC, P   |
-| time_coverage_end (global)    | R    |                | R                | 2, OC, P   |
-| grid_mapping_name (variable)  |      | RequiredC      | R+               | 3       |
-| crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 4       |
-| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 5, OC   |
-| standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 6       |
-| standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 7       |
+| time_coverage_start (global)  | R    |                | R                | 1, OC, P   |
+| time_coverage_end (global)    | R    |                | R                | 1, OC, P   |
+| grid_mapping_name (variable)  |      | RequiredC      | R+               | 2       |
+| crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 3       |
+| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 4, OC   |
+| geospatial_lon_min (global)   | R    |                | R                | |
+| geospatial_lon_max (global)   | R    |                | R                | |
+| geospatial_lat_min (global)   | R    |                | R                | |
+| geospatial_lat_max (global)   | R    |                | R                | |
+| standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 5       |
+| standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 6       |
 
 Notes column key:
 
@@ -181,33 +184,28 @@ Notes column key:
  P = Premet file attributes that may be specified in a premet file; when used, a
   `premet_dir`path must be defined in the .ini file.
 
- 1 = Used to populate the ProductionDateTime field in UMM-G files when the global attributes
-  date_modified or date_created are absent from a netCDF file. The date_modified ini file attribute
-  is also a required .ini file attribute when running MetGenC on collections not comprising
-  netCDF files See: [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
-
- 2 = Used to populate the time begin and end UMM-G values; OC .ini attribute for
+ 1 = Used to populate the time begin and end UMM-G values; OC .ini attribute for
   time_coverage_start is `time_start_regex` = \<value\>, and for time_coverage_end the
   .ini attribute is `time_coverage_duration` = \<value\>.
 
- 3 = A grid mapping variable is required if the horizontal spatial coordinates are not
+ 2 = A grid mapping variable is required if the horizontal spatial coordinates are not
    longitude and latitude and the intent of the data provider is to geolocate
    the data. `grid_mapping` and `grid_mapping_name` allow programmatic identification of
    the variable holding information about the horizontal coordinate reference system.
 
- 4 = The `crs_wkt` ("coordinate referenc system well known text") value is handed to the
+ 3 = The `crs_wkt` ("coordinate referenc system well known text") value is handed to the
    `CRS` and `Transformer` modules in `pyproj` to conveniently deal
    with the reprojection of (y,x) values to EPSG 4326 (lon, lat) values.
 
- 5 = The `GeoTransform` value provides the pixel size per data value, which is then used
+ 4 = The `GeoTransform` value provides the pixel size per data value, which is then used
    to calculate the padding added to x and y values to create a GPolygon enclosing all
    of the data; OC .ini attribute is `pixel_size` = <value>.
 
- 6 = The values of the coordinate variable identified by the `standard_name` attribute
+ 5 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_x_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
- 7 = The values of the coordinate variable identified by the `standard_name` attribute
+ 6 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
@@ -218,7 +216,7 @@ MetGenC-required attributes. When not reported, that attribute will have to be a
 its associated .ini attribute being added to the .ini file. See [Optional Configuration Elements](#optional-configuration-elements)
 for full details/descriptions of these.
 ```
-ncdump -h <file name.nc> | grep -e date_modified -e date_created -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
+ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
 ```
 
 
@@ -230,11 +228,7 @@ ncdump -h <file name.nc> | grep -e date_modified -e date_created -e time_coverag
 | axis (variable)               |      | R              |                  |
 | geospatial_bounds (global)    | R    |                | R                |
 | geospatial_bounds_crs (global)| R    |                | R                |
-| geospatial_lat_min (global)   | R    |                | R                |
-| geospatial_lat_max (global)   | R    |                | R                |
 | geospatial_lat_units (global) | R    |                | R                |
-| geospatial_lon_min (global)   | R    |                | R                |
-| geospatial_lon_max (global)   | R    |                | R                |
 | geospatial_lon_units (global) | R    |                | R                |
 
 ### Attribute Reference links
@@ -361,32 +355,28 @@ in the `metgenc init` functionality.
 
 See this project's GitHub file, `fixtures/test.ini` for examples.
 
-| .ini element          | .ini section | Attribute absent from netCDF file the .ini attribute stands in for | Attribute populated in UMMG | Note |
+| .ini element           | .ini section | Attribute absent from netCDF file the .ini attribute stands in for | Attribute populated in UMMG | Note |
 | -----------------------|-------------- | ------------------- | ---------------------------| ---- |
-| date_modified          | Collection    | date_modified       | ProductionDateTime | 1, R    |
-| time_start_regex       | Collection    | time_coverage_start | BeginningDateTime | 2    |
-| time_coverage_duration | Collection    | time_coverage_end   | EndingDateTime | 3    |
-| pixel_size             | Collection    | GeoTransform        | n/a | 4    |
+| time_start_regex       | Collection    | time_coverage_start | BeginningDateTime | 1    |
+| time_coverage_duration | Collection    | time_coverage_end   | EndingDateTime | 2    |
+| pixel_size             | Collection    | GeoTransform        | n/a | 3    |
 
 R = Required for all non-netCDF file types (e.g., csv, .tif, .h5, etc) and netCDF files missing
     the global attribute specified
-1. Set this to be the YYYY-MM-DD that you're running MetGenC (e.g., date_modified =
-2025-08-07); this value is a constant that will populate ProductionDateTime in all UMMG files.
-   * The ProductionDateTime field in a UMMG file mustn't show as "None"; if it does, Cumulus
-     will throw ingest errors stating that ProductionDateTime can't be "None".
-   * This attribute should be used with "nearly" compliant netCDF files wherein their global
-  attributes are missing the `date_modified` or `date_created` attribtes.
-2. This regex attribute leverages a netCDF's file name containing a date to populate UMMG files'
-TemporalExtent field attribute, BeginningDateTime. Must match using the named group `(?P<time_coverage_start>)`.
+
+1. This regex attribute leverages a netCDF's file name containing a date to populate UMMG files'
+   TemporalExtent field attribute, BeginningDateTime. Must match using the named group `(?P<time_coverage_start>)`.
    * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
    (csv, tif, etc.) since these should rely on premet files containing temporal details for each file.
-3. The time_coverage_duration attribute value specifies the duration to be applied to the `time_coverage_start`
+
+2. The time_coverage_duration attribute value specifies the duration to be applied to the `time_coverage_start`
 value to generate correct EndingDateTime values in UMMG files; this value is a constant that will
 be applied to each time_start_regex value gleaned from files. Must be a valid
 [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
    * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
    (csv, tif, etc.) since these should rely on premet files containing temporal details for each file.
-5. Rarely applicable for science files that aren't gridded netCDF (.txt, .csv, .jpg, .tif, etc.); this
+
+3. Rarely applicable for science files that aren't gridded netCDF (.txt, .csv, .jpg, .tif, etc.); this
 value is a constant that will be applied to all granule-level metadata.
 
 #### Granule and Browse regex
@@ -463,7 +453,6 @@ spatial_dir = spatial/ipflt1b
 auth_id = IPFLT1B_DUCk
 version = 1
 provider = OIB; metgenc version 1.10.0rc0
-date_modified = 2025-08-04
 granule_regex = (IPFLT1B_)(?P<granuleid>.+?(?=_)_)?(DUCk)
 ```
 And a multi-file granule comprising the following files:
@@ -619,7 +608,6 @@ Using configuration:
   + time_start_regex: None
   + time_coverage_duration: None
   + pixel_size: None
-  + date_modified: None
   + browse_regex: _brws
   + granule_regex: (NSIDC0081_SEAICE_PS_)(?P<granuleid>[NS]{1}\d{2}km_\d{8})(_v2.0_)(?:F\d{2}_)?(DUCk)
 ```
@@ -633,7 +621,9 @@ Using configuration:
 * checksum_type: is another config file entry that could be changed by the operator, but should be left as-is!
 * number: 1000000 is the default max granule count for ingest. This value is not found in the config file, thus it can only be changed by a DUCk developer if necessary.
 * dry_run: reflects the option included (or not) by the operator in the command line when `metgenc process` is run.
-* premet_dir:, spatial_dir:, collection_geometry_override:, collection_temporal_override:, time_start_regex:, time_coverage_duration:, pixel_size:, date_modified:, browse_regex:, and granule_regex: are all optional as they're data set dependent and should be set when necessary by operators within the config file.
+* premet_dir:, spatial_dir:, collection_geometry_override:, collection_temporal_override:,
+  time_start_regex:, time_coverage_duration:, pixel_size:, browse_regex:, and granule_regex:
+  are all optional as they're data set dependent and should be set when necessary by operators within the config file.
 ---
 
 ### process

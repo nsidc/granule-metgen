@@ -41,7 +41,6 @@ def expected_keys():
             "time_start_regex",
             "time_coverage_duration",
             "pixel_size",
-            "date_modified",
             "browse_regex",
             "granule_regex",
             "reference_file_regex",
