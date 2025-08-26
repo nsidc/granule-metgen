@@ -650,7 +650,14 @@ directory. This promotes operators having the ability to validate and visually Q
 * When run without the dry run option, metgenc will transfer CNM to AWS, kicking off end-to-end ingest of
 data and UMM-G files to CUAT.
 
-When MetGenC is run on the VM, it must be run at the root of the vm's virtual environment, `metgenc`.
+When MetGenC is run on the VM, `metgenc process -d -c init/xxxxx.ini` must be run at the root of the vm's virtual environment, e.g., `vagrant@vmpolark2:~/metgenc$`. If you run it in the data/ or init/ or any other directory, you'll see errors like:
+```
+The configuration is invalid:
+  * The data_dir does not exist.
+  * The premet_dir does not exist.
+  * The spatial_dir does not exist.
+  * The local_output_dir does not exist.
+```
 
 If running `metgenc process` fails, check for an error message in the metgenc.log to begin troubleshooting.
 
