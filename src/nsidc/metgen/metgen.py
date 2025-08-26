@@ -346,7 +346,8 @@ def process(configuration: config.Config) -> None:
             browse_filenames=browse_files,
             premet_filename=premet_file,
             spatial_filename=spatial_file,
-            data_reader=data_reader(data_files),
+            reference_data_filename=reference_data_file,
+            data_reader=registry.lookup(Path(reference_data_file).suffix),
         )
         for name, reference_data_file, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
             configuration
@@ -356,19 +357,6 @@ def process(configuration: config.Config) -> None:
     results = [pipeline(g) for g in granules]
 
     summarize_results(results)
-
-
-def data_reader(data_files: set[str]) -> Callable[[str, str, str, config.Config], dict]:
-    """
-    Determine which file reader to use for the given data files. This currently
-    is limited to handling one data file type (and one reader) per collection.
-    In a future issue, we may handle granules with multiple data file types per granule.
-    In that future work this needs to be refactored to handle this case.
-    """
-    # Lookup based on an arbitrary data file in the set
-    _, extension = os.path.splitext(first(data_files))
-
-    return registry.lookup(extension)
 
 
 # -------------------------------------------------------------------
