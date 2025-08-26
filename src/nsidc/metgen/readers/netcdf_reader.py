@@ -71,9 +71,10 @@ time_start_regex and time_coverage_duration are set in the configuration file."
 
 
 def time_coverage_start(netcdf_filename, netcdf, configuration):
+    coverage_start = None
+
     if "time_coverage_start" in netcdf.ncattrs():
         coverage_start = netcdf.getncattr("time_coverage_start")
-
     elif configuration.time_start_regex:
         m = re.match(configuration.time_start_regex, netcdf_filename)
         coverage_start = m.group("time_coverage_start")
