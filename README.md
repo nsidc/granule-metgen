@@ -385,26 +385,27 @@ be applied to each time_start_regex value gleaned from files. Must be a valid
 value is a constant that will be applied to all granule-level metadata.
 
 #### Granule and Browse regex
-For data sets comprising multi-file granules (with or without browse), or single-file
-granules with browse, browse_regex and granule_regex are the configuration elements to
-use (neither need to be included in the .ini for collections comprising single-file granules
-without browse). Use of browse_regex facilitates identifying the browse images so they're
-classified as such in the CNM. Use of granule_regex defines a file name pattern to appropriately
-group files by the element common for the multiple files to be grouped within each granule:
 
 | .ini element | .ini section | Note |
 | ------------- | ------------- | ---- |
 | browse_regex  | Collection    | 1    |
 | granule_regex | Collection    | 2    |
+| reference_file_regex | Collection | 3 |
 
 Note column:
-1. The file name pattern identifying a browse file. The default is `_brws`. This element is
- prompted for as one of the `metgenc init` prompts.
-2. The file name pattern identifying related files. Must  capture all text
- in file names that will result in a globally unique: product/name (in CNM), and
- Identifier (as the IdentifierType: ProducerGranuleId in UMM-G) generated for each file,
- relying on the named group `(?P<granuleid>)` within the regex tp provide a match. This init
- elementvalue must be added manually as it's **not** included in the `metgenc init` prompts.
+1. The file name pattern identifying the browse file(s) accompanying single or multi-file granules. Granules
+   with multiple associated browse files work fine with MetGenC! The default is `_brws`, change it to reflect
+   the browse file names of the data delivered. This element is prompted for when running `metgenc init`.
+3. The file name pattern to be used for multi-file granules to define a file name pattern to appropriately
+   group files together as a granule using the elements common amongst their names.  
+   - This must result in a globally unique: product/name (in CNM), and Identifier (as the IdentifierType: ProducerGranuleId in UMM-G)
+     generated for each granule. This init element value must be added manually as it's **not** included in the `metgenc init` prompts.
+5. The file name pattern identifying a single file for metgenc to reference as the primary
+   file in a multi-file granule. This must be specified whenever working with multi-file granules. This element
+   is prompted for when running `metgenc init`.
+   * In the case of multi-file granules containing a CF-compliant netCDF science file and other supporting files
+     like .tif, or .txt files, etc., specifying the netCDF will allow MetGenC to parse it as it would any other CF-compliant
+     netCDF file, making it so operators don't need to supply premet/spatial files.
 
 ##### Example 1: Use of `granule_regex` and `browse_regex` for a single-file granule with multiple browse images
 Given the .ini file's Source and Collection contents:
@@ -459,6 +460,7 @@ auth_id = IPFLT1B_DUCk
 version = 1
 provider = OIB; metgenc version 1.10.0rc0
 granule_regex = (IPFLT1B_)(?P<granuleid>.+?(?=_)_)?(DUCk)
+reference_file_regex = _DUCk.kml
 ```
 And a multi-file granule comprising the following files:
 ```
@@ -655,7 +657,14 @@ directory. This promotes operators having the ability to validate and visually Q
 * When run without the dry run option, metgenc will transfer CNM to AWS, kicking off end-to-end ingest of
 data and UMM-G files to CUAT.
 
-When MetGenC is run on the VM, it must be run at the root of the vm's virtual environment, `metgenc`.
+When MetGenC is run on the VM, `metgenc process -d -c init/xxxxx.ini` must be run at the root of the vm's virtual environment, e.g., `vagrant@vmpolark2:~/metgenc$`. If you run it in the data/ or init/ or any other directory, you'll see errors like:
+```
+The configuration is invalid:
+  * The data_dir does not exist.
+  * The premet_dir does not exist.
+  * The spatial_dir does not exist.
+  * The local_output_dir does not exist.
+```
 
 If running `metgenc process` fails, check for an error message in the metgenc.log to begin troubleshooting.
 
