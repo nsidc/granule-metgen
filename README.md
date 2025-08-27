@@ -6,7 +6,7 @@
   * [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
   * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
   * [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
-    + [Query a netCDF file for presence of MetGenC-Required Attributes](#query-a-netcdf-file-for-presence-of-metgenc-required-attributes)
+    + [How to query a netCDF file for presence of MetGenC-Required Attributes](#how-to-query-a-netcdf-file-for-presence-of-metgenc-required-attributes)
     + [Attribute Reference links](#attribute-reference-links)
   * [Geometry Logic](#geometry-logic)
     + [Geometry Rules](#geometry-rules)
@@ -155,6 +155,8 @@ science files.
 * The checksum_type must be SHA256
 
 ## NetCDF Attributes MetGenC Relies upon to Generate UMM-G json Files
+CF Conventions and NSIDC Guidelines (=NSIDC Guidelines for netCDF Attributes) are the driving forces behind emphatically
+suggesting data producers include the Attributes used by MetGenC in their netCDF files.
 
 - **Required** required
 - **RequiredC** conditionally required
@@ -162,17 +164,17 @@ science files.
 - **R** recommended
 - **S** suggested
 
-| Attribute used by MetGenC (location in netCDF file)   | ACDD | CF Conventions | NSIDC Guidelines | Notes   |
-| ----------------------------- | ---- | -------------- | ---------------- | ------- |
-| time_coverage_start (global)  | R    |                | R                | 1, OC, P   |
-| time_coverage_end (global)    | R    |                | R                | 1, OC, P   |
-| grid_mapping_name (variable)  |      | RequiredC      | R+               | 2       |
-| crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 3       |
-| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 4, OC   |
-| geospatial_lon_min (global)   | R    |                | R                | |
-| geospatial_lon_max (global)   | R    |                | R                | |
-| geospatial_lat_min (global)   | R    |                | R                | |
-| geospatial_lat_max (global)   | R    |                | R                | |
+| Attribute used by MetGenC (location in netCDF file)   | CF Conventions | NSIDC Guidelines | Notes   |
+| ----------------------------- | -------------- | ---------------- | ------- |
+| time_coverage_start (global)  |                | R                | 1, OC, P   |
+| time_coverage_end (global)    |                | R                | 1, OC, P   |
+| grid_mapping_name (variable)  | RequiredC      | R+               | 2       |
+| crs_wkt (variable with `grid_mapping_name` attribute)      |  | R     | 3       |
+| GeoTransform (variable with `grid_mapping_name` attribute) |  | R     | 4, OC   |
+| geospatial_lon_min (global)   |                | R                | |
+| geospatial_lon_max (global)   |                | R                | |
+| geospatial_lat_min (global)   |                | R                | |
+| geospatial_lat_max (global)   |                | R                | |
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 5       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 6       |
 
@@ -210,7 +212,7 @@ Notes column key:
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
-### Query a netCDF file for presence of MetGenC-Required Attributes
+### How to query a netCDF file for presence of MetGenC-Required Attributes
 On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
 can run ncdump to check whether a netCDF representative of the collection's files contains the
 MetGenC-required attributes. When not reported, that attribute will have to be accommodated by
@@ -219,23 +221,6 @@ for full details/descriptions of these.
 ```
 ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
 ```
-
-
-| netCDF file attributes not currently used by MetGenC | ACDD | CF Conventions | NSIDC Guidelines |
-| ----------------------------- | ---- | -------------- | ---------------- |
-| Conventions (global)          | R+   | Required       | R                |
-| standard_name (data variable) | R+   | R+             |                  |
-| grid_mapping (data variable)  |      | RequiredC      | R+               |
-| axis (variable)               |      | R              |                  |
-| geospatial_bounds (global)    | R    |                | R                |
-| geospatial_bounds_crs (global)| R    |                | R                |
-| geospatial_lat_units (global) | R    |                | R                |
-| geospatial_lon_units (global) | R    |                | R                |
-
-### Attribute Reference links
-* https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3
-* https://cfconventions.org/Data/cf-conventions/cf-conventions-1.11/cf-conventions.html
-* https://nsidc.org/sites/default/files/documents/other/nsidc-guidelines-netcdf-attributes.pdf
 
 ## Geometry Logic
 
