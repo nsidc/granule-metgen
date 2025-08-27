@@ -216,7 +216,7 @@ Notes column key:
 On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
 can run ncdump to check whether a netCDF representative of the collection's files contains the
 MetGenC-required attributes. When not reported, that attribute will have to be accommodated by
-its associated .ini attribute being added to the .ini file. See [Optional Configuration Elements](#optional-configuration-elements)
+its associated .ini attribute being added to the .ini file. See [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
 for full details/descriptions of these.
 ```
 ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
