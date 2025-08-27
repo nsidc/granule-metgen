@@ -14,6 +14,7 @@
   * [Running MetGenC: Its Commands In-depth](#running-metgenc-its-commands-in-depth)
     + [help](#help)
     + [init](#init)
+        * [INI RULES](#ini-rules)
       - [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
       - [Granule and Browse regex](#granule-and-browse-regex)
         * [Example 1: Use of granule_regex and browse_regex for a single-file granule with multiple browse images](#example-1-use-of-granule_regex-and-browse_regex-for-a-single-file-granule-with-multiple-browse-images)
@@ -322,13 +323,9 @@ Show MetGenC's help text:
 
 The **init** command can be used to generate a metgenc configuration (i.e., .ini) file for
 your data set, or edit an existing .ini file.
-* You can skip this step if you've already acquired or made an .ini file and prefer editing it
-  manually (any text editor will work).
-* An existing configuration file can also be copied, renamed, and used with a different
-  data set, just be sure to update paths, regex values, etc that are data set-specific!
-* The .ini file's checksum_type should always be set to SHA256.
-* If creating a new .ini, remember to include .ini trailing the name you choose.
-
+* You don't need to run this command if you already have an .ini file that you prefer
+  to copy and edit manually (any text editor will work) to apply to the collection you're ingesting.
+* If running metgenc init, the name of the new ini file you specify needs to include the `.ini` suffix.
 ```
 metgenc init --help
 Usage: metgenc init [OPTIONS]
@@ -343,6 +340,13 @@ Options:
 Example running **init**
 
     $ metgenc init -c ./init/<name of config file to create or modify>.ini
+
+##### INI RULES:  
+* The .ini file's `checksum_type = SHA256` should never be edited
+* The `kinesis_stream_name` and `staging_bucket_name` should never be edited
+* `auth_id` and `version` must accurately reflect the collection's authID and versionID
+* provider is a free text attribute where, for now, the version of metgenc being run should be documented
+  * running `metgenc --version` will return the current version    
 
 #### Required and Optional Configuration Elements
 Some attribute values may be read from the .ini file if the values
@@ -527,10 +531,10 @@ When a granule has an associated `.spatial` file containing geodetic point data 
 | Spatial       | spatial_polygon_max_vertices     | integer | 100     | Maximum vertices in generated polygon (10-1000) |
 | Spatial       | spatial_polygon_cartesian_tolerance | float | 0.0001  | Minimum distance between polygon points in degrees (0.00001-0.01) |
 
-
-
 ##### Example Spatial Polygon Generation Configuration
-Example showing content added to an .ini file, having edited the CMR default vertex tolerance (distance between two vertices) to decrease the precision of the GPoly coordinate pairs listed in the UMMG json files MetGenC generates:
+Example showing content added to an .ini file, having edited the CMR default vertex tolerance 
+(distance between two vertices) to decrease the precision of the GPoly coordinate pairs listed
+in the UMMG json files MetGenC generates:
 ```ini
 [Spatial]
 spatial_polygon_enabled = true
