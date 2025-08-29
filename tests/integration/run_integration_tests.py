@@ -277,10 +277,17 @@ class IntegrationTestRunner:
             "--overwrite",
         ]
 
+        # Set working directory to the directory containing the INI file
+        # This ensures relative paths in the config resolve correctly
+        work_dir = ini_file.parent
+
         logger.info(f"Running: {' '.join(cmd)}")
+        logger.info(f"Working directory: {work_dir}")
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, check=False, cwd=work_dir
+            )
 
             if result.returncode == 0:
                 logger.info("MetGenC completed successfully")
@@ -323,6 +330,10 @@ class IntegrationTestRunner:
             issues.append("No CNM or UMM-G output directories found")
             return False, issues
 
+        # Set working directory to the directory containing the config file
+        # This ensures relative paths in the config resolve correctly for validation commands
+        work_dir = config_file.parent
+
         # Validate CNM files using metgenc validate
         if cnm_dir.exists():
             cnm_files = list(cnm_dir.glob("*.json"))
@@ -340,7 +351,7 @@ class IntegrationTestRunner:
                 ]
                 try:
                     result = subprocess.run(
-                        cmd, capture_output=True, text=True, timeout=60
+                        cmd, capture_output=True, text=True, timeout=60, cwd=work_dir
                     )
                     if result.returncode != 0:
                         issues.append(f"CNM validation failed: {result.stderr}")
@@ -369,7 +380,7 @@ class IntegrationTestRunner:
                 ]
                 try:
                     result = subprocess.run(
-                        cmd, capture_output=True, text=True, timeout=60
+                        cmd, capture_output=True, text=True, timeout=60, cwd=work_dir
                     )
                     if result.returncode != 0:
                         issues.append(f"UMM-G validation failed: {result.stderr}")
@@ -427,6 +438,7 @@ class IntegrationTestRunner:
             output_dir.mkdir(exist_ok=True)
             (output_dir / "cnm").mkdir(exist_ok=True)
             (output_dir / "ummg").mkdir(exist_ok=True)
+            (output_dir / "logs").mkdir(exist_ok=True)
 
             # Run metgenc
             success, output = self.run_metgenc(ini_file, environment)

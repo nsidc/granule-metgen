@@ -48,6 +48,8 @@ def expected_keys():
             "spatial_polygon_target_coverage",
             "spatial_polygon_max_vertices",
             "spatial_polygon_cartesian_tolerance",
+            "log_dir",
+            "name",
         ]
     )
 
@@ -64,7 +66,11 @@ def cfg_parser():
         "staging_bucket_name": "xyzzy-${environment}-bucket",
         "write_cnm_file": False,
     }
-    cp["Settings"] = {"checksum_type": "SHA256", "number": 1}
+    cp["Settings"] = {
+        "checksum_type": "SHA256",
+        "number": 1,
+        "log_dir": "/tmp",
+    }
     return cp
 
 
@@ -219,7 +225,7 @@ def test_validate_with_invalid_checks(m1, m2, m3, cfg_parser):
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
-    assert len(exc_info.value.errors) == 4
+    assert len(exc_info.value.errors) == 5
 
 
 @pytest.mark.parametrize(

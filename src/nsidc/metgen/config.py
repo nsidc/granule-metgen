@@ -50,6 +50,8 @@ class Config:
     spatial_polygon_target_coverage: Optional[float] = None
     spatial_polygon_max_vertices: Optional[int] = None
     spatial_polygon_cartesian_tolerance: Optional[float] = None
+    log_dir: Optional[str] = None
+    name: Optional[str] = None
 
     def show(self):
         # TODO: add section headings in the right spot
@@ -87,6 +89,10 @@ def config_parser_factory(configuration_file):
     # If the config parser gets no value (empty string), interpret it as False
     cfg_parser.BOOLEAN_STATES |= [("", False)]
     cfg_parser.read(configuration_file)
+
+    # Store the config file basename for use in logging
+    cfg_parser._config_name = os.path.splitext(os.path.basename(configuration_file))[0]
+
     return cfg_parser
 
 
@@ -148,6 +154,7 @@ def configuration(
         "spatial_polygon_target_coverage": constants.DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE,
         "spatial_polygon_max_vertices": constants.DEFAULT_SPATIAL_POLYGON_MAX_VERTICES,
         "spatial_polygon_cartesian_tolerance": constants.DEFAULT_SPATIAL_POLYGON_CARTESIAN_TOLERANCE,
+        "log_dir": constants.DEFAULT_LOG_DIR,
     }
     try:
         return Config(
@@ -318,6 +325,15 @@ def configuration(
                 config_parser,
                 overrides,
             ),
+            _get_configuration_value(
+                environment,
+                "Settings",
+                "log_dir",
+                str,
+                config_parser,
+                overrides,
+            ),
+            getattr(config_parser, "_config_name", "metgenc"),
         )
     except Exception as e:
         raise Exception("Unable to read the configuration file", e)
@@ -389,6 +405,13 @@ def validate(configuration):
             if tolerance is not None
             else True,
             "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees.",
+        ],
+        [
+            "log_dir",
+            lambda log_dir: os.path.exists(log_dir) and os.access(log_dir, os.W_OK)
+            if log_dir
+            else True,
+            "The log directory does not exist or is not writable.",
         ],
     ]
     errors = [
