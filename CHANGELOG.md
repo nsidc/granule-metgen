@@ -1,6 +1,7 @@
 ## UNRELEASED
 
 * Issue-255: Remove CSV reader capability (generic & SNOWEX-specific readers)
+* Fix configuration issues with some integration tests
 
 ## v1.11.0 (2025-09-02)
 
