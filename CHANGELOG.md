@@ -1,7 +1,9 @@
 ## UNRELEASED
 
 * Issue-255: Remove CSV reader capability (generic & SNOWEX-specific readers)
-* Fix configuration issues with some integration tests
+* Issue-282: Fix configuration issues with some integration tests
+* Issue-272: Add a user-provided logfile directory location. Add the configuration
+  file's basename and the metgenc start datetime to the logfile's name.
 
 ## v1.11.0 (2025-09-02)
 
