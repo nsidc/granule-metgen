@@ -52,7 +52,7 @@ LOGFILE_FORMAT = "%(asctime)s|%(levelname)s|%(name)s|%(message)s"
 # -------------------------------------------------------------------
 
 
-def init_logging():
+def init_logging(configuration=None):
     """
     Initialize the logger for metgenc.
     """
@@ -64,7 +64,21 @@ def init_logging():
     console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
     logger.addHandler(console_handler)
 
-    logfile_handler = logging.FileHandler(constants.ROOT_LOGGER + ".log", "a")
+    # Generate log filename
+    log_dir = constants.DEFAULT_LOG_DIR
+    if configuration and configuration.log_dir:
+        log_dir = configuration.log_dir
+
+    # Generate filename: metgenc-{name}-{datetime}.log
+    config_basename = "metgenc"
+    if configuration and configuration.name:
+        config_basename = configuration.name
+
+    timestamp = dt.datetime.now().strftime("%Y%m%d-%H%M")
+    log_filename = f"metgenc-{config_basename}-{timestamp}.log"
+    log_path = os.path.join(log_dir, log_filename)
+
+    logfile_handler = logging.FileHandler(log_path, "a")
     logfile_handler.setLevel(logging.DEBUG)
     logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
     logger.addHandler(logfile_handler)
@@ -224,6 +238,11 @@ def init_config(configuration_file):
         constants.SETTINGS_SECTION_NAME,
         "checksum_type",
         Prompt.ask("Checksum type", default=constants.DEFAULT_CHECKSUM_TYPE),
+    )
+    cfg_parser.set(
+        constants.SETTINGS_SECTION_NAME,
+        "log_dir",
+        Prompt.ask("Log directory", default=constants.DEFAULT_LOG_DIR),
     )
 
     print()

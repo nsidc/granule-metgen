@@ -326,12 +326,13 @@ Example running **init**
 
     $ metgenc init -c ./init/<name of config file to create or modify>.ini
 
-##### INI RULES:  
+##### INI RULES:
 * The .ini file's `checksum_type = SHA256` should never be edited
 * The `kinesis_stream_name` and `staging_bucket_name` should never be edited
 * `auth_id` and `version` must accurately reflect the collection's authID and versionID
+* `log_dir` specifies the directory where log files will be written. Log files are named `metgenc-{config-name}-{timestamp}.log` where config-name is the base name of the .ini file and timestamp is in YYYYMMDD-HHMM format. The log directory must exist and be writable. If not specified, defaults to `/share/logs/metgenc`
 * provider is a free text attribute where, for now, the version of metgenc being run should be documented
-  * running `metgenc --version` will return the current version    
+  * running `metgenc --version` will return the current version
 
 #### Required and Optional Configuration Elements
 Some attribute values may be read from the .ini file if the values
@@ -381,7 +382,7 @@ Note column:
    with multiple associated browse files work fine with MetGenC! The default is `_brws`, change it to reflect
    the browse file names of the data delivered. This element is prompted for when running `metgenc init`.
 3. The file name pattern to be used for multi-file granules to define a file name pattern to appropriately
-   group files together as a granule using the elements common amongst their names.  
+   group files together as a granule using the elements common amongst their names.
    - This must result in a globally unique: product/name (in CNM), and Identifier (as the IdentifierType: ProducerGranuleId in UMM-G)
      generated for each granule. This init element value must be added manually as it's **not** included in the `metgenc init` prompts.
 5. The file name pattern identifying a single file for metgenc to reference as the primary
@@ -517,7 +518,7 @@ When a granule has an associated `.spatial` file containing geodetic point data 
 | Spatial       | spatial_polygon_cartesian_tolerance | float | 0.0001  | Minimum distance between polygon points in degrees (0.00001-0.01) |
 
 ##### Example Spatial Polygon Generation Configuration
-Example showing content added to an .ini file, having edited the CMR default vertex tolerance 
+Example showing content added to an .ini file, having edited the CMR default vertex tolerance
 (distance between two vertices) to decrease the precision of the GPoly coordinate pairs listed
 in the UMMG json files MetGenC generates:
 ```ini
@@ -590,6 +591,7 @@ Using configuration:
   + write_cnm_file: True
   + overwrite_ummg: True
   + checksum_type: SHA256
+  + log_dir: /share/logs/metgenc
   + number: 1000000
   + dry_run: False
   + premet_dir: None
