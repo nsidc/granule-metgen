@@ -2,7 +2,6 @@
 - [MetGenC](#metgenc)
   * [Level of Support](#level-of-support)
   * [Accessing the MetGenC VM and Tips and Assumptions](#accessing-the-metgenc-vm-and-tips-and-assumptions)
-  * [CMR Authentication and use of Collection Metadata](#cmr-authentication-and-use-of-collection-metadata)
   * [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
   * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
   * [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
@@ -113,28 +112,6 @@ access_key     ****************SQXY              env
 secret_key     ****************cJ+5              env
     region                us-west-2              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']
 ```
-
-## CMR Authentication and use of Collection Metadata
-
-MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials
-to retrieve collection metadata. If authentication fails,
-collection metadata will not be accessible to help compensate for metadata elements
-missing from science files or a data set's configuration (.ini) file.
-
-Always export the following variables to your environment before running
-`metgenc process` (there's more on what this entails to come):
-
-    $ export EARTHDATA_USERNAME=your-EDL-user-name
-    $ export EARTHDATA_PASSWORD=your-EDL-password
-
-If you have a different user name/password combo for UAT from that of the PROD
-environment, be sure to set the values appropriate for the environment you're
-ingesting to.
-
-If collection metadata are unavailable either due to an authentication failure
-or because the collection information doesn't yet exist in CMR, MetGenC will
-continue processing with the information available from the .ini file and the
-science files.
 
 ## Assumptions for netCDF files for MetGenC
 
