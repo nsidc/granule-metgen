@@ -12,6 +12,7 @@ from isoduration import parse_duration
 from netCDF4 import Dataset
 from pyproj import CRS, Transformer
 from shapely import LineString
+from shapely.wkt import loads as wkt_loads
 
 from nsidc.metgen import constants
 from nsidc.metgen.config import Config
@@ -131,7 +132,7 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     # if cartesian, look for bounding rectangle attributes and return upper
     # left and lower right points
     if gsr == constants.CARTESIAN:
-        return bounding_rectangle_from_attrs(netcdf)
+        return bounding_rectangle_from_attrs(netcdf, configuration)
 
     if len(xdata) * len(ydata) == 2:
         raise Exception("Don't know how to create polygon around two points")
@@ -144,12 +145,62 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     ]
 
 
-# TODO: If no bounding attributes, add fallback options?
-# - look for geospatial_bounds global attribute and parse points from its polygon
-# - pull points from spatial coordinate values (but this might only be appropriate for
-#   some projections, for example EASE-GRID2)
-# Also TODO: Find a more elegant way to handle these attributes.
-def bounding_rectangle_from_attrs(netcdf):
+def bounding_rectangle_from_geospatial_bounds(netcdf):
+    """
+    Extract bounding rectangle from geospatial_bounds WKT POLYGON attribute.
+
+    Args:
+        netcdf: NetCDF4 Dataset object
+
+    Returns:
+        List of two dicts with Longitude/Latitude keys representing
+        upper-left and lower-right corners of bounding rectangle.
+
+    Raises:
+        Exception: If geospatial_bounds attribute doesn't exist or WKT is invalid
+    """
+    if "geospatial_bounds" not in netcdf.ncattrs():
+        raise Exception("geospatial_bounds attribute not found in NetCDF file")
+
+    wkt_string = netcdf.getncattr("geospatial_bounds")
+
+    try:
+        # Parse WKT string using Shapely
+        geometry = wkt_loads(wkt_string)
+
+        # Ensure it's a Polygon (as requested in requirements)
+        if geometry.geom_type != "Polygon":
+            raise Exception(
+                f"geospatial_bounds must be a POLYGON, found {geometry.geom_type}"
+            )
+
+        # Get bounding box (envelope) - returns (minx, miny, maxx, maxy)
+        minx, miny, maxx, maxy = geometry.bounds
+
+        # Return as upper-left and lower-right points (same format as existing function)
+        return [
+            {"Longitude": round(minx, 8), "Latitude": round(maxy, 8)},  # upper-left
+            {"Longitude": round(maxx, 8), "Latitude": round(miny, 8)},  # lower-right
+        ]
+
+    except Exception as e:
+        raise Exception(f"Failed to parse geospatial_bounds WKT: {str(e)}")
+
+
+def bounding_rectangle_from_latlon_attrs(netcdf):
+    """
+    Extract bounding rectangle from geospatial_lat/lon_min/max attributes.
+
+    Args:
+        netcdf: NetCDF4 Dataset object
+
+    Returns:
+        List of two dicts with Longitude/Latitude keys representing
+        upper-left and lower-right corners of bounding rectangle.
+
+    Raises:
+        Exception: If required lat/lon attributes are missing
+    """
     global_attrs = set(netcdf.ncattrs())
     bounding_attrs = [
         "geospatial_lon_max",
@@ -172,7 +223,57 @@ def bounding_rectangle_from_attrs(netcdf):
         ]
 
     # Global attributes not available, show error
-    log_and_raise_error("Global attributes for bounding rectangle not available")
+    raise Exception("Global attributes for bounding rectangle not available")
+
+
+def bounding_rectangle_from_attrs(netcdf, configuration):
+    """
+    Extract bounding rectangle using configuration-driven method selection with fallback.
+
+    Args:
+        netcdf: NetCDF4 Dataset object
+        configuration: Config object containing prefer_geospatial_bounds setting
+
+    Returns:
+        List of two dicts with Longitude/Latitude keys representing
+        upper-left and lower-right corners of bounding rectangle.
+
+    Raises:
+        Exception: If neither method succeeds
+    """
+    # Determine preferred method based on configuration
+    prefer_bounds = getattr(configuration, "prefer_geospatial_bounds", False)
+
+    primary_method = (
+        bounding_rectangle_from_geospatial_bounds
+        if prefer_bounds
+        else bounding_rectangle_from_latlon_attrs
+    )
+    fallback_method = (
+        bounding_rectangle_from_latlon_attrs
+        if prefer_bounds
+        else bounding_rectangle_from_geospatial_bounds
+    )
+
+    # Try primary method first
+    try:
+        return primary_method(netcdf)
+    except Exception as primary_error:
+        # Log the primary method failure and try fallback
+        logger = logging.getLogger(constants.ROOT_LOGGER)
+        logger.warning(f"Primary bounding rectangle method failed: {primary_error}")
+        logger.info("Attempting fallback method...")
+
+        try:
+            return fallback_method(netcdf)
+        except Exception as fallback_error:
+            # Both methods failed, raise combined error
+            error_msg = (
+                f"Both bounding rectangle methods failed. "
+                f"Primary ({'geospatial_bounds' if prefer_bounds else 'lat/lon attributes'}): {primary_error}. "
+                f"Fallback ({'lat/lon attributes' if prefer_bounds else 'geospatial_bounds'}): {fallback_error}"
+            )
+            log_and_raise_error(error_msg)
 
 
 def distill_points(xdata, ydata, pad):
