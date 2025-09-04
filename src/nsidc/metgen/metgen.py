@@ -40,7 +40,7 @@ from rich.prompt import Confirm, Prompt
 from nsidc.metgen import aws, config, constants
 from nsidc.metgen.collection_metadata import get_collection_metadata
 from nsidc.metgen.models import CollectionMetadata
-from nsidc.metgen.readers import generic, registry, utilities
+from nsidc.metgen.readers import registry, utilities
 from nsidc.metgen.spatial import create_flightline_polygon
 
 # -------------------------------------------------------------------
@@ -52,7 +52,7 @@ LOGFILE_FORMAT = "%(asctime)s|%(levelname)s|%(name)s|%(message)s"
 # -------------------------------------------------------------------
 
 
-def init_logging():
+def init_logging(configuration=None):
     """
     Initialize the logger for metgenc.
     """
@@ -64,7 +64,21 @@ def init_logging():
     console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
     logger.addHandler(console_handler)
 
-    logfile_handler = logging.FileHandler(constants.ROOT_LOGGER + ".log", "a")
+    # Generate log filename
+    log_dir = constants.DEFAULT_LOG_DIR
+    if configuration and configuration.log_dir:
+        log_dir = configuration.log_dir
+
+    # Generate filename: metgenc-{name}-{datetime}.log
+    config_basename = "metgenc"
+    if configuration and configuration.name:
+        config_basename = configuration.name
+
+    timestamp = dt.datetime.now().strftime("%Y%m%d-%H%M")
+    log_filename = f"metgenc-{config_basename}-{timestamp}.log"
+    log_path = os.path.join(log_dir, log_filename)
+
+    logfile_handler = logging.FileHandler(log_path, "a")
     logfile_handler.setLevel(logging.DEBUG)
     logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
     logger.addHandler(logfile_handler)
@@ -225,6 +239,11 @@ def init_config(configuration_file):
         "checksum_type",
         Prompt.ask("Checksum type", default=constants.DEFAULT_CHECKSUM_TYPE),
     )
+    cfg_parser.set(
+        constants.SETTINGS_SECTION_NAME,
+        "log_dir",
+        Prompt.ask("Log directory", default=constants.DEFAULT_LOG_DIR),
+    )
 
     print()
     print(f"Saving new configuration: {configuration_file}")
@@ -347,7 +366,7 @@ def process(configuration: config.Config) -> None:
             premet_filename=premet_file,
             spatial_filename=spatial_file,
             reference_data_filename=reference_data_file,
-            data_reader=data_reader(configuration.auth_id, reference_data_file),
+            data_reader=registry.lookup(Path(reference_data_file).suffix),
         )
         for name, reference_data_file, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
             configuration
@@ -357,20 +376,6 @@ def process(configuration: config.Config) -> None:
     results = [pipeline(g) for g in granules]
 
     summarize_results(results)
-
-
-def data_reader(
-    auth_id: str, data_file: str
-) -> Callable[[str, str, str, config.Config], dict]:
-    """
-    Determine which file reader to use for the given data file.
-    """
-    _, extension = os.path.splitext(data_file)
-
-    try:
-        return registry.lookup(auth_id, extension)
-    except (KeyError, Exception):
-        return generic.extract_metadata
 
 
 # -------------------------------------------------------------------

@@ -1,6 +1,17 @@
 ## UNRELEASED
 
-* Issue-273: Note the `cumulus-prod` AWS profile in the README.md.
+* Issue-273: Describe the `cumulus-prod` AWS profile in the README.md.
+
+## v1.12.0rc0 (2025-09-02)
+
+* Issue-255: Remove CSV reader capability (generic & SNOWEX-specific readers)
+* Issue-282: Fix configuration issues with some integration tests
+* Issue-272: Add a user-provided logfile directory location. Add the configuration
+  file's basename and the metgenc start datetime to the logfile's name.
+
+## v1.11.0 (2025-09-02)
+
+ * Minor version release of all issues in v1.11.0rc1, rc2, rc3
 
 ## v1.11.0rc3 (2025-08-25)
 

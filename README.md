@@ -2,11 +2,10 @@
 - [MetGenC](#metgenc)
   * [Level of Support](#level-of-support)
   * [Accessing the MetGenC VM and Tips and Assumptions](#accessing-the-metgenc-vm-and-tips-and-assumptions)
-  * [CMR Authentication and use of Collection Metadata](#cmr-authentication-and-use-of-collection-metadata)
   * [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
   * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
   * [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
-    + [Query a netCDF file for presence of MetGenC-Required Attributes](#query-a-netcdf-file-for-presence-of-metgenc-required-attributes)
+    + [How to query a netCDF file for presence of MetGenC-Required Attributes](#how-to-query-a-netcdf-file-for-presence-of-metgenc-required-attributes)
     + [Attribute Reference links](#attribute-reference-links)
   * [Geometry Logic](#geometry-logic)
     + [Geometry Rules](#geometry-rules)
@@ -14,6 +13,7 @@
   * [Running MetGenC: Its Commands In-depth](#running-metgenc-its-commands-in-depth)
     + [help](#help)
     + [init](#init)
+        * [INI RULES](#ini-rules)
       - [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
       - [Granule and Browse regex](#granule-and-browse-regex)
         * [Example 1: Use of granule_regex and browse_regex for a single-file granule with multiple browse images](#example-1-use-of-granule_regex-and-browse_regex-for-a-single-file-granule-with-multiple-browse-images)
@@ -118,28 +118,6 @@ Commands within the above one-liner detailed:
 
 
 
-## CMR Authentication and use of Collection Metadata
-
-MetGenC will attempt to authenticate with Earthdata Login (EDL) credentials
-to retrieve collection metadata. If authentication fails,
-collection metadata will not be accessible to help compensate for metadata elements
-missing from science files or a data set's configuration (.ini) file.
-
-Always export the following variables to your environment before running
-`metgenc process` (there's more on what this entails to come):
-
-    $ export EARTHDATA_USERNAME=your-EDL-user-name
-    $ export EARTHDATA_PASSWORD=your-EDL-password
-
-If you have a different user name/password combo for UAT from that of the PROD
-environment, be sure to set the values appropriate for the environment you're
-ingesting to.
-
-If collection metadata are unavailable either due to an authentication failure
-or because the collection information doesn't yet exist in CMR, MetGenC will
-continue processing with the information available from the .ini file and the
-science files.
-
 ## Assumptions for netCDF files for MetGenC
 
 * NetCDF files have an extension of `.nc` (per CF conventions).
@@ -159,6 +137,8 @@ science files.
 * The checksum_type must be SHA256
 
 ## NetCDF Attributes MetGenC Relies upon to Generate UMM-G json Files
+CF Conventions and NSIDC Guidelines (=NSIDC Guidelines for netCDF Attributes) are the driving forces behind emphatically
+suggesting data producers include the Attributes used by MetGenC in their netCDF files.
 
 - **Required** required
 - **RequiredC** conditionally required
@@ -166,17 +146,17 @@ science files.
 - **R** recommended
 - **S** suggested
 
-| Attribute used by MetGenC (location in netCDF file)   | ACDD | CF Conventions | NSIDC Guidelines | Notes   |
-| ----------------------------- | ---- | -------------- | ---------------- | ------- |
-| time_coverage_start (global)  | R    |                | R                | 1, OC, P   |
-| time_coverage_end (global)    | R    |                | R                | 1, OC, P   |
-| grid_mapping_name (variable)  |      | RequiredC      | R+               | 2       |
-| crs_wkt (variable with `grid_mapping_name` attribute)      |  |  | R     | 3       |
-| GeoTransform (variable with `grid_mapping_name` attribute) |  |  | R     | 4, OC   |
-| geospatial_lon_min (global)   | R    |                | R                | |
-| geospatial_lon_max (global)   | R    |                | R                | |
-| geospatial_lat_min (global)   | R    |                | R                | |
-| geospatial_lat_max (global)   | R    |                | R                | |
+| Attribute used by MetGenC (location in netCDF file)   | CF Conventions | NSIDC Guidelines | Notes   |
+| ----------------------------- | -------------- | ---------------- | ------- |
+| time_coverage_start (global)  |                | R                | 1, OC, P   |
+| time_coverage_end (global)    |                | R                | 1, OC, P   |
+| grid_mapping_name (variable)  | RequiredC      | R+               | 2       |
+| crs_wkt (variable with `grid_mapping_name` attribute)      |  | R     | 3       |
+| GeoTransform (variable with `grid_mapping_name` attribute) |  | R     | 4, OC   |
+| geospatial_lon_min (global)   |                | R                | |
+| geospatial_lon_max (global)   |                | R                | |
+| geospatial_lat_min (global)   |                | R                | |
+| geospatial_lat_max (global)   |                | R                | |
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 5       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 6       |
 
@@ -214,32 +194,15 @@ Notes column key:
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
-### Query a netCDF file for presence of MetGenC-Required Attributes
+### How to query a netCDF file for presence of MetGenC-Required Attributes
 On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
 can run ncdump to check whether a netCDF representative of the collection's files contains the
 MetGenC-required attributes. When not reported, that attribute will have to be accommodated by
-its associated .ini attribute being added to the .ini file. See [Optional Configuration Elements](#optional-configuration-elements)
+its associated .ini attribute being added to the .ini file. See [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
 for full details/descriptions of these.
 ```
 ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
 ```
-
-
-| netCDF file attributes not currently used by MetGenC | ACDD | CF Conventions | NSIDC Guidelines |
-| ----------------------------- | ---- | -------------- | ---------------- |
-| Conventions (global)          | R+   | Required       | R                |
-| standard_name (data variable) | R+   | R+             |                  |
-| grid_mapping (data variable)  |      | RequiredC      | R+               |
-| axis (variable)               |      | R              |                  |
-| geospatial_bounds (global)    | R    |                | R                |
-| geospatial_bounds_crs (global)| R    |                | R                |
-| geospatial_lat_units (global) | R    |                | R                |
-| geospatial_lon_units (global) | R    |                | R                |
-
-### Attribute Reference links
-* https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3
-* https://cfconventions.org/Data/cf-conventions/cf-conventions-1.11/cf-conventions.html
-* https://nsidc.org/sites/default/files/documents/other/nsidc-guidelines-netcdf-attributes.pdf
 
 ## Geometry Logic
 
@@ -327,13 +290,9 @@ Show MetGenC's help text:
 
 The **init** command can be used to generate a metgenc configuration (i.e., .ini) file for
 your data set, or edit an existing .ini file.
-* You can skip this step if you've already acquired or made an .ini file and prefer editing it
-  manually (any text editor will work).
-* An existing configuration file can also be copied, renamed, and used with a different
-  data set, just be sure to update paths, regex values, etc that are data set-specific!
-* The .ini file's checksum_type should always be set to SHA256.
-* If creating a new .ini, remember to include .ini trailing the name you choose.
-
+* You don't need to run this command if you already have an .ini file that you prefer
+  to copy and edit manually (any text editor will work) to apply to the collection you're ingesting.
+* If running metgenc init, the name of the new ini file you specify needs to include the `.ini` suffix.
 ```
 metgenc init --help
 Usage: metgenc init [OPTIONS]
@@ -348,6 +307,14 @@ Options:
 Example running **init**
 
     $ metgenc init -c ./init/<name of config file to create or modify>.ini
+
+##### INI RULES:
+* The .ini file's `checksum_type = SHA256` should never be edited
+* The `kinesis_stream_name` and `staging_bucket_name` should never be edited
+* `auth_id` and `version` must accurately reflect the collection's authID and versionID
+* `log_dir` specifies the directory where log files will be written. Log files are named `metgenc-{config-name}-{timestamp}.log` where config-name is the base name of the .ini file and timestamp is in YYYYMMDD-HHMM format. The log directory must exist and be writable. If not specified, defaults to `/share/logs/metgenc`
+* provider is a free text attribute where, for now, the version of metgenc being run should be documented
+  * running `metgenc --version` will return the current version
 
 #### Required and Optional Configuration Elements
 Some attribute values may be read from the .ini file if the values
@@ -397,7 +364,7 @@ Note column:
    with multiple associated browse files work fine with MetGenC! The default is `_brws`, change it to reflect
    the browse file names of the data delivered. This element is prompted for when running `metgenc init`.
 3. The file name pattern to be used for multi-file granules to define a file name pattern to appropriately
-   group files together as a granule using the elements common amongst their names.  
+   group files together as a granule using the elements common amongst their names.
    - This must result in a globally unique: product/name (in CNM), and Identifier (as the IdentifierType: ProducerGranuleId in UMM-G)
      generated for each granule. This init element value must be added manually as it's **not** included in the `metgenc init` prompts.
 5. The file name pattern identifying a single file for metgenc to reference as the primary
@@ -532,10 +499,10 @@ When a granule has an associated `.spatial` file containing geodetic point data 
 | Spatial       | spatial_polygon_max_vertices     | integer | 100     | Maximum vertices in generated polygon (10-1000) |
 | Spatial       | spatial_polygon_cartesian_tolerance | float | 0.0001  | Minimum distance between polygon points in degrees (0.00001-0.01) |
 
-
-
 ##### Example Spatial Polygon Generation Configuration
-Example showing content added to an .ini file, having edited the CMR default vertex tolerance (distance between two vertices) to decrease the precision of the GPoly coordinate pairs listed in the UMMG json files MetGenC generates:
+Example showing content added to an .ini file, having edited the CMR default vertex tolerance
+(distance between two vertices) to decrease the precision of the GPoly coordinate pairs listed
+in the UMMG json files MetGenC generates:
 ```ini
 [Spatial]
 spatial_polygon_enabled = true
@@ -606,6 +573,7 @@ Using configuration:
   + write_cnm_file: True
   + overwrite_ummg: True
   + checksum_type: SHA256
+  + log_dir: /share/logs/metgenc
   + number: 1000000
   + dry_run: False
   + premet_dir: None

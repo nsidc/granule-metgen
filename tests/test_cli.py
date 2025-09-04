@@ -87,8 +87,14 @@ def test_process_with_granule_limit(mock_validate, mock_process, cli_runner):
 @patch("nsidc.metgen.metgen.process")
 @patch("nsidc.metgen.config.validate")
 @patch("nsidc.metgen.config.validate_spatial_source")
+@patch("nsidc.metgen.metgen.init_logging")
 def test_process_with_no_write_cnm(
-    mock_validate_spatial, mock_validate, process_mock, configuration_mock, cli_runner
+    mock_init_logging,
+    mock_validate_spatial,
+    mock_validate,
+    process_mock,
+    configuration_mock,
+    cli_runner,
 ):
     result = cli_runner.invoke(cli, ["process", "--config", INI_FILE])
 
@@ -103,8 +109,14 @@ def test_process_with_no_write_cnm(
 @patch("nsidc.metgen.metgen.process")
 @patch("nsidc.metgen.config.validate")
 @patch("nsidc.metgen.config.validate_spatial_source")
+@patch("nsidc.metgen.metgen.init_logging")
 def test_process_with_write_cnm(
-    mock_validate_spatial, mock_validate, process_mock, configuration_mock, cli_runner
+    mock_init_logging,
+    mock_validate_spatial,
+    mock_validate,
+    process_mock,
+    configuration_mock,
+    cli_runner,
 ):
     result = cli_runner.invoke(cli, ["process", "-wc", "--config", INI_FILE])
 
@@ -119,8 +131,14 @@ def test_process_with_write_cnm(
 @patch("nsidc.metgen.metgen.process")
 @patch("nsidc.metgen.config.validate")
 @patch("nsidc.metgen.config.validate_spatial_source")
+@patch("nsidc.metgen.metgen.init_logging")
 def test_process_with_no_overwrite(
-    mock_validate_spatial, mock_validate, process_mock, configuration_mock, cli_runner
+    mock_init_logging,
+    mock_validate_spatial,
+    mock_validate,
+    process_mock,
+    configuration_mock,
+    cli_runner,
 ):
     result = cli_runner.invoke(cli, ["process", "--config", INI_FILE])
 
@@ -135,8 +153,14 @@ def test_process_with_no_overwrite(
 @patch("nsidc.metgen.metgen.process")
 @patch("nsidc.metgen.config.validate")
 @patch("nsidc.metgen.config.validate_spatial_source")
+@patch("nsidc.metgen.metgen.init_logging")
 def test_process_with_overwrite(
-    mock_validate_spatial, mock_validate, process_mock, configuration_mock, cli_runner
+    mock_init_logging,
+    mock_validate_spatial,
+    mock_validate,
+    process_mock,
+    configuration_mock,
+    cli_runner,
 ):
     result = cli_runner.invoke(cli, ["process", "-o", "--config", INI_FILE])
 
