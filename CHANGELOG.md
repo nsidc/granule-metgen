@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Issue-273: Describe the `cumulus-prod` AWS profile in the README.md.
+
 ## v1.12.0rc0 (2025-09-02)
 
 * Issue-255: Remove CSV reader capability (generic & SNOWEX-specific readers)

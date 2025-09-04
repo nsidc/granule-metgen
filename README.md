@@ -87,31 +87,36 @@ Commands within the above one-liner detailed:
 
         $ source metgenc-env.sh cumulus-uat
 
-  * If you think you've already run it but can't remember, run the following:
+  `cumulus-uat` is the profile you want to use from the `~/.aws/credentials` file.
+  Available profiles are `cumulus-uat` and `cumulus-prod`.
+
+  If you think you've already run it but can't remember, run the following:
 
             $ aws configure list
 
-and will either indicate that you need to source your credentials by returning:
+  The output will either indicate that you need to source your credentials by returning:
 
-```
-Name                    Value             Type    Location
-----                    -----             ----    --------
-profile               <not set>           None    None
-access_key            <not set>           None    None
-secret_key            <not set>           None    None
-region                <not set>           None    None
-```
-or it'll show that you're all set (AWS comms-wise) for ingesting to Cumulus by
-returning the following:
+  ```
+  Name                    Value             Type    Location
+  ----                    -----             ----    --------
+  profile             <not set>             None    None
+  access_key          <not set>             None    None
+  secret_key          <not set>             None    None
+  region              <not set>             None    None
+  ```
+  or it'll show that you're all set (AWS comms-wise) for ingesting to Cumulus by
+  returning the following:
 
-```
-      Name                    Value             Type    Location
-      ----                    -----             ----    --------
-   profile              cumulus-uat              env    ['AWS_PROFILE', 'AWS_DEFAULT_PROFILE']
-access_key     ****************SQXY              env
-secret_key     ****************cJ+5              env
-    region                us-west-2              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']
-```
+  ```
+  Name                         Value             Type    Location
+  ----                         -----             ----    --------
+  profile                 cumulus-uat             env    ['AWS_DEFAULT_PROFILE', 'AWS_PROFILE']
+  access_key     ****************SQXY             env
+  secret_key     ****************cJ+5             env
+  region                    us-west-2     config-file    ~/.aws/config
+  ```
+
+
 
 ## Assumptions for netCDF files for MetGenC
 
@@ -646,17 +651,23 @@ channels, and post a quick "done" note when you're done ingest testing.**
 
 
 #### Troubleshooting metgenc process command runs
-* You'll need to have sourced (or source before you run it), your AWS profile by running `source metgenc-env.sh cumulus-uat`
-  where `cumulus-uat` reflects the profile name specified in your AWS credential and config files.
-  If you can't remember whether you've sourced your AWS profile, run `aws configure list` at the prompt.
+* If you run `$ metgenc process -c ./init/<some .ini file>` to test end-to-end ingest, but you
+  get a flurry of errors, confirm that you completed the step to set up your AWS credentials
+  _before_ running MetGenC:
 
-If you run `$ metgenc process -c ./init/<some .ini file>` to test end-to-end ingest, but you get a flurry of errors,
-see if sourcing your AWS credentials (`source metgenc-env.sh cumulus-uat`) solves the problem! Forgetting
-to set up communications between MetGenC and AWS is easy to do, but thankfully, easy to fix.
+  ```
+  source metgenc-env.sh cumulus-uat
+  ```
+
+  where `cumulus-uat` reflects the desired profile name in `~/.aws/config` and `~/.aws/credentials`.
+  (Use `cumulus-prod` for the CPRD environment.)
+  You can verify a successful AWS credential setup by running `aws configure list` at the prompt.
+  Forgetting to set up communications between MetGenC and AWS is easy to do, but thankfully, easy to fix.
 
 * When MetGenC is run on the VM, it must be run at the root of the vm's virtual environment, `metgenc`.
 
-* If running `metgenc process` fails, check for an error message in the metgenc.log (metgenc/metgenc.log) to aid your troubleshooting.
+* If running `metgenc process` fails, check for an error message in the metgenc.log (metgenc/metgenc.log)
+  to aid your troubleshooting.
 
 ---
 
