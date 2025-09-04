@@ -165,16 +165,14 @@ def bounding_rectangle_from_geospatial_bounds(netcdf):
     wkt_string = netcdf.getncattr("geospatial_bounds")
 
     try:
-        # Parse WKT string using Shapely
         geometry = wkt_loads(wkt_string)
 
-        # Ensure it's a Polygon (as requested in requirements)
+        # Only polygons are currently supported
         if geometry.geom_type != "Polygon":
             raise Exception(
                 f"geospatial_bounds must be a POLYGON, found {geometry.geom_type}"
             )
 
-        # Get bounding box (envelope) - returns (minx, miny, maxx, maxy)
         minx, miny, maxx, maxy = geometry.bounds
 
         # Return as upper-left and lower-right points (same format as existing function)
