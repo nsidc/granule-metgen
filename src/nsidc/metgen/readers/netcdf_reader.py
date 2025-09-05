@@ -123,16 +123,26 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     general-use module.
     """
 
+    # if cartesian, look for bounding rectangle attributes and return upper
+    # left and lower right points
+    if gsr == constants.CARTESIAN:
+        return bounding_rectangle_from_attrs(netcdf, configuration)
+
+    # For geodetic data, check if user prefers geospatial_bounds
+    prefer_bounds = getattr(configuration, "prefer_geospatial_bounds", False)
+    if prefer_bounds:
+        try:
+            return bounding_rectangle_from_geospatial_bounds(netcdf)
+        except Exception:
+            # Fall back to coordinate transformation approach if geospatial_bounds fails
+            pass
+
+    # Set up coordinate transformation for geodetic processing
     grid_var = find_grid_mapping_var(netcdf)
     xformer = crs_transformer(find_grid_wkt(grid_var))
     pad = pixel_padding(grid_var, configuration)
     xdata = find_coordinate_data_by_standard_name(netcdf, "projection_x_coordinate")
     ydata = find_coordinate_data_by_standard_name(netcdf, "projection_y_coordinate")
-
-    # if cartesian, look for bounding rectangle attributes and return upper
-    # left and lower right points
-    if gsr == constants.CARTESIAN:
-        return bounding_rectangle_from_attrs(netcdf, configuration)
 
     if len(xdata) * len(ydata) == 2:
         raise Exception("Don't know how to create polygon around two points")
@@ -226,52 +236,40 @@ def bounding_rectangle_from_latlon_attrs(netcdf):
 
 def bounding_rectangle_from_attrs(netcdf, configuration):
     """
-    Extract bounding rectangle using configuration-driven method selection with fallback.
+    Extract bounding rectangle from lat/lon geospatial attributes.
 
     Args:
         netcdf: NetCDF4 Dataset object
-        configuration: Config object containing prefer_geospatial_bounds setting
+        configuration: Config object (unused but kept for compatibility)
 
     Returns:
         List of two dicts with Longitude/Latitude keys representing
         upper-left and lower-right corners of bounding rectangle.
-
-    Raises:
-        Exception: If neither method succeeds
     """
-    # Determine preferred method based on configuration
-    prefer_bounds = getattr(configuration, "prefer_geospatial_bounds", False)
+    global_attrs = set(netcdf.ncattrs())
+    bounding_attrs = [
+        "geospatial_lon_max",
+        "geospatial_lat_max",
+        "geospatial_lon_min",
+        "geospatial_lat_min",
+    ]
+    LON_MAX = 0
+    LAT_MAX = 1
+    LON_MIN = 2
+    LAT_MIN = 3
 
-    primary_method = (
-        bounding_rectangle_from_geospatial_bounds
-        if prefer_bounds
-        else bounding_rectangle_from_latlon_attrs
+    def latlon_attr(index):
+        return float(round(netcdf.getncattr(bounding_attrs[index]), 8))
+
+    if set(bounding_attrs).issubset(global_attrs):
+        return [
+            {"Longitude": latlon_attr(LON_MIN), "Latitude": latlon_attr(LAT_MAX)},
+            {"Longitude": latlon_attr(LON_MAX), "Latitude": latlon_attr(LAT_MIN)},
+        ]
+
+    raise Exception(
+        "Cannot find geospatial lat/lon bounding attributes"
     )
-    fallback_method = (
-        bounding_rectangle_from_latlon_attrs
-        if prefer_bounds
-        else bounding_rectangle_from_geospatial_bounds
-    )
-
-    # Try primary method first
-    try:
-        return primary_method(netcdf)
-    except Exception as primary_error:
-        # Log the primary method failure and try fallback
-        logger = logging.getLogger(constants.ROOT_LOGGER)
-        logger.warning(f"Primary bounding rectangle method failed: {primary_error}")
-        logger.info("Attempting fallback method...")
-
-        try:
-            return fallback_method(netcdf)
-        except Exception as fallback_error:
-            # Both methods failed, raise combined error
-            error_msg = (
-                f"Both bounding rectangle methods failed. "
-                f"Primary ({'geospatial_bounds' if prefer_bounds else 'lat/lon attributes'}): {primary_error}. "
-                f"Fallback ({'lat/lon attributes' if prefer_bounds else 'geospatial_bounds'}): {fallback_error}"
-            )
-            log_and_raise_error(error_msg)
 
 
 def distill_points(xdata, ydata, pad):

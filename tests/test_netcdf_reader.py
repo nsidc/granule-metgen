@@ -148,22 +148,32 @@ def test_bounding_rectangle_from_latlon_attrs_missing():
     )
 
 
-def test_prefer_geospatial_bounds_true_success():
-    """Test that geospatial_bounds is used when prefer_geospatial_bounds=True"""
+def test_bounding_rectangle_from_attrs_with_valid_latlon():
+    """Test that bounding_rectangle_from_attrs works with lat/lon attributes"""
     mock_netcdf = MagicMock()
-    mock_netcdf.ncattrs.return_value = ["geospatial_bounds"]
-    mock_netcdf.getncattr.return_value = (
-        "POLYGON((50.0 -180.0,56.0 -180.0,56.0 -155.0,50.0 -155.0,50.0 -180.0))"
-    )
+    mock_netcdf.ncattrs.return_value = [
+        "geospatial_lon_max", "geospatial_lat_max", 
+        "geospatial_lon_min", "geospatial_lat_min"
+    ]
+    # Mock the getncattr calls for lat/lon bounds
+    def mock_getncattr(attr):
+        attrs = {
+            "geospatial_lon_max": 56.0,
+            "geospatial_lat_max": -155.0, 
+            "geospatial_lon_min": 50.0,
+            "geospatial_lat_min": -180.0
+        }
+        return attrs[attr]
+    
+    mock_netcdf.getncattr.side_effect = mock_getncattr
 
     mock_config = MagicMock()
-    mock_config.prefer_geospatial_bounds = True
 
     result = netcdf_reader.bounding_rectangle_from_attrs(mock_netcdf, mock_config)
 
     expected = [
-        {"Longitude": 50.0, "Latitude": -155.0},
-        {"Longitude": 56.0, "Latitude": -180.0},
+        {"Longitude": 50.0, "Latitude": -155.0},  # upper-left (lon_min, lat_max)
+        {"Longitude": 56.0, "Latitude": -180.0},  # lower-right (lon_max, lat_min)
     ]
     assert result == expected
 
@@ -226,40 +236,45 @@ def test_fallback_from_geospatial_bounds_to_latlon():
     assert result == expected
 
 
-def test_fallback_from_latlon_to_geospatial_bounds():
-    """Test fallback from lat/lon to geospatial_bounds when primary fails"""
+def test_bounding_rectangle_from_attrs_missing_latlon():
+    """Test that bounding_rectangle_from_attrs raises exception when lat/lon attrs missing"""
     mock_netcdf = MagicMock()
-    # Mock that lat/lon attrs don't exist but geospatial_bounds does
+    # Mock that lat/lon attrs don't exist
+    mock_netcdf.ncattrs.return_value = ["geospatial_bounds"]
+
+    mock_config = MagicMock()
+
+    with pytest.raises(Exception) as exc_info:
+        netcdf_reader.bounding_rectangle_from_attrs(mock_netcdf, mock_config)
+    
+    assert "Cannot find geospatial lat/lon bounding attributes" in str(exc_info.value)
+
+
+def test_spatial_values_geodetic_prefers_geospatial_bounds():
+    """Test that spatial_values uses geospatial_bounds for geodetic when prefer_geospatial_bounds=True"""
+    mock_netcdf = MagicMock()
     mock_netcdf.ncattrs.return_value = ["geospatial_bounds"]
     mock_netcdf.getncattr.return_value = (
         "POLYGON((50.0 -180.0,56.0 -180.0,56.0 -155.0,50.0 -155.0,50.0 -180.0))"
     )
 
     mock_config = MagicMock()
-    mock_config.prefer_geospatial_bounds = False
+    mock_config.prefer_geospatial_bounds = True
 
-    with patch("nsidc.metgen.readers.netcdf_reader.logging.getLogger"):
-        result = netcdf_reader.bounding_rectangle_from_attrs(mock_netcdf, mock_config)
+    # Mock the grid mapping functions that would be called for coordinate transformation
+    with (
+        patch("nsidc.metgen.readers.netcdf_reader.find_grid_mapping_var") as mock_grid_var,
+        patch("nsidc.metgen.readers.netcdf_reader.crs_transformer") as mock_transformer,
+        patch("nsidc.metgen.readers.netcdf_reader.pixel_padding") as mock_padding,
+        patch("nsidc.metgen.readers.netcdf_reader.find_coordinate_data_by_standard_name") as mock_coord_data,
+    ):
+        result = netcdf_reader.spatial_values(mock_netcdf, mock_config, constants.GEODETIC)
 
     expected = [
         {"Longitude": 50.0, "Latitude": -155.0},
         {"Longitude": 56.0, "Latitude": -180.0},
     ]
     assert result == expected
-
-
-def test_both_methods_fail():
-    """Test error when both primary and fallback methods fail"""
-    mock_netcdf = MagicMock()
-    mock_netcdf.ncattrs.return_value = ["other_attr"]
-
-    mock_config = MagicMock()
-    mock_config.prefer_geospatial_bounds = True
-
-    with pytest.raises(Exception) as exc_info:
-        netcdf_reader.bounding_rectangle_from_attrs(mock_netcdf, mock_config)
-
-    assert "Both bounding rectangle methods failed" in str(exc_info.value)
 
 
 def test_config_attribute_missing_defaults_to_false():
