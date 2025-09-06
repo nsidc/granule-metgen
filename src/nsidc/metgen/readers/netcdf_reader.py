@@ -128,7 +128,7 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     elif gsr == constants.GEODETIC:
         prefer_bounds = getattr(configuration, "prefer_geospatial_bounds", False)
         if prefer_bounds:
-            return bounding_rectangle_from_geospatial_bounds(netcdf)
+            return points_from_geospatial_bounds(netcdf)
         else:
             return bounding_rectangle_from_coordinates(netcdf, configuration)
     else:
@@ -163,16 +163,17 @@ def bounding_rectangle_from_coordinates(netcdf, configuration) -> list[dict]:
     ]
 
 
-def bounding_rectangle_from_geospatial_bounds(netcdf):
+def points_from_geospatial_bounds(netcdf):
     """
-    Extract bounding rectangle from geospatial_bounds WKT POLYGON attribute.
+    Extract polygon vertices from geospatial_bounds WKT POLYGON attribute,
+    transforming to EPSG:4326 if necessary.
 
     Args:
         netcdf: NetCDF4 Dataset object
 
     Returns:
-        List of two dicts with Longitude/Latitude keys representing
-        upper-left and lower-right corners of bounding rectangle.
+        List of dicts with Longitude/Latitude keys representing
+        all polygon vertices in EPSG:4326 coordinates.
 
     Raises:
         Exception: If geospatial_bounds attribute doesn't exist or WKT is invalid
@@ -191,12 +192,27 @@ def bounding_rectangle_from_geospatial_bounds(netcdf):
                 f"geospatial_bounds must be a POLYGON, found {geometry.geom_type}"
             )
 
-        minx, miny, maxx, maxy = geometry.bounds
+        exterior_coords = list(geometry.exterior.coords)
 
-        # Return as upper-left and lower-right points (same format as existing function)
+        # Transform coordinates only if necessary
+        if "geospatial_bounds_crs" in netcdf.ncattrs():
+            bounds_crs_string = netcdf.getncattr("geospatial_bounds_crs")
+
+            bounds_crs = CRS.from_string(bounds_crs_string)
+            target_crs = CRS.from_epsg(4326)
+
+            if not bounds_crs.equals(target_crs):
+                transformer = Transformer.from_crs(
+                    bounds_crs, target_crs, always_xy=True
+                )
+                # Transform coordinates (x, y) -> (lon, lat)
+                exterior_coords = [
+                    transformer.transform(x, y) for x, y in exterior_coords
+                ]
+
         return [
-            {"Longitude": round(minx, 8), "Latitude": round(maxy, 8)},  # upper-left
-            {"Longitude": round(maxx, 8), "Latitude": round(miny, 8)},  # lower-right
+            {"Longitude": round(lon, 8), "Latitude": round(lat, 8)}
+            for lon, lat in exterior_coords
         ]
 
     except Exception as e:

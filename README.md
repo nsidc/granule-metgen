@@ -152,7 +152,8 @@ suggesting data producers include the Attributes used by MetGenC in their netCDF
 | geospatial_lon_max (global)   |                | R                | |
 | geospatial_lat_min (global)   |                | R                | |
 | geospatial_lat_max (global)   |                | R                | |
-| geospatial_bounds (global)    |                |                  | |
+| geospatial_bounds (global)    |                | R                | 7, OC |
+| geospatial_bounds_crs (global) |               | ?                | 8    |
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 5       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 6       |
 
@@ -193,7 +194,12 @@ Notes column key:
  7 = The `geospatial_bounds` global attribute contains spatial boundary information as a
    WKT POLYGON string. When present and `prefer_geospatial_bounds = true` is set in the
    .ini file, MetGenC will use this attribute instead of the coordinate values for
-   GEODETIC collections. The corresponding .ini parameter is `prefer_geospatial_bounds` = true/false.
+   GEODETIC collections. If `geospatial_bounds_crs` attribute is also present, coordinates
+   will be transformed to EPSG:4326 if needed. The corresponding .ini parameter is `prefer_geospatial_bounds` = true/false.
+
+ 8 = The `geospatial_bounds_crs` global attribute specifies the coordinate reference system
+   for the coordinates in `geospatial_bounds`. Can be an EPSG identifier (e.g., "EPSG:4326")
+   or other CRS format. When present, MetGenC will transform coordinates to EPSG:4326 if needed.
 
 ### How to query a netCDF file for presence of MetGenC-Required Attributes
 On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
@@ -202,7 +208,7 @@ MetGenC-required attributes. When not reported, that attribute will have to be a
 its associated .ini attribute being added to the .ini file. See [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
 for full details/descriptions of these.
 ```
-ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e geospatial_bounds -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
+ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e geospatial_bounds -e geospatial_bounds_crs -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
 ```
 
 ## Geometry Logic
@@ -536,7 +542,7 @@ This enhancement is backward compatible - existing workflows continue unchanged,
 
 ##### Geospatial Bounds Configuration
 
-MetGenC can extract spatial boundaries directly from the `geospatial_bounds` NetCDF attribute when it contains a WKT POLYGON string. This is an alternative to the default of using coordinates for GEODETIC collections.
+MetGenC can extract polygon vertices directly from the `geospatial_bounds` NetCDF attribute when it contains a WKT POLYGON string. This extracts all polygon vertices as individual points, providing an alternative to the default of using coordinates for GEODETIC collections.
 
 **Example Configuration:**
 ```ini
