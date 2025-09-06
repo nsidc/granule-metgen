@@ -48,6 +48,7 @@ def expected_keys():
             "spatial_polygon_target_coverage",
             "spatial_polygon_max_vertices",
             "spatial_polygon_cartesian_tolerance",
+            "prefer_geospatial_bounds",
             "log_dir",
             "name",
         ]
@@ -450,3 +451,27 @@ def test_spatial_polygon_cartesian_tolerance_validation_too_high(
         "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees."
         in exc_info.value.errors
     )
+
+
+def test_prefer_geospatial_bounds_defaults(cfg_parser):
+    """Test that prefer_geospatial_bounds has correct default."""
+    cfg = config.configuration(cfg_parser, {})
+    assert cfg.prefer_geospatial_bounds is False
+
+
+def test_prefer_geospatial_bounds_from_ini(cfg_parser):
+    """Test reading prefer_geospatial_bounds from ini file."""
+    cfg_parser["Spatial"] = {
+        "prefer_geospatial_bounds": "True",
+    }
+    cfg = config.configuration(cfg_parser, {})
+    assert cfg.prefer_geospatial_bounds is True
+
+
+def test_prefer_geospatial_bounds_overrides(cfg_parser):
+    """Test that overrides work for prefer_geospatial_bounds configuration."""
+    overrides = {
+        "prefer_geospatial_bounds": True,
+    }
+    cfg = config.configuration(cfg_parser, overrides)
+    assert cfg.prefer_geospatial_bounds is True

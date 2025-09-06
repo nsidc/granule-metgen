@@ -50,6 +50,7 @@ class Config:
     spatial_polygon_target_coverage: Optional[float] = None
     spatial_polygon_max_vertices: Optional[int] = None
     spatial_polygon_cartesian_tolerance: Optional[float] = None
+    prefer_geospatial_bounds: Optional[bool] = False
     log_dir: Optional[str] = None
     name: Optional[str] = None
 
@@ -154,6 +155,7 @@ def configuration(
         "spatial_polygon_target_coverage": constants.DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE,
         "spatial_polygon_max_vertices": constants.DEFAULT_SPATIAL_POLYGON_MAX_VERTICES,
         "spatial_polygon_cartesian_tolerance": constants.DEFAULT_SPATIAL_POLYGON_CARTESIAN_TOLERANCE,
+        "prefer_geospatial_bounds": constants.DEFAULT_PREFER_GEOSPATIAL_BOUNDS,
         "log_dir": constants.DEFAULT_LOG_DIR,
     }
     try:
@@ -322,6 +324,14 @@ def configuration(
                 "Spatial",
                 "spatial_polygon_cartesian_tolerance",
                 float,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Spatial",
+                "prefer_geospatial_bounds",
+                bool,
                 config_parser,
                 overrides,
             ),
