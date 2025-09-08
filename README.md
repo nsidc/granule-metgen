@@ -157,6 +157,8 @@ suggesting data producers include the Attributes used by MetGenC in their netCDF
 | geospatial_lon_max (global)   |                | R                | |
 | geospatial_lat_min (global)   |                | R                | |
 | geospatial_lat_max (global)   |                | R                | |
+| geospatial_bounds (global)    |                | R                | 7, OC |
+| geospatial_bounds_crs (global) |               | ?                | 8    |
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 5       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 6       |
 
@@ -194,6 +196,19 @@ Notes column key:
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
+ 7 = The `geospatial_bounds` global attribute contains spatial boundary information as a
+   WKT POLYGON string. When present and `prefer_geospatial_bounds = true` is set in the
+   .ini file, MetGenC will use this attribute instead of spatial coordinate values to generate
+   the display GPolygon for collections with a GEODETIC granule spatial representation.
+   If the `geospatial_bounds_crs` attribute is also present, coordinates
+   will be transformed to EPSG:4326 if needed. The corresponding .ini parameter is `prefer_geospatial_bounds` = true/false.
+
+ 8 = The `geospatial_bounds_crs` global attribute specifies the coordinate reference system
+   for the coordinates in `geospatial_bounds`. Can be an EPSG identifier (e.g., "EPSG:4326")
+   or other CRS format. When present, MetGenC will transform coordinates to EPSG:4326 if needed.
+   **If `geospatial_bounds` is `true` and no `geospatial_bounds_crs` attribute exists, the
+   coordinates in the `geospatial_bounds` attribute are assumed to represent points in EPSG:4326.**
+
 ### How to query a netCDF file for presence of MetGenC-Required Attributes
 On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
 can run ncdump to check whether a netCDF representative of the collection's files contains the
@@ -201,7 +216,7 @@ MetGenC-required attributes. When not reported, that attribute will have to be a
 its associated .ini attribute being added to the .ini file. See [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
 for full details/descriptions of these.
 ```
-ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
+ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e geospatial_bounds -e geospatial_bounds_crs -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
 ```
 
 ## Geometry Logic
@@ -532,6 +547,26 @@ spatial_polygon_enabled = false
 The `spatial_polygon_cartesian_tolerance` parameter ensures that generated polygons meet NASA CMR validation requirements. The CMR system requires that each point in a polygon must have a unique spatial location - if two points are closer than the tolerance threshold in both latitude and longitude, they are considered the same point and the polygon becomes invalid. MetGenC automatically filters points during polygon generation to ensure this requirement is met.
 
 This enhancement is backward compatible - existing workflows continue unchanged, and polygon generation only activates for appropriate `.spatial` file scenarios.
+
+##### Geospatial Bounds Configuration
+
+MetGenC can extract polygon vertices directly from the `geospatial_bounds`
+NetCDF attribute when it contains a WKT POLYGON string. This extracts all
+polygon vertices as individual points, providing an alternative to the default
+of using spatial coordinate values to generate a polygon.
+ **If no `geospatial_bounds_crs` attribute exists, the
+`geospatial_bounds` value is assumed to represent points in EPSG:4326.**
+
+**Example Configuration:**
+```ini
+[Spatial]
+prefer_geospatial_bounds = true
+```
+
+**When Geospatial Bounds Extraction is Applied:**
+- ✅ Granule spatial representation is `GEODETIC`
+- ✅ `prefer_geospatial_bounds = true` in .ini file
+- ✅ NetCDF file contains valid `geospatial_bounds` global attribute with WKT POLYGON
 
 ---
 

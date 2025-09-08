@@ -12,6 +12,7 @@ from isoduration import parse_duration
 from netCDF4 import Dataset
 from pyproj import CRS, Transformer
 from shapely import LineString
+from shapely.wkt import loads as wkt_loads
 
 from nsidc.metgen import constants
 from nsidc.metgen.config import Config
@@ -122,16 +123,34 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     general-use module.
     """
 
+    if gsr == constants.CARTESIAN:
+        return bounding_rectangle_from_attrs(netcdf)
+    elif gsr == constants.GEODETIC:
+        prefer_bounds = getattr(configuration, "prefer_geospatial_bounds", False)
+        if prefer_bounds:
+            return points_from_geospatial_bounds(netcdf)
+        else:
+            return points_from_coordinate_variables(netcdf, configuration)
+    else:
+        log_and_raise_error(f"Unsupported granule spatial representation: {gsr}")
+
+
+def points_from_coordinate_variables(netcdf, configuration) -> list[dict]:
+    """
+    Extract bounding rectangle using coordinate transformation from projection coordinates.
+
+    Args:
+        netcdf: NetCDF4 Dataset object
+        configuration: Config object with pixel_size settings
+
+    Returns:
+        List of dicts with Longitude/Latitude keys representing polygon perimeter points.
+    """
     grid_var = find_grid_mapping_var(netcdf)
     xformer = crs_transformer(find_grid_wkt(grid_var))
     pad = pixel_padding(grid_var, configuration)
     xdata = find_coordinate_data_by_standard_name(netcdf, "projection_x_coordinate")
     ydata = find_coordinate_data_by_standard_name(netcdf, "projection_y_coordinate")
-
-    # if cartesian, look for bounding rectangle attributes and return upper
-    # left and lower right points
-    if gsr == constants.CARTESIAN:
-        return bounding_rectangle_from_attrs(netcdf)
 
     if len(xdata) * len(ydata) == 2:
         raise Exception("Don't know how to create polygon around two points")
@@ -144,12 +163,78 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
     ]
 
 
+def points_from_geospatial_bounds(netcdf):
+    """
+    Extract polygon vertices from geospatial_bounds WKT POLYGON attribute,
+    transforming to EPSG:4326 if necessary.
+
+    Args:
+        netcdf: NetCDF4 Dataset object
+
+    Returns:
+        List of dicts with Longitude/Latitude keys representing
+        all polygon vertices in EPSG:4326 coordinates.
+
+    Raises:
+        Exception: If geospatial_bounds attribute doesn't exist or WKT is invalid
+    """
+    if "geospatial_bounds" not in netcdf.ncattrs():
+        log_and_raise_error("geospatial_bounds attribute not found in NetCDF file")
+
+    wkt_string = netcdf.getncattr("geospatial_bounds")
+
+    try:
+        geometry = wkt_loads(wkt_string)
+
+        # Only polygons are currently supported
+        if geometry.geom_type != "Polygon":
+            log_and_raise_error(
+                f"geospatial_bounds must be a POLYGON, found {geometry.geom_type}"
+            )
+
+        exterior_coords = list(geometry.exterior.coords)
+
+        # Transform coordinates only if necessary
+        if "geospatial_bounds_crs" in netcdf.ncattrs():
+            bounds_crs_string = netcdf.getncattr("geospatial_bounds_crs")
+
+            bounds_crs = CRS.from_string(bounds_crs_string)
+            target_crs = CRS.from_epsg(4326)
+
+            if not bounds_crs.equals(target_crs):
+                transformer = Transformer.from_crs(
+                    bounds_crs, target_crs, always_xy=True
+                )
+                # Transform coordinates (x, y) -> (lon, lat)
+                exterior_coords = [
+                    transformer.transform(x, y) for x, y in exterior_coords
+                ]
+
+        return [
+            {"Longitude": round(lon, 8), "Latitude": round(lat, 8)}
+            for lon, lat in exterior_coords
+        ]
+
+    except Exception as e:
+        log_and_raise_error(f"Failed to parse geospatial_bounds WKT: {str(e)}")
+
+
 # TODO: If no bounding attributes, add fallback options?
 # - look for geospatial_bounds global attribute and parse points from its polygon
 # - pull points from spatial coordinate values (but this might only be appropriate for
 #   some projections, for example EASE-GRID2)
 # Also TODO: Find a more elegant way to handle these attributes.
 def bounding_rectangle_from_attrs(netcdf):
+    """
+    Extract bounding rectangle from lat/lon geospatial attributes.
+
+    Args:
+        netcdf: NetCDF4 Dataset object
+
+    Returns:
+        List of two dicts with Longitude/Latitude keys representing
+        upper-left and lower-right corners of bounding rectangle.
+    """
     global_attrs = set(netcdf.ncattrs())
     bounding_attrs = [
         "geospatial_lon_max",
@@ -171,8 +256,7 @@ def bounding_rectangle_from_attrs(netcdf):
             {"Longitude": latlon_attr(LON_MAX), "Latitude": latlon_attr(LAT_MIN)},
         ]
 
-    # Global attributes not available, show error
-    log_and_raise_error("Global attributes for bounding rectangle not available")
+    log_and_raise_error("Cannot find geospatial lat/lon bounding attributes")
 
 
 def distill_points(xdata, ydata, pad):
