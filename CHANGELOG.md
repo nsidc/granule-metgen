@@ -1,7 +1,9 @@
 ## UNRELEASED
 
 * Issue-273: Describe the `cumulus-prod` AWS profile in the README.md.
-* Issue-195: Add a 'trace' field to the CNM message containing the MetGenC version.
+* Issue-195: Include MetGenC version number in CNM message `trace` field.
+* Issue-247: Add `ini` option to use the values in a NetCDF file's
+  `geospatial_bounds` global attribute to construct the GPolygon describing the data coverage.
 
 ## v1.12.0rc0 (2025-09-02)
 
