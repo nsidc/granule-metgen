@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.12.0rc1 (2025-09-08)
 
 * Issue-273: Describe the `cumulus-prod` AWS profile in the README.md.
 * Issue-195: Include MetGenC version number in CNM message `trace` field.
