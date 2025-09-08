@@ -37,7 +37,7 @@ from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
 
-from nsidc.metgen import aws, config, constants
+from nsidc.metgen import __version__, aws, config, constants
 from nsidc.metgen.collection_metadata import get_collection_metadata
 from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.readers import registry, utilities
@@ -807,6 +807,16 @@ def stage_files(configuration: config.Config, granule: Granule) -> Granule:
     return granule
 
 
+def build_trace_message() -> str:
+    """
+    Build a trace message with MetGenC version.
+
+    Returns:
+        Trace message with MetGenC version
+    """
+    return f"MetGenC {__version__}"
+
+
 def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
     """
     Create a CNM submission message for the Granule.
@@ -841,6 +851,7 @@ def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
             | {
                 "file_content": json.dumps(populated_file_templates),
                 "cnm_schema_version": constants.CNM_JSON_SCHEMA_VERSION,
+                "trace": build_trace_message(),
             }
         ),
     )

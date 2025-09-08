@@ -616,3 +616,11 @@ def test_collection_temporal_errors_returned(test_config, simple_collection_meta
         test_config, simple_collection_metadata
     )
     assert errors[0] == "Very bad temporal error"
+
+
+def test_build_trace_message():
+    """Test build_trace_message returns MetGenC version"""
+    from nsidc.metgen import __version__
+
+    result = metgen.build_trace_message()
+    assert result == f"MetGenC {__version__}"
