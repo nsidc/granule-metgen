@@ -130,12 +130,12 @@ def spatial_values(netcdf, configuration, gsr) -> list[dict]:
         if prefer_bounds:
             return points_from_geospatial_bounds(netcdf)
         else:
-            return bounding_rectangle_from_coordinates(netcdf, configuration)
+            return points_from_coordinate_variables(netcdf, configuration)
     else:
-        raise Exception(f"Unsupported granule spatial representation: {gsr}")
+        log_and_raise_error(f"Unsupported granule spatial representation: {gsr}")
 
 
-def bounding_rectangle_from_coordinates(netcdf, configuration) -> list[dict]:
+def points_from_coordinate_variables(netcdf, configuration) -> list[dict]:
     """
     Extract bounding rectangle using coordinate transformation from projection coordinates.
 
@@ -179,7 +179,7 @@ def points_from_geospatial_bounds(netcdf):
         Exception: If geospatial_bounds attribute doesn't exist or WKT is invalid
     """
     if "geospatial_bounds" not in netcdf.ncattrs():
-        raise Exception("geospatial_bounds attribute not found in NetCDF file")
+        log_and_raise_error("geospatial_bounds attribute not found in NetCDF file")
 
     wkt_string = netcdf.getncattr("geospatial_bounds")
 
@@ -188,7 +188,7 @@ def points_from_geospatial_bounds(netcdf):
 
         # Only polygons are currently supported
         if geometry.geom_type != "Polygon":
-            raise Exception(
+            log_and_raise_error(
                 f"geospatial_bounds must be a POLYGON, found {geometry.geom_type}"
             )
 
@@ -216,7 +216,7 @@ def points_from_geospatial_bounds(netcdf):
         ]
 
     except Exception as e:
-        raise Exception(f"Failed to parse geospatial_bounds WKT: {str(e)}")
+        log_and_raise_error(f"Failed to parse geospatial_bounds WKT: {str(e)}")
 
 
 # TODO: If no bounding attributes, add fallback options?
@@ -256,7 +256,7 @@ def bounding_rectangle_from_attrs(netcdf):
             {"Longitude": latlon_attr(LON_MAX), "Latitude": latlon_attr(LAT_MIN)},
         ]
 
-    raise Exception("Cannot find geospatial lat/lon bounding attributes")
+    log_and_raise_error("Cannot find geospatial lat/lon bounding attributes")
 
 
 def distill_points(xdata, ydata, pad):

@@ -193,13 +193,16 @@ Notes column key:
 
  7 = The `geospatial_bounds` global attribute contains spatial boundary information as a
    WKT POLYGON string. When present and `prefer_geospatial_bounds = true` is set in the
-   .ini file, MetGenC will use this attribute instead of the coordinate values for
-   GEODETIC collections. If `geospatial_bounds_crs` attribute is also present, coordinates
+   .ini file, MetGenC will use this attribute instead of spatial coordinate values to generate
+   the display GPolygon for collections with a GEODETIC granule spatial representation.
+   If the `geospatial_bounds_crs` attribute is also present, coordinates
    will be transformed to EPSG:4326 if needed. The corresponding .ini parameter is `prefer_geospatial_bounds` = true/false.
 
  8 = The `geospatial_bounds_crs` global attribute specifies the coordinate reference system
    for the coordinates in `geospatial_bounds`. Can be an EPSG identifier (e.g., "EPSG:4326")
    or other CRS format. When present, MetGenC will transform coordinates to EPSG:4326 if needed.
+   **If `geospatial_bounds` is `true` and no `geospatial_bounds_crs` attribute exists, the
+   coordinates in the `geospatial_bounds` attribute are assumed to represent points in EPSG:4326.**
 
 ### How to query a netCDF file for presence of MetGenC-Required Attributes
 On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
@@ -542,7 +545,12 @@ This enhancement is backward compatible - existing workflows continue unchanged,
 
 ##### Geospatial Bounds Configuration
 
-MetGenC can extract polygon vertices directly from the `geospatial_bounds` NetCDF attribute when it contains a WKT POLYGON string. This extracts all polygon vertices as individual points, providing an alternative to the default of using coordinates for GEODETIC collections.
+MetGenC can extract polygon vertices directly from the `geospatial_bounds`
+NetCDF attribute when it contains a WKT POLYGON string. This extracts all
+polygon vertices as individual points, providing an alternative to the default
+of using spatial coordinate values to generate a polygon.
+ **If no `geospatial_bounds_crs` attribute exists, the
+`geospatial_bounds` value is assumed to represent points in EPSG:4326.**
 
 **Example Configuration:**
 ```ini
