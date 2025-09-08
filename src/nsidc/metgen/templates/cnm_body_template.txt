@@ -4,6 +4,7 @@
     "identifier": "$uuid",
     "collection": "$short_name",
     "provider": "$provider",
+    "trace": "$trace",
     "product": {
         "name":  "$producer_granule_id",
         "dataVersion": "$version",
