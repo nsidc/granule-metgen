@@ -69,11 +69,11 @@ def test_points_from_geospatial_bounds_valid_polygon():
     result = netcdf_reader.points_from_geospatial_bounds(mock_netcdf)
 
     expected = [
-        {"Longitude": 50.0, "Latitude": -180.0},  # first vertex
-        {"Longitude": 56.2583, "Latitude": -180.0},  # second vertex
-        {"Longitude": 56.2583, "Latitude": -155.5594},  # third vertex
-        {"Longitude": 50.0, "Latitude": -155.5594},  # fourth vertex
-        {"Longitude": 50.0, "Latitude": -180.0},  # closing vertex (duplicate of first)
+        {"Longitude": -180.0, "Latitude": 50.0},  # first vertex
+        {"Longitude": -180.0, "Latitude": 56.2583},  # second vertex
+        {"Longitude": -155.5594, "Latitude": 56.2583},  # third vertex
+        {"Longitude": -155.5594, "Latitude": 50.0},  # fourth vertex
+        {"Longitude": -180.0, "Latitude": 50.0},  # closing vertex (duplicate of first)
     ]
     assert result == expected
 
@@ -150,11 +150,11 @@ def test_points_from_geospatial_bounds_no_crs_assumes_epsg4326():
 
     # Should return coordinates as-is (assuming they're already in EPSG:4326)
     expected = [
-        {"Longitude": 50.0, "Latitude": -180.0},
-        {"Longitude": 56.0, "Latitude": -180.0},
-        {"Longitude": 56.0, "Latitude": -155.0},
-        {"Longitude": 50.0, "Latitude": -155.0},
-        {"Longitude": 50.0, "Latitude": -180.0},
+        {"Longitude": -180.0, "Latitude": 50.0},
+        {"Longitude": -180.0, "Latitude": 56.0},
+        {"Longitude": -155.0, "Latitude": 56.0},
+        {"Longitude": -155.0, "Latitude": 50.0},
+        {"Longitude": -180.0, "Latitude": 50.0},
     ]
     assert result == expected
 
@@ -172,10 +172,10 @@ def test_points_from_geospatial_bounds_epsg4326_no_transform():
 
     # Should return coordinates as-is (no transformation needed)
     expected = [
-        {"Longitude": 50.0, "Latitude": -180.0},
-        {"Longitude": 56.0, "Latitude": -180.0},
-        {"Longitude": 56.0, "Latitude": -155.0},
-        {"Longitude": 50.0, "Latitude": -155.0},
-        {"Longitude": 50.0, "Latitude": -180.0},
+        {"Longitude": -180.0, "Latitude": 50.0},
+        {"Longitude": -180.0, "Latitude": 56.0},
+        {"Longitude": -155.0, "Latitude": 56.0},
+        {"Longitude": -155.0, "Latitude": 50.0},
+        {"Longitude": -180.0, "Latitude": 50.0},
     ]
     assert result == expected

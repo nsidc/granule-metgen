@@ -12,6 +12,7 @@ from isoduration import parse_duration
 from netCDF4 import Dataset
 from pyproj import CRS, Transformer
 from shapely import LineString
+from shapely.geometry.polygon import orient
 from shapely.wkt import loads as wkt_loads
 
 from nsidc.metgen import constants
@@ -192,23 +193,30 @@ def points_from_geospatial_bounds(netcdf):
                 f"geospatial_bounds must be a POLYGON, found {geometry.geom_type}"
             )
 
-        exterior_coords = list(geometry.exterior.coords)
+        # Ensure points are in counter-clockwise order
+        # TODO: This duplicates code in the polygon generator module. Suggest refactoring so
+        # orientation check only needs to happen in one place, regardless of how polygon is
+        # generated.
+        oriented_polygon = orient(geometry, sign=1.0)
+        exterior_coords = list(oriented_polygon.exterior.coords)
 
         # Transform coordinates only if necessary
+        target_crs = CRS.from_epsg(4326)
         if "geospatial_bounds_crs" in netcdf.ncattrs():
             bounds_crs_string = netcdf.getncattr("geospatial_bounds_crs")
-
             bounds_crs = CRS.from_string(bounds_crs_string)
-            target_crs = CRS.from_epsg(4326)
+        else:
+            # Assume EPSG:4326 if no CRS is specified.
+            bounds_crs = target_crs
 
-            if not bounds_crs.equals(target_crs):
-                transformer = Transformer.from_crs(
-                    bounds_crs, target_crs, always_xy=True
-                )
-                # Transform coordinates (x, y) -> (lon, lat)
-                exterior_coords = [
-                    transformer.transform(x, y) for x, y in exterior_coords
-                ]
+        if bounds_crs.equals(target_crs):
+            # EPSG:4326 values are defined by OGC to be in decimal degrees, in lat, lon order
+            # (NOT in lon, lat order). Swap the order of the values in the tuple.
+            exterior_coords = [(y, x) for x, y in exterior_coords]
+        else:
+            transformer = Transformer.from_crs(bounds_crs, target_crs, always_xy=True)
+            # Transform coordinates (x, y) -> (lon, lat)
+            exterior_coords = [transformer.transform(x, y) for x, y in exterior_coords]
 
         return [
             {"Longitude": round(lon, 8), "Latitude": round(lat, 8)}
