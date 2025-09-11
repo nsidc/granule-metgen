@@ -1,3 +1,8 @@
+## UNRELEASED
+
+* Patch Issue-247: Allow for the fact that EPSG:4326 coordinates are listed in
+  (lat, lon) order in the `geospatial_bounds` WKT value.
+
 ## v1.12.0rc1 (2025-09-08)
 
 * Issue-273: Describe the `cumulus-prod` AWS profile in the README.md.
