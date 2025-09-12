@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.12.0rc3 (2025-09-12)
 
 * Issue-247 patch of the patch: Ensure polygons generated from
  `geospatial_bounds` are counterclockwise.
