@@ -1,6 +1,11 @@
+## UNRELEASED
+
+* Issue-247 patch of the patch: Ensure polygons generated from
+ `geospatial_bounds` are counterclockwise.
+
 ## v1.12.0rc2 (2025-09-11)
 
-* Patch Issue-247: Allow for the fact that EPSG:4326 coordinates are listed in
+* Issue-247 patch: Allow for the fact that EPSG:4326 coordinates are listed in
   (lat, lon) order in the `geospatial_bounds` WKT value.
 
 ## v1.12.0rc1 (2025-09-08)

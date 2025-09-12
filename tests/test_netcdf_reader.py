@@ -2,6 +2,7 @@ import re
 from unittest.mock import MagicMock, patch
 
 import pytest
+from shapely import LinearRing
 
 from nsidc.metgen import constants
 from nsidc.metgen.readers import netcdf_reader
@@ -60,24 +61,6 @@ def test_shows_bad_filename():
         assert re.search("Could not open netCDF file fake.nc", exc_info.value.args[0])
 
 
-def test_points_from_geospatial_bounds_valid_polygon():
-    """Test parsing valid POLYGON WKT from geospatial_bounds attribute"""
-    mock_netcdf = MagicMock()
-    mock_netcdf.ncattrs.return_value = ["geospatial_bounds"]
-    mock_netcdf.getncattr.return_value = "POLYGON((50.0000 -180.0000,56.2583 -180.0000,56.2583 -155.5594,50.0000 -155.5594,50.0000 -180.0000))"
-
-    result = netcdf_reader.points_from_geospatial_bounds(mock_netcdf)
-
-    expected = [
-        {"Longitude": -180.0, "Latitude": 50.0},  # first vertex
-        {"Longitude": -180.0, "Latitude": 56.2583},  # second vertex
-        {"Longitude": -155.5594, "Latitude": 56.2583},  # third vertex
-        {"Longitude": -155.5594, "Latitude": 50.0},  # fourth vertex
-        {"Longitude": -180.0, "Latitude": 50.0},  # closing vertex (duplicate of first)
-    ]
-    assert result == expected
-
-
 def test_points_from_geospatial_bounds_missing_attribute():
     """Test error when geospatial_bounds attribute is missing"""
     mock_netcdf = MagicMock()
@@ -119,7 +102,7 @@ def test_points_from_geospatial_bounds_with_crs_transformation():
     mock_netcdf.ncattrs.return_value = ["geospatial_bounds", "geospatial_bounds_crs"]
     # Polygon in Web Mercator coordinates (roughly around London area)
     mock_netcdf.getncattr.side_effect = lambda attr: {
-        "geospatial_bounds": "POLYGON((-20000 6700000,-10000 6700000,-10000 6710000,-20000 6710000,-20000 6700000))",
+        "geospatial_bounds": "POLYGON((-20000 6700000, -20000 6710000, -10000 6710000, -10000 6700000, -20000 6700000))",
         "geospatial_bounds_crs": "EPSG:3857",
     }[attr]
 
@@ -137,6 +120,9 @@ def test_points_from_geospatial_bounds_with_crs_transformation():
         assert point["Longitude"] != -20000  # Ensure transformation occurred
         assert point["Latitude"] != 6700000  # Ensure transformation occurred
 
+    result_ring = LinearRing((r["Longitude"], r["Latitude"]) for r in result)
+    assert result_ring.is_ccw
+
 
 def test_points_from_geospatial_bounds_no_crs_assumes_epsg4326():
     """Test that missing geospatial_bounds_crs assumes coordinates are already in EPSG:4326"""
@@ -148,12 +134,12 @@ def test_points_from_geospatial_bounds_no_crs_assumes_epsg4326():
 
     result = netcdf_reader.points_from_geospatial_bounds(mock_netcdf)
 
-    # Should return coordinates as-is (assuming they're already in EPSG:4326)
+    # Should return coordinates untransformed but in counter-clockwise order
     expected = [
         {"Longitude": -180.0, "Latitude": 50.0},
-        {"Longitude": -180.0, "Latitude": 56.0},
-        {"Longitude": -155.0, "Latitude": 56.0},
         {"Longitude": -155.0, "Latitude": 50.0},
+        {"Longitude": -155.0, "Latitude": 56.0},
+        {"Longitude": -180.0, "Latitude": 56.0},
         {"Longitude": -180.0, "Latitude": 50.0},
     ]
     assert result == expected
@@ -164,18 +150,40 @@ def test_points_from_geospatial_bounds_epsg4326_no_transform():
     mock_netcdf = MagicMock()
     mock_netcdf.ncattrs.return_value = ["geospatial_bounds", "geospatial_bounds_crs"]
     mock_netcdf.getncattr.side_effect = lambda attr: {
-        "geospatial_bounds": "POLYGON((50.0 -180.0,56.0 -180.0,56.0 -155.0,50.0 -155.0,50.0 -180.0))",
+        "geospatial_bounds": "POLYGON((50.0 -180.0, 50.0 -155.0, 56.0 -155.0, 56.0 -180.0, 50.0 -180.0))",
         "geospatial_bounds_crs": "EPSG:4326",
     }[attr]
 
     result = netcdf_reader.points_from_geospatial_bounds(mock_netcdf)
 
-    # Should return coordinates as-is (no transformation needed)
+    # Should return coordinates untransformed, no change to order
     expected = [
         {"Longitude": -180.0, "Latitude": 50.0},
-        {"Longitude": -180.0, "Latitude": 56.0},
-        {"Longitude": -155.0, "Latitude": 56.0},
         {"Longitude": -155.0, "Latitude": 50.0},
+        {"Longitude": -155.0, "Latitude": 56.0},
+        {"Longitude": -180.0, "Latitude": 56.0},
+        {"Longitude": -180.0, "Latitude": 50.0},
+    ]
+    assert result == expected
+
+
+def test_points_from_geospatial_bounds_epsg4326_reversed_to_ccw():
+    """Test that points in clockwise order are reversed"""
+    mock_netcdf = MagicMock()
+    mock_netcdf.ncattrs.return_value = ["geospatial_bounds", "geospatial_bounds_crs"]
+    mock_netcdf.getncattr.side_effect = lambda attr: {
+        "geospatial_bounds": "POLYGON((50.0 -180.0, 56.0 -180.0, 56.0 155.0, 50.0 155.0, 50.0 -180.0))",
+        "geospatial_bounds_crs": "EPSG:4326",
+    }[attr]
+
+    result = netcdf_reader.points_from_geospatial_bounds(mock_netcdf)
+
+    # Should return coordinates untransformed, rearranged to counter-clockwise
+    expected = [
+        {"Longitude": -180.0, "Latitude": 50.0},
+        {"Longitude": 155.0, "Latitude": 50.0},
+        {"Longitude": 155.0, "Latitude": 56.0},
+        {"Longitude": -180.0, "Latitude": 56.0},
         {"Longitude": -180.0, "Latitude": 50.0},
     ]
     assert result == expected

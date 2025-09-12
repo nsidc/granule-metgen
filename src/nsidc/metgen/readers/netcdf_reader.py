@@ -11,8 +11,7 @@ from dateutil.parser import parse
 from isoduration import parse_duration
 from netCDF4 import Dataset
 from pyproj import CRS, Transformer
-from shapely import LineString
-from shapely.geometry.polygon import orient
+from shapely import LinearRing, LineString
 from shapely.wkt import loads as wkt_loads
 
 from nsidc.metgen import constants
@@ -193,14 +192,6 @@ def points_from_geospatial_bounds(netcdf):
                 f"geospatial_bounds must be a POLYGON, found {geometry.geom_type}"
             )
 
-        # Ensure points are in counter-clockwise order
-        # TODO: This duplicates code in the polygon generator module. Suggest refactoring so
-        # orientation check only needs to happen in one place, regardless of how polygon is
-        # generated.
-        oriented_polygon = orient(geometry, sign=1.0)
-        exterior_coords = list(oriented_polygon.exterior.coords)
-
-        # Transform coordinates only if necessary
         target_crs = CRS.from_epsg(4326)
         if "geospatial_bounds_crs" in netcdf.ncattrs():
             bounds_crs_string = netcdf.getncattr("geospatial_bounds_crs")
@@ -210,12 +201,25 @@ def points_from_geospatial_bounds(netcdf):
             bounds_crs = target_crs
 
         if bounds_crs.equals(target_crs):
-            # EPSG:4326 values are defined by OGC to be in decimal degrees, in lat, lon order
-            # (NOT in lon, lat order). Swap the order of the values in the tuple.
-            exterior_coords = [(y, x) for x, y in exterior_coords]
+            # EPSG:4326 values in WKT are defined by OGC to be in decimal degrees, in lat,
+            # lon order (NOT in lon, lat order). Swap the order of the values in each point.
+            ring = LinearRing((y, x) for x, y in geometry.exterior.coords)
+
         else:
-            transformer = Transformer.from_crs(bounds_crs, target_crs, always_xy=True)
+            ring = geometry.exterior
+
+        # Ensure points are in counter-clockwise order
+        # TODO: This duplicates code in the polygon generator module. Orientation check also exists
+        # in thinned_perimeter(). Suggest refactoring so orientation check only needs to happen in
+        # one place, regardless of how polygon is generated.
+        if not ring.is_ccw:
+            exterior_coords = list(ring.reverse().coords)
+        else:
+            exterior_coords = list(ring.coords)
+
+        if not bounds_crs.equals(target_crs):
             # Transform coordinates (x, y) -> (lon, lat)
+            transformer = Transformer.from_crs(bounds_crs, target_crs, always_xy=True)
             exterior_coords = [transformer.transform(x, y) for x, y in exterior_coords]
 
         return [
