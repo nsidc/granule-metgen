@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Minor version release encompassing all features in v1.12.0rc0 - v1.12.0rc3.
+
 ## v1.12.0rc3 (2025-09-12)
 
 * Issue-247 patch of the patch: Ensure polygons generated from
