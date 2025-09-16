@@ -210,7 +210,7 @@ def points_from_spatial(
         )
 
     # If spatial_path doesn't exist, then spatial information is assumed to be available
-    # in the granule data file.
+    # in the granule data file or via collection metadata.
     if spatial_path is None:
         return None
 
