@@ -221,12 +221,10 @@ def points_from_spatial(
     # TODO: We really only need to do the "spo vs spatial" check once, since the same
     # file type will (should) be used for all granules.
     if re.search(constants.SPO_SUFFIX, spatial_path):
-        parsed_points = parse_spo(gsr, points)
+        return parse_spo(gsr, points)
 
     else:
-        parsed_points = parse_spatial(points, configuration)
-
-    points = parsed_points
+        points = parse_spatial(points, configuration)
 
     # confirm the number of points makes sense for this granule spatial representation
     if not valid_spatial_config(gsr, len(points)):
