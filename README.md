@@ -462,13 +462,21 @@ The granule_regex sections:
 Note: Ideally there would also be a version ID in this file name, but version wasn't assigned in most IceBridge collection granule names.
 
 #### Using Premet and Spatial files
-When necessary, the following two .ini elements can be used to define paths
-to the directories containing `premet` and `spatial` files. The user will be
-prompted for these values when running `metgenc init`.
+When necessary, the following two .ini elements can be added to define the paths
+to directories containing `premet` and `spatial` files—they must be two separate directories. 
+The user will be prompted for these values when running `metgenc init`.
 | .ini element | .ini section |
 | ------------- | ------------- |
 | premet_dir    | Source        |
 | spatial_dir   | Source        |
+
+- The spatial_dir defines the path to the directory containing either .spatial or .spo files.
+- The composition of .spatial/.spo and .premet files and their naming convention is to remain exactly
+   it is/has been for their use with SIPSMetgen, and is described here: https://nsidc.org/sites/default/files/documents/other/guidelines-preliminary-metadata-creation-and-data-product-delivery.pdf
+  - This was done to avoid causing changes to have to be made to existing ops and/or data producer workflows/scripts.
+- Reminder for premets: there should be a compelling reason (i.e., preserving continuity of an existing collection) from
+  the pub team in order to include more attributes than just begin/end date/time. Most, if not all, new data sets requiring
+  premets should see them include only begin/end date/time.
 
 #### Setting Collection Spatial Extent as Granule Spatial Extent
 In cases of data sets where granule spatial information is not available
@@ -503,7 +511,12 @@ MetGenC includes optimized polygon generation capabilities for creating spatial 
 
 When a granule has an associated `.spatial` file containing geodetic point data (≥3 points), MetGenC will automatically generate an optimized polygon to enclose the data points instead of using the basic point-to-point polygon method. This results in more accurate spatial coverage with fewer vertices.
 
-**This feature is optional but enabled by default within MetGenC. To disable or to change values**, edit the .ini file for the collection and add any or all of the following parameters and the values you'd like them to be. Largely the values shouldn't need to be altered, but should ingest fail for GPolygonSpatial errors, the attribute to add to the .ini file would be the `spatial_polygon_cartesian_tolerance`, and decreasing the coordinate precision (e.g., .0001 => .01).
+**This feature, while optional, is always enabled by default in MetGenC**. 
+- To disable it entirely, edit the .ini file, add a \[Spatial\] section if necessary, and add the line `spatial_polygon_enabled = false`.
+- When `spatial_polygon_enabled = true` (either by default or when set as such in the .ini file) the other parameters listed below can be added to
+  and edited in the .ini file. For the most part, the values shouldn't need to be altered! However, if ingest fails due to GPolygonSpatial errors,
+  the first attribute to add to or edit in the .ini file should be `spatial_polygon_cartesian_tolerance` by decreasing its coordinate precision
+  (e.g., .0001 => .01) which will increase the distance between gpolygon vertices, expanding the spatial extent.
 
 **Configuration Parameters:**
 
