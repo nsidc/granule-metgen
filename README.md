@@ -6,7 +6,6 @@
   * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
   * [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
     + [How to query a netCDF file for presence of MetGenC-Required Attributes](#how-to-query-a-netcdf-file-for-presence-of-metgenc-required-attributes)
-    + [Attribute Reference links](#attribute-reference-links)
   * [Geometry Logic](#geometry-logic)
     + [Geometry Rules](#geometry-rules)
     + [Geometry Logic and Expectations Table](#geometry-logic-and-expectations-table)
@@ -27,7 +26,7 @@
       - [Example running info](#example-running-info)
     + [process](#process)
       - [Examples running process](#examples-running-process)
-      - [Troubleshooting metgenc process command runs](#troubleshooting-metgenc-process-command-runs)
+      - [Troubleshooting metgenc process](#troubleshooting-metgenc-process)
     + [validate](#validate)
       - [Example running validate](#example-running-validate)
     + [Pretty-print a json file in your shell](#pretty-print-a-json-file-in-your-shell)
@@ -196,16 +195,16 @@ Notes column key:
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
- 7 = The `geospatial_bounds` global attribute contains spatial boundary information as a
+ 7 = The `geospatial_bounds` netCDF file global attribute contains spatial boundary information as a
    WKT POLYGON string. When present and `prefer_geospatial_bounds = true` is set in the
    .ini file, MetGenC will use this attribute instead of spatial coordinate values to generate
-   the display GPolygon for collections with a GEODETIC granule spatial representation.
-   If the `geospatial_bounds_crs` attribute is also present, coordinates
+   spatial representations of granules in collections with a GEODETIC granule spatial representation.
+   If the `geospatial_bounds_crs` attribute is also present in netCDF files, coordinates
    will be transformed to EPSG:4326 if needed. The corresponding .ini parameter is `prefer_geospatial_bounds` = true/false.
 
- 8 = The `geospatial_bounds_crs` global attribute specifies the coordinate reference system
-   for the coordinates in `geospatial_bounds`. Can be an EPSG identifier (e.g., "EPSG:4326")
-   or other CRS format. When present, MetGenC will transform coordinates to EPSG:4326 if needed.
+ 8 = The `geospatial_bounds_crs` netCDF file global attribute specifies the coordinate reference system
+   for the coordinates in the `geospatial_bounds` global attribute. It can be an EPSG identifier (e.g., "EPSG:4326")
+   or other CRS format. When present, MetGenC will transform `geospatial_bounds` coordinates to EPSG:4326 if needed.
    **If `geospatial_bounds` is `true` and no `geospatial_bounds_crs` attribute exists, the
    coordinates in the `geospatial_bounds` attribute are assumed to represent points in EPSG:4326.**
 
@@ -239,9 +238,9 @@ attributes in an .ini file, in other cases an operator will need to further modi
 as input files.
 
 For granules suited to using the spatial extent defined for its collection,
-a `collection_geometry_override=True` attribute/value pair can be added to the .ini file
+a `collection_geometry_override = True` attribute/value pair can be added to the .ini file
 (as long as it's a single bounding rectangle, and not two or more bounding rectangles).
-Setting `collection_geometry_override=False` in the .ini file will make MetGenC look to the
+Setting `collection_geometry_override = False` in the .ini file will make MetGenC look to the
 science files or premet/spatial files for the granule-level spatial representation geometry
 to use.
 
@@ -270,7 +269,7 @@ to use.
 | .spatial | > 2 | cartesian | yes | | There is no cartesian-associated geometry for GPolys. |
 | science file (NSIDC/CF-compliant netCDF) | NA | cartesian | no | BR | min/max lon/lat points for BR expected to be included in global attributes. |
 | science file (NSIDC/CF-compliant) | 1 or > 2 | geodetic | no | | Error if only two points. GPoly calculated from grid perimeter. |
-| science file, non-NSIDC/CF-compliant netCDF or other format | NA | either | no | As specified by .ini file. | Configuration file must include a `spatial_dir` value (a path to the directory with valid `.spatial` or `.spo` files), or `collection_geometry_override=True` entry (which must be defined as a single point or a single bounding rectangle). |
+| science file, non-NSIDC/CF-compliant netCDF or other format | NA | either | no | As specified by .ini file. | Configuration file must include a `spatial_dir` value (a path to the directory with valid `.spatial` or `.spo` files), or `collection_geometry_override = True` entry (which must be defined as a single point or a single bounding rectangle). |
 | collection spatial metadata geometry = cartesian with one BR | NA | cartesian | no | BR as described in collection metadata. | |
 | collection spatial metadata geometry = cartesian with one BR | NA | geodetic | yes | | Collection geometry and GSRCS must both be cartesian. |
 | collection spatial metadata geometry = cartesian with two or more BR | NA | cartesian | yes | | Two-part bounding rectangle is not a valid granule-level geometry. |
@@ -327,7 +326,7 @@ Example running **init**
 * The .ini file's `checksum_type = SHA256` should never be edited
 * The `kinesis_stream_name` and `staging_bucket_name` should never be edited
 * `auth_id` and `version` must accurately reflect the collection's authID and versionID
-* `log_dir` specifies the directory where log files will be written. Log files are named `metgenc-{config-name}-{timestamp}.log` where config-name is the base name of the .ini file and timestamp is in YYYYMMDD-HHMM format. The log directory must exist and be writable. If not specified, defaults to `/share/logs/metgenc`
+* `log_dir` specifies the directory where metgenc log files will be written. Log files are named `metgenc-{config-name}-{timestamp}.log` where config-name is the base name of the .ini file and timestamp is in YYYYMMDD-HHMM format. The default log directory is `/share/logs/metgenc`, but this can be edited to write metgenc logs to a different existing, writable directory location.
 * provider is a free text attribute where, for now, the version of metgenc being run should be documented
   * running `metgenc --version` will return the current version
 
@@ -356,12 +355,17 @@ R = Required for all non-netCDF file types (e.g., csv, .tif, .h5, etc) and netCD
    * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
    (csv, tif, etc.) since these should rely on premet files containing temporal details for each file.
 
-2. The time_coverage_duration attribute value specifies the duration to be applied to the `time_coverage_start`
-value to generate correct EndingDateTime values in UMMG files; this value is a constant that will
-be applied to each time_start_regex value gleaned from files. Must be a valid
+2. The time_coverage_duration attribute value specifies the duration to be applied to the `time_coverage_start` value
+in order to generate EndingDateTime values in UMMG files; this value **is a constant**. It's only capable of appling the same
+value to all time_start_regex value gleaned from files. The time_coverage_duration value must be a valid
 [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
-   * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
-   (csv, tif, etc.) since these should rely on premet files containing temporal details for each file.
+   * This attribute is meant to be used only with "nearly" compliant _netCDF_ files--not any other file types
+   since all other file types will rely on premet files to generate temporal details in output ummg metadata files.
+Example:
+```
+time_start_regex = IRTIT3_(?P<time_coverage_start>\d{8})_
+time_coverage_duration = P0DT23H59M59S
+```
 
 3. Rarely applicable for science files that aren't gridded netCDF (.txt, .csv, .jpg, .tif, etc.); this
 value is a constant that will be applied to all granule-level metadata.
@@ -416,16 +420,17 @@ NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F18_DUCk_brws.png
 ```
 
 The browse_regex:
-This simply identifies the piece of the file names used to differentiate the browse image files from the science files, in this case: `browse_regex = _brws`.
+This simply identifies the part of the browse file name that distinguishes it as the browse from the science file, in this example: `browse_regex = _brws`.
 
 The granule_regex sections:
-- `(NSIDC0081_SEAICE_PS_)`, `(_v2.0_)`, and `(DUCk)` identify the 1st, 3rd, and 4th (the last) _Capture Groups_ to parse the constants to be included in each granule name: authID, version ID, and DUCk (the latter only relevant for early CUAT testing).
+In the case where a file name element interrupts what would be a string common to both the science and browse file names, a granule_regex is required to identify the granule name.
+- `(NSIDC0081_SEAICE_PS_)`, `(_v2.0_)`, and `(DUCk)` identify the 1st, 3rd, and 4th (the last) _Capture Groups_. These are constants required to be present in each granules name: authID, version ID, and DUCk (the latter only relevant for early CUAT testing). These are combined with the following...
 
-- The _Named Capture Group granuleid_ `(?P<granuleid>[NS]{1}\d{2}km_\d{8})` matches the region, resolution, and date elements unique to each file name to be included in each granule name, e.g., `N25km_20211101` and `S25km_20211102`.
+- The _Named Capture Group granuleid_ `(?P<granuleid>[NS]{1}\d{2}km_\d{8})` matches the region, resolution, and date elements unique to each file name (e.g., `N25km_20211101` and `S25km_20211102`), which are combined with the elements in the bullet above to form unique granule names. 
 
-- `(?:F\d{2}_)?` matches the F16_, F17_, and F18_ strings in the browse file names, to acknowledge their existence so the regex will work appropriately with all files in the collection BUT the `(?:F\d{2}_)?` represents a _Non-capture Group_; these elements will be matched but won't be included in the granule name.
+- `(?:F\d{2}_)?` matches the F16_, F17_, and F18_ strings in the browse file names as a _Non-capture Group_; these elements will be matched but **won't** be included in granule names.
 
-- Thus, NSIDC0081_SEAICE_PS_, \_v2.0_, and DUCk will be combined with the granuleid capture group element to become the producerGranuleId reflected for each granule in EDSC's Granules listing. This will globally, uniquely identify all granules associated with a given collection from any other files in other collections in CUAT or CPROD. In this case that's `NSIDC0081_SEAICE_PS_N25km_20211105_v2.0_DUCk.nc` and `NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc`. These are reflected in the CNM as the product/name value, and the UMMG as the Identifier value.
+- In summary: NSIDC0081_SEAICE_PS_, \_v2.0_, and DUCk are combined with the granuleid capture group element, `(?P<granuleid>[NS]{1}\d{2}km_\d{8})`, to form the producerGranuleId reflected for each granule, e.g., `NSIDC0081_SEAICE_PS_N25km_20211105_v2.0_DUCk.nc` and `NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc` in this case. These are names that will be shown for the granules in EDSC. They globally, uniquely distinguish granules in a specific collection from any other granules in any other collections in CUAT or CPROD. These names are found in the CNM as the `product`/`name` value, and the UMMG metadata file as the `Identifier value`.
 
 ##### Example 2: Use of granule_regex for a multi-file granule with no browse
 
@@ -564,7 +569,7 @@ This enhancement is backward compatible - existing workflows continue unchanged,
 ##### Geospatial Bounds Configuration
 
 MetGenC can extract polygon vertices directly from the `geospatial_bounds`
-NetCDF attribute when it contains a WKT POLYGON string. This extracts all
+netCDF attribute when it contains a WKT POLYGON string. This extracts all
 polygon vertices as individual points, providing an alternative to the default
 of using spatial coordinate values to generate a polygon.
  **If no `geospatial_bounds_crs` attribute exists, the
@@ -673,17 +678,6 @@ directory. This promotes operators having the ability to validate and visually Q
 * When run without the dry run option, metgenc will transfer CNM to AWS, kicking off end-to-end ingest of
 data and UMM-G files to CUAT.
 
-When MetGenC is run on the VM, `metgenc process -d -c init/xxxxx.ini` must be run at the root of the vm's virtual environment, e.g., `vagrant@vmpolark2:~/metgenc$`. If you run it in the data/ or init/ or any other directory, you'll see errors like:
-```
-The configuration is invalid:
-  * The data_dir does not exist.
-  * The premet_dir does not exist.
-  * The spatial_dir does not exist.
-  * The local_output_dir does not exist.
-```
-
-If running `metgenc process` fails, check for an error message in the metgenc.log to begin troubleshooting.
-
 #### Examples running process
 The following is an example of using the dry run option (-d) to generate UMM-G and write CNM as files (-wc) for three granules (-n 3):
 
@@ -698,25 +692,28 @@ Note: Before running **process** to ingest granules to CUAT (i.e., you've not se
 channels, and post a quick "done" note when you're done ingest testing.**
 
 
-#### Troubleshooting metgenc process command runs
-* If you run `$ metgenc process -c ./init/<some .ini file>` to test end-to-end ingest, but you
-  get a flurry of errors, confirm that you completed the step to set up your AWS credentials
-  _before_ running MetGenC:
+#### Troubleshooting metgenc process
+* MetGenC processing, `metgenc process -d -c init/xxxxx.ini`, must be run at the ~/metgenc level in the
+  vm's virtual environment, e.g., `vagrant@vmpolark2:~/metgenc$`. If you run it in the data/, or init/, or any other
+  directory, you'll see errors like:
+```
+The configuration is invalid:
+  * The data_dir does not exist.
+  * The premet_dir does not exist.
+  * The spatial_dir does not exist.
+  * The local_output_dir does not exist.
+```
+* If running `metgenc process` fails for other reasons, check for an error message in the metgenc log. This is written by default to/as (/share/logs/metgenc/`metgenc-{config-name}-{timestamp}.log`).
+  * The metgenc.log will spell out the reason for the error for the operator, so the .ini file or paths pointed to in the .ini file can be spiffed up.
 
-  ```
-  source metgenc-env.sh cumulus-uat
-  ```
-
-  where `cumulus-uat` reflects the desired profile name in `~/.aws/config` and `~/.aws/credentials`.
-  (Use `cumulus-prod` for the CPRD environment.)
-  You can verify a successful AWS credential setup by running `aws configure list` at the prompt.
-  Forgetting to set up communications between MetGenC and AWS is easy to do, but thankfully, easy to fix.
-
-* When MetGenC is run on the VM, it must be run at the root of the vm's virtual environment, `metgenc`.
-
-* If running `metgenc process` fails, check for an error message in the metgenc.log (metgenc/metgenc.log)
-  to aid your troubleshooting.
-
+* If running metgenc process without the -d / --dry-run option leads to the following warning:
+```
+  The configuration is invalid:
+    The kinesis stream does not exist.
+    The staging bucket does not exist.
+```
+  It's likely indicating that the AWS credentials stored on the VM have expired or updated. The VM will have to be redeployed to fix this.
+  
 ---
 
 ### validate
@@ -742,19 +739,19 @@ Options:
     $ metgenc validate -c init/modscg.ini -t ummg (adding the -t ummg option will validate all UMM-G files; -t cnm will validate all CNM that have been written locally)
     $ metgenc validate -c init/modscg.ini (without the -t option specified, just all locally written CNM will be validated)
 
-The package `check-jsonschema` is also installed by MetGenC and can be used to validate a single file at a time:
+running the following is an alternate way to validate ummg and cnm json files, but can only be run on one file at a time:
 
     $ check-jsonschema --schemafile <path to schema file> <path to CNM or UMM-G file to check>
 
+If running `metgenc validate` fails, check the metgenc.log for an error message to begin troubleshooting.   
+
 ### Pretty-print a json file in your shell
-This is not a MetGenC command, but it's a handy way to `cat` a file and omit having
-to wade through unformatted json chaos:
-`cat <UMM-G or CNM file name> | jq "."`
+Handy tip: While not a MetGenC command, a handy way to show a file's contents without having
+to wade through unformatted json chaos is to run:
+`cat <UMM-G or CNM file name> | jq `
 
-e.g., `cat NSIDC0081_SEAICE_PS_S25km_20211104_v2.0_DUCk.nc.cnm.json | jq "."` will
-pretty-print the contents of that json file in your shell!
-
-If running `metgenc validate` fails, check for an error message in the metgenc.log to begin troubleshooting.
+e.g., running `cat /share/apps/metgenc/SNEX23_CSU_GPR/output/cnm/SNEX23_CSU_GPR_FLCF_20230307_20230316_v01.csv.cnm.json | jq`
+will pretty-print the contents of this cnm.json file in the comfort of your own shell!
 
 ## For Developers
 ### Contributing
