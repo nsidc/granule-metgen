@@ -41,7 +41,6 @@ from nsidc.metgen import __version__, aws, config, constants
 from nsidc.metgen.collection_metadata import get_collection_metadata
 from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.readers import registry, utilities
-from nsidc.metgen.spatial import create_flightline_polygon
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
@@ -742,9 +741,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
     )
 
     # Get spatial coverage from spatial file if it exists
-    spatial_content = utilities.external_spatial_values(
-        configuration.collection_geometry_override, gsr, granule
-    )
+    spatial_content = utilities.external_spatial_values(configuration, gsr, granule)
 
     # Populated summary dict looks like:
     # {
@@ -767,9 +764,7 @@ def create_ummg(configuration: config.Config, granule: Granule) -> Granule:
         gsr,
     )
 
-    summary["spatial_extent"] = populate_spatial(
-        gsr, summary["geometry"], configuration, spatial_content
-    )
+    summary["spatial_extent"] = populate_spatial(gsr, summary["geometry"])
     summary["temporal_extent"] = populate_temporal(summary["temporal"])
     summary["additional_attributes"] = populate_additional_attributes(
         premet_content, constants.UMMG_ADDITIONAL_ATTRIBUTES
@@ -983,60 +978,10 @@ def checksum(file):
 def populate_spatial(
     spatial_representation: str,
     spatial_values: list,
-    configuration: config.Config = None,
-    spatial_content: list = None,
 ) -> str:
     """
     Return a string representation of a geometry (point, bounding box, gpolygon)
-    Optionally generates optimized polygons when spatial files are present.
     """
-    # Check if we should generate polygons for spatial file data
-    if (
-        configuration is not None
-        and configuration.spatial_polygon_enabled
-        and spatial_content is not None
-        and spatial_representation == constants.GEODETIC
-        and len(spatial_values) >= 3
-    ):
-        try:
-            # Create configured polygon generator using partial application
-            generate_polygon = partial(
-                create_flightline_polygon,
-                target_coverage=configuration.spatial_polygon_target_coverage,
-                max_vertices=configuration.spatial_polygon_max_vertices,
-                cartesian_tolerance=configuration.spatial_polygon_cartesian_tolerance,
-            )
-
-            # Extract lon/lat arrays from spatial_values
-            lons = [point["Longitude"] for point in spatial_values]
-            lats = [point["Latitude"] for point in spatial_values]
-
-            # Generate polygon using our configured spatial module
-            polygon, metadata = generate_polygon(lons, lats)
-
-            if polygon is not None:
-                # Convert shapely polygon to UMM-G format
-                coords = list(polygon.exterior.coords)
-                polygon_points = [
-                    {"Longitude": float(lon), "Latitude": float(lat)}
-                    for lon, lat in coords
-                ]
-
-                # Use the existing template system
-                return ummg_spatial_gpolygon_template().safe_substitute(
-                    {"points": json.dumps(polygon_points)}
-                )
-
-        except Exception as e:
-            # If polygon generation fails, fall back to original behavior
-            import logging
-
-            logger = logging.getLogger(constants.ROOT_LOGGER)
-            logger.warning(
-                f"Polygon generation failed, using original spatial processing: {e}"
-            )
-
-    # Original behavior for all other cases
     match spatial_representation:
         case constants.CARTESIAN:
             return populate_bounding_rectangle(spatial_values)

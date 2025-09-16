@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Issue 292: Exclude `.spo` files from polygon-generation logic.
+
 ## v1.12.0 (2025-09-15)
 
 * Minor version release encompassing all features in v1.12.0rc0 - v1.12.0rc3.

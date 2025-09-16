@@ -2,9 +2,10 @@ import re
 from datetime import timezone
 
 from dateutil.parser import parse
-from funcy import distinct, first, last, lkeep
+from funcy import distinct, first, last, lkeep, partial
 
-from nsidc.metgen import constants
+from nsidc.metgen import config, constants
+from nsidc.metgen.spatial import create_flightline_polygon
 
 
 def temporal_from_premet(pdict: dict) -> list:
@@ -184,19 +185,21 @@ def refine_temporal(tvals: list):
     return tvals
 
 
-def external_spatial_values(collection_geometry_override, gsr, granule) -> list:
+def external_spatial_values(configuration, gsr, granule) -> list:
     """
-    Retrieve spatial information from a granule-specific spatial (or spo) file, or
+    Retrieve spatial information from a granule-specific spatial or spo file, or
     the collection metadata.
     """
-    if collection_geometry_override:
+    if configuration.collection_geometry_override:
         # Get spatial coverage from collection
         return points_from_collection(granule.collection.spatial_extent)
 
-    return points_from_spatial(granule.spatial_filename, gsr)
+    return points_from_spatial(granule.spatial_filename, gsr, configuration)
 
 
-def points_from_spatial(spatial_path: str, gsr: str) -> list:
+def points_from_spatial(
+    spatial_path: str, gsr: str, configuration: config.Config = None
+) -> list:
     """
     Read (lon, lat) points from a .spatial or .spo file.
     """
@@ -206,15 +209,24 @@ def points_from_spatial(spatial_path: str, gsr: str) -> list:
             "spatial_dir is specified but no .spatial or .spo file exists for granule."
         )
 
+    # If spatial_path doesn't exist, then spatial information is assumed to be available
+    # in the granule data file.
     if spatial_path is None:
         return None
 
     points = raw_points(spatial_path)
+    if not points:
+        raise Exception(f"No spatial values found in {spatial_path}.")
 
     # TODO: We really only need to do the "spo vs spatial" check once, since the same
     # file type will (should) be used for all granules.
     if re.search(constants.SPO_SUFFIX, spatial_path):
-        return parse_spo(gsr, points)
+        parsed_points = parse_spo(gsr, points)
+
+    else:
+        parsed_points = parse_spatial(points, configuration)
+
+    points = parsed_points
 
     # confirm the number of points makes sense for this granule spatial representation
     if not valid_spatial_config(gsr, len(points)):
@@ -222,14 +234,62 @@ def points_from_spatial(spatial_path: str, gsr: str) -> list:
             f"Unsupported combination of {gsr} and point count of {len(points)}."
         )
 
-    # TODO: Handle point cloud creation here if point count is greater than 1 and gsr
-    # is geodetic. Note! Flight line files can be huge!
     return points
 
 
+def parse_spatial(spatial_values: list, configuration: config.Config = None):
+    # If only a single point, or two points (assumed to identify a bounding rectangle),
+    # return spatial values without further processing
+    if len(spatial_values) <= 2:
+        return spatial_values
+
+    # Generate polygon from spatial file data
+    if configuration is not None and configuration.spatial_polygon_enabled:
+        try:
+            # Create configured polygon generator using partial application
+            generate_polygon = partial(
+                create_flightline_polygon,
+                target_coverage=configuration.spatial_polygon_target_coverage,
+                max_vertices=configuration.spatial_polygon_max_vertices,
+                cartesian_tolerance=configuration.spatial_polygon_cartesian_tolerance,
+            )
+
+            # Extract lon/lat arrays from spatial_values
+            lons = [point["Longitude"] for point in spatial_values]
+            lats = [point["Latitude"] for point in spatial_values]
+
+            # Generate polygon using our configured spatial module
+            polygon, metadata = generate_polygon(lons, lats)
+
+            if polygon is not None:
+                coords = list(polygon.exterior.coords)
+                polygon_points = [
+                    {"Longitude": float(lon), "Latitude": float(lat)}
+                    for lon, lat in coords
+                ]
+                return polygon_points
+
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(constants.ROOT_LOGGER)
+            logger.error(f"Polygon generation failed: {e}")
+
+    # Configuration does not exist, or polygon processing is not enabled.
+    # Return values without further processing
+    return spatial_values
+
+
 def valid_spatial_config(gsr: str, point_count: int) -> str:
-    if (gsr == constants.CARTESIAN) and (point_count == 2):
-        return True
+    if not point_count:
+        return False
+
+    if point_count == 2:
+        if gsr == constants.CARTESIAN:
+            return True
+
+        else:
+            return False
 
     if gsr == constants.GEODETIC:
         return True
@@ -239,10 +299,10 @@ def valid_spatial_config(gsr: str, point_count: int) -> str:
 
 def parse_spo(gsr: str, points: list) -> list:
     """
-    Read points from a .spo file, reverse the order of the points to comply with
-    the Cumulus requirement for a clockwise order to polygon points, and ensure
-    the polygon is closed. Raise an exception if either the granule spatial representation
-    or the number of points don't support a gpolygon.
+    Reverse the order of the points to comply with the Cumulus requirement for a
+    clockwise order to polygon points, and ensure the polygon is closed. Raise an
+    exception if either the granule spatial representation or the number of
+    points don't support a gpolygon.
     """
     if gsr == constants.CARTESIAN:
         raise Exception(
