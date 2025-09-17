@@ -1,6 +1,7 @@
 ## UNRELEASED
 
-* Issue 292: Exclude `.spo` files from polygon-generation logic.
+* Issue 292: Exclude `.spo` files from polygon-generation logic, regardless of
+  the value of the `spatial_polygon_enabled` flag in the `ini` file.
 
 ## v1.12.0 (2025-09-15)
 

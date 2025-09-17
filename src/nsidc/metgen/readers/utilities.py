@@ -197,6 +197,9 @@ def external_spatial_values(configuration, gsr, granule) -> list:
     return points_from_spatial(granule.spatial_filename, gsr, configuration)
 
 
+# TODO: Rename methods and parameters as needed to reduce overloading of the term "spatial."
+# Clarify whether we're talking about a spatial file, a spo file, or "spatial content" more
+# generically.
 def points_from_spatial(
     spatial_path: str, gsr: str, configuration: config.Config = None
 ) -> list:
