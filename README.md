@@ -760,6 +760,11 @@ The configuration is invalid:
     The staging bucket does not exist.
 ```
   It's almost certainly indicating that you've not sourced the credentials required (cumulus-uat, cumulus-prod) for the environment you're telling MetGenC to process in.
+
+* If metgenc reports "Successful   : False" for a specific granule, you can copy the UUID (or, just the last alphanumeric block after the dash is adequate), and then grep the metgenc log for that processing run for that id specifying only 46 lines after the id to be returned. That'll show you the log details just for that granule!
+```
+  e.g., grep -A 46 43eae1561cba metgenc.log
+```
   
 ---
 
