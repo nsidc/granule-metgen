@@ -82,6 +82,13 @@ nsidc@nsidc.org for more information.
   prod
   cd metgenc;source .venv/bin/activate;source metgenc-env.sh cumulus-prod
   ```
+BE AWARE: IF YOU'BE BEEN TESTING/INGEST CUAT INGEST, WHEN YOU'RE READY TO INGEST TO CPRD, MAKE SURE TO RUN `source metgenc-env.sh cumulus-prod`. MetGenC will happily let you use the -e prod option, but you need to have the right credentials sourced!!
+If the creds aren't pointing to the right environment, MetGenC will return:
+```
+* The kinesis stream does not exist.
+* The staging bucket does not exist.
+```
+
 Commands within the above one-liner detailed:
 * CD Into, and activate, the venv:
 
@@ -752,7 +759,7 @@ The configuration is invalid:
     The kinesis stream does not exist.
     The staging bucket does not exist.
 ```
-  It's likely indicating that the AWS credentials stored on the VM have expired or updated. The VM will have to be redeployed to fix this.
+  It's almost certainly indicating that you've not sourced the credentials required (cumulus-uat, cumulus-prod) for the environment you're telling MetGenC to process in.
   
 ---
 
