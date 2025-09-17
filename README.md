@@ -15,8 +15,10 @@
         * [INI RULES](#ini-rules)
       - [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
       - [Granule and Browse regex](#granule-and-browse-regex)
-        * [Example 1: Use of granule_regex and browse_regex for a single-file granule with multiple browse images](#example-1-use-of-granule_regex-and-browse_regex-for-a-single-file-granule-with-multiple-browse-images)
-        * [Example 2: Use of granule_regex for a multi-file granule with no browse](#example-2-use-of-granule_regex-for-a-multi-file-granule-with-no-browse)
+        * [Example 1: Use of granule_regex for multi-file granules with no browse](#example-1-use-of-granule_regex-for-multi-file-granules-with-no-browse)
+        * [Example 2: Single-file granule with good file names and no browse-omit browse_regex and granule_regex](#example-2-single-file-granule-with-good-file-names-and-no-browse-omit-browse_regex-and-granule_regex)
+        * [Example 3: Single-file granule with good file names and browse images-omit granule_regex](#example-3-single-file-granule-with-good-file-names-and-browse-images-omit-granule_regex)
+        * [Example 4: Use of granule_regex and browse_regex for single-file granules with interrupted file names](#example-4-use-of-granule_regex-and-browse_regex-for-single-file-granules-with-interrupted-file-names)
       - [Using Premet and Spatial Files](#using-premet-and-spatial-files)
       - [Setting Collection Spatial Extent as Granule Spatial Extent](#setting-collection-spatial-extent-as-granule-spatial-extent)
       - [Setting Collection Temporal Extent as Granule Temporal Extent](#setting-collection-temporal-extent-as-granule-temporal-extent)
@@ -393,9 +395,82 @@ Note column:
      like .tif, or .txt files, etc., specifying the netCDF will allow MetGenC to parse it as it would any other CF-compliant
      netCDF file, making it so operators don't need to supply premet/spatial files.
 
-##### Example 1: Use of `granule_regex` and `browse_regex` for a single-file granule with multiple browse images
-Given the .ini file's Source and Collection contents:
+##### Example 1: Use of granule_regex for multi-file granules with no browse
 
+Given the Config file Source and Collection contents:
+
+```
+[Source]
+data_dir = data/IPFLT1B_DUCk
+premet_dir = premet/ipflt1b
+spatial_dir = spatial/ipflt1b
+
+[Collection]
+auth_id = IPFLT1B_DUCk
+version = 1
+provider = OIB; metgenc version 1.10.0rc0
+granule_regex = (IPFLT1B_)(?P<granuleid>.+?(?=_)_)?(DUCk)
+reference_file_regex = _DUCk.kml
+```
+And a multi-file granule comprising the following files:
+```
+IPFLT1B_20101226_085033_DUCk.dbf
+IPFLT1B_20101226_085033_DUCk.kml
+IPFLT1B_20101226_085033_DUCk.shp
+IPFLT1B_20101226_085033_DUCk.shx
+IPFLT1B_20101226_085033_DUCk.txt
+```
+The granule_regex sections:
+
+- `(IPFLT1B_)`, and `(DUCk)` identify the 1st and 3rd (the last) _Capture Groups_ to parse the constants to be included in each granule name: authID, and DUCk.
+
+- The _Named Capture Group granuleid_ `(?P<granuleid>.+?(?=_)_)?` matches the unique date range contained in each file name to be included in each granule name, e.g., `IPFLT1B_20101226_085033_`.
+
+- Thus, IPFLT1B_ and DUCk are combined with the granuleid capture group element to become the producerGranuleId reflected for each granule in EDSC's Granules listing. This will globally, uniquely identify all granules associated with a given collection from any other files in other collections in CUAT or CPROD. In this case that's `IPFLT1B_20101226_085033_DUCk`. This is reflected in the CNM as the product/name value, and the UMMG as the Identifier value.
+Note: Ideally there would also be a version ID in this file name, but version wasn't assigned in most IceBridge collection granule names.
+
+##### Example 2: Single-file granule with good file names and no browse-omit browse_regex and granule_regex
+This .ini file's \[Source\] and \[Collection\] contents apply to a single-file granule with no browse images:
+```
+[Source]
+data_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX23_CSU_GPR_metgen/data
+premet_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX23_CSU_GPR_metgen/premet
+spatial_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX23_CSU_GPR_metgen/spatial
+
+[Collection]
+auth_id = SNEX23_CSU_GPR
+version = 1
+provider = SnowEx
+```
+No regex are necessary since the file name will simply become the granule name.
+
+##### Example 3: Single-file granule with good file names and browse images-omit granule_regex
+This .ini file's \[Source\] and \[Collection\] contents work for single-file granules with browse images:
+```
+[Source]
+data_dir = ./data/0081
+
+[Collection]
+auth_id = NSIDC-0081
+version = 2
+provider = DPT
+browse_regex = _F\d{2}
+```
+And two granules + their associated browse files and good granule names:
+```
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0.nc
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F16.png
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F17.png
+NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F18.png
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0.nc
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F16.png
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F17.png
+NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F18.png
+```
+Only the browse_regex needs to be set to capture that which distinguishes the browse from the science files, in this case that's the presence of _F\d{2}, where _F\d{2} captures the number _F16, _F17, and _F18.
+
+##### Example 4: Use of `granule_regex` and `browse_regex` for single-file granules with interrupted file names
+Given the .ini file's \[Source\] and \[Collection\] contents:
 ```
 [Source]
 data_dir = ./data/0081DUCk
@@ -430,45 +505,14 @@ In the case where a file name element interrupts what would be a string common t
 
 - `(?:F\d{2}_)?` matches the F16_, F17_, and F18_ strings in the browse file names as a _Non-capture Group_; these elements will be matched but **won't** be included in granule names.
 
-- In summary: NSIDC0081_SEAICE_PS_, \_v2.0_, and DUCk are combined with the granuleid capture group element, `(?P<granuleid>[NS]{1}\d{2}km_\d{8})`, to form the producerGranuleId reflected for each granule, e.g., `NSIDC0081_SEAICE_PS_N25km_20211105_v2.0_DUCk.nc` and `NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc` in this case. These are names that will be shown for the granules in EDSC. They globally, uniquely distinguish granules in a specific collection from any other granules in any other collections in CUAT or CPROD. These names are found in the CNM as the `product`/`name` value, and the UMMG metadata file as the `Identifier value`.
-
-##### Example 2: Use of granule_regex for a multi-file granule with no browse
-
-Given the Config file Source and Collection contents:
-
-```
-[Source]
-data_dir = data/IPFLT1B_DUCk
-premet_dir = premet/ipflt1b
-spatial_dir = spatial/ipflt1b
-
-[Collection]
-auth_id = IPFLT1B_DUCk
-version = 1
-provider = OIB; metgenc version 1.10.0rc0
-granule_regex = (IPFLT1B_)(?P<granuleid>.+?(?=_)_)?(DUCk)
-reference_file_regex = _DUCk.kml
-```
-And a multi-file granule comprising the following files:
-```
-IPFLT1B_20101226_085033_DUCk.dbf
-IPFLT1B_20101226_085033_DUCk.kml
-IPFLT1B_20101226_085033_DUCk.shp
-IPFLT1B_20101226_085033_DUCk.shx
-IPFLT1B_20101226_085033_DUCk.txt
-```
-The granule_regex sections:
-
-- `(IPFLT1B_)`, and `(DUCk)` identify the 1st and 3rd (the last) _Capture Groups_ to parse the constants to be included in each granule name: authID, and DUCk.
-
-- The _Named Capture Group granuleid_ `(?P<granuleid>.+?(?=_)_)?` matches the unique date range contained in each file name to be included in each granule name, e.g., `IPFLT1B_20101226_085033_`.
-
-- Thus, IPFLT1B_ and DUCk are combined with the granuleid capture group element to become the producerGranuleId reflected for each granule in EDSC's Granules listing. This will globally, uniquely identify all granules associated with a given collection from any other files in other collections in CUAT or CPROD. In this case that's `IPFLT1B_20101226_085033_DUCk`. This is reflected in the CNM as the product/name value, and the UMMG as the Identifier value.
-Note: Ideally there would also be a version ID in this file name, but version wasn't assigned in most IceBridge collection granule names.
+- In summary: NSIDC0081_SEAICE_PS_, \_v2.0_, and DUCk are combined with the granuleid capture group element, `(?P<granuleid>[NS]{1}\d{2}km_\d{8})`, to form the producerGranuleId reflected for each granule, e.g., `NSIDC0081_SEAICE_PS_N25km_20211105_v2.0_DUCk.nc` and `NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc`. These are the names that will be shown for the granules in EDSC. They globally, uniquely distinguish granules in a specific collection from any other granules in any other collections in CUAT or CPROD. These names are found in the CNM as the `product`/`name` value, and the UMMG metadata file as the `Identifier value`.
+  - If the granule_regex was omitted from the .ini file in this case, the cnm output would only define data and metadata files for ingest, the browse images would not be included!
+  - Since metgenc validate doesn't check attribute values, no validation errors are thrown when this happens.
+  - This hopefully is largely an example portraying a made-up edge case due to the way I'd added the _DUCk identifier to these files for early MetGenC testing!! But be aware of this if you find yourself dealing with complicated file names where the element meant to comprise the granule id are interrupted by other elements.   
 
 #### Using Premet and Spatial files
 When necessary, the following two .ini elements can be added to define the paths
-to directories containing `premet` and `spatial` files—they must be two separate directories. 
+to directories containing `premet` and `spatial` files—they must be two separate directories, and separate from the data directory. 
 The user will be prompted for these values when running `metgenc init`.
 | .ini element | .ini section |
 | ------------- | ------------- |
