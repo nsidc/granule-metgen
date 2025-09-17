@@ -1,7 +1,7 @@
 # MetGenC README.md Table of contents
 - [MetGenC](#metgenc)
   * [Level of Support](#level-of-support)
-  * [Accessing the MetGenC VM and Tips and Assumptions](#accessing-the-metgenc-vm-and-tips-and-assumptions)
+  * [Accessing the OPS MetGenC VM and Tips and Assumptions](#accessing-the-ops-metgenc-vm-and-tips-and-assumptions)
   * [Assumptions for netCDF files for MetGenC](#assumptions-for-netcdf-files-for-metgenc)
   * [MetGenC .ini File Assumtions](#metgenc-ini-file-assumtions)
   * [NetCDF Attributes MetGenC Relies upon to generate UMM-G json files](#netcdf-attributes-metgenc-relies-upon-to-generate-umm-g-json-files)
@@ -70,13 +70,17 @@ the repository and submit a pull request.
 See the [LICENSE](LICENSE.md) for details on permissions and warranties. Please contact
 nsidc@nsidc.org for more information.
 
-## Accessing the MetGenC VM and Tips and Assumptions
+## Accessing the OPS MetGenC VM and Tips and Assumptions
 * from nusnow:
-  `$ vssh staging metgenc`
+  `$ vssh production metgenc`
 
 * the one swell foop command line to kick off everything you need to run MetGenC:
   ```
-  cd metgenc;source .venv/bin/activate;source metgenc-env.sh cumulus-uat;export EARTHDATA_USERNAME=<your uname>;export EARTHDATA_PASSWORD=<your pw>
+  uat
+  cd metgenc;source .venv/bin/activate;source metgenc-env.sh cumulus-uat
+
+  prod
+  cd metgenc;source .venv/bin/activate;source metgenc-env.sh cumulus-prod
   ```
 Commands within the above one-liner detailed:
 * CD Into and Activate the venv:
@@ -84,12 +88,11 @@ Commands within the above one-liner detailed:
         $ cd metgenc
         $ source .venv/bin/activate
 
-* Before you run end-to-end ingest, be sure to source your AWS credentials:
+* Before you run end-to-end ingest, be sure to source the AWS credentials:
 
-        $ source metgenc-env.sh cumulus-uat
+        $ source metgenc-env.sh cumulus-<uat or prod>
 
-  `cumulus-uat` is the profile you want to use from the `~/.aws/credentials` file.
-  Available profiles are `cumulus-uat` and `cumulus-prod`.
+Available profiles are `cumulus-uat` and `cumulus-prod`.
 
   If you think you've already run it but can't remember, run the following:
 
@@ -105,13 +108,13 @@ Commands within the above one-liner detailed:
   secret_key          <not set>             None    None
   region              <not set>             None    None
   ```
-  or it'll show that you're all set (AWS comms-wise) for ingesting to Cumulus by
+  Or it'll show that you're all set (AWS comms-wise) for ingesting to Cumulus by
   returning the following:
 
   ```
   Name                         Value             Type    Location
   ----                         -----             ----    --------
-  profile                 cumulus-uat             env    ['AWS_DEFAULT_PROFILE', 'AWS_PROFILE']
+  profile                 cumulus-<uat or prod>   env    ['AWS_DEFAULT_PROFILE', 'AWS_PROFILE']
   access_key     ****************SQXY             env
   secret_key     ****************cJ+5             env
   region                    us-west-2     config-file    ~/.aws/config
