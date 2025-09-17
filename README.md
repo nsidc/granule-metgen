@@ -83,7 +83,7 @@ nsidc@nsidc.org for more information.
   cd metgenc;source .venv/bin/activate;source metgenc-env.sh cumulus-prod
   ```
 Commands within the above one-liner detailed:
-* CD Into and Activate the venv:
+* CD Into, and activate, the venv:
 
         $ cd metgenc
         $ source .venv/bin/activate
@@ -502,7 +502,7 @@ This simply identifies the part of the browse file name that distinguishes it as
 
 The granule_regex sections:
 In the case where a file name element interrupts what would be a string common to both the science and browse file names, a granule_regex is required to identify the granule name.
-- `(NSIDC0081_SEAICE_PS_)`, `(_v2.0_)`, and `(DUCk)` identify the 1st, 3rd, and 4th (the last) _Capture Groups_. These are constants required to be present in each granules name: authID, version ID, and DUCk (the latter only relevant for early CUAT testing). These are combined with the following...
+- `(NSIDC0081_SEAICE_PS_)`, `(_v2.0_)`, and `(DUCk)` identify the 1st, 3rd, and 4th (the last) _Capture Groups_. These are constants required to be present in each granules name: authID, version ID, and DUCk (the latter was only relevant for early CUAT testing). These are combined with the following...
 
 - The _Named Capture Group granuleid_ `(?P<granuleid>[NS]{1}\d{2}km_\d{8})` matches the region, resolution, and date elements unique to each file name (e.g., `N25km_20211101` and `S25km_20211102`), which are combined with the elements in the bullet above to form unique granule names. 
 
@@ -653,7 +653,7 @@ Options:
 #### Example running info
 
 ```
-metgenc info -c init/0081DUCkBRWS.ini
+metgenc info -c /share/apps/metgenc/SNEX23_CSU_GPR/init/SNEX23_CSU_GPR.ini
                    __
    ____ ___  ___  / /_____ ____  ____  _____
   / __ `__ \/ _ \/ __/ __ `/ _ \/ __ \/ ___/
@@ -662,43 +662,37 @@ metgenc info -c init/0081DUCkBRWS.ini
                    /____/
 Using configuration:
   + environment: uat
-  + data_dir: ./data/0081DUCk
-  + auth_id: NSIDC-0081DUCk
-  + version: 2
-  + provider: DPT
-  + local_output_dir: output
+  + data_dir: /disks/sidads_staging/SNOWEX_metgen/SNEX23_CSU_GPR_metgen/data
+  + auth_id: SNEX23_CSU_GPR
+  + version: 1
+  + provider: SnowEx
+  + local_output_dir: /share/apps/metgenc/SNEX23_CSU_GPR/output
   + ummg_dir: ummg
   + kinesis_stream_name: nsidc-cumulus-uat-external_notification
   + staging_bucket_name: nsidc-cumulus-uat-ingest-staging
   + write_cnm_file: True
   + overwrite_ummg: True
   + checksum_type: SHA256
-  + log_dir: /share/logs/metgenc
   + number: 1000000
   + dry_run: False
-  + premet_dir: None
-  + spatial_dir: None
+  + premet_dir: /disks/sidads_staging/SNOWEX_metgen/SNEX23_CSU_GPR_metgen/premet
+  + spatial_dir: /disks/sidads_staging/SNOWEX_metgen/SNEX23_CSU_GPR_metgen/spatial
   + collection_geometry_override: False
   + collection_temporal_override: False
   + time_start_regex: None
   + time_coverage_duration: None
   + pixel_size: None
   + browse_regex: _brws
-  + granule_regex: (NSIDC0081_SEAICE_PS_)(?P<granuleid>[NS]{1}\d{2}km_\d{8})(_v2.0_)(?:F\d{2}_)?(DUCk)
+  + granule_regex: None
+  + reference_file_regex: None
+  + spatial_polygon_enabled: False
+  + spatial_polygon_target_coverage: 0.98
+  + spatial_polygon_max_vertices: 100
+  + spatial_polygon_cartesian_tolerance: 0.0001
+  + prefer_geospatial_bounds: False
+  + log_dir: /share/logs/metgenc
+  + name: SNEX23_CSU_GPR
 ```
-
-* environment: reflects `uat` as this is the default environment. This can be changed on the command line when `metgenc process` is run by adding the `-e` / `--env` option (e.g., metgenc process -e prod).
-* data_dir:, auth_id:, version:, provider:, local_output_dir:, and ummg_dir: (which is relative to the local_output_dir) are set by the operator in the config file.
-* kinesis_stream_name: and staging_bucket_name: could be changed by the operator in the config file, but should be left as-is!
-* write_cnm_file:, and overwrite_ummg: are editable by operators in the config file
-  * write_cnm_file: can be set here as `true` or `false`. Setting this to `true` when testing allows you to visually qc CNM content as well as run `metgenc validate` to assure they're valid for ingest. Once known to be valid, and you're ready to ingest data end-to-end, this can be edited to `false` to prevent CNM from being written locally if desired. They'll always be sent to AWS regardless of the value being `true` or `false`.
-  * overwrite_ummg: when set to `true` will overwrite any existing UMM-G files for a data set present in the vm's MetGenC venv output/ummg directory. If set to `false` any existing files would be preserved, and only new files would be written.
-* checksum_type: is another config file entry that could be changed by the operator, but should be left as-is!
-* number: 1000000 is the default max granule count for ingest. This value is not found in the config file, thus it can only be changed by a DUCk developer if necessary.
-* dry_run: reflects the option included (or not) by the operator in the command line when `metgenc process` is run.
-* premet_dir:, spatial_dir:, collection_geometry_override:, collection_temporal_override:,
-  time_start_regex:, time_coverage_duration:, pixel_size:, browse_regex:, and granule_regex:
-  are all optional as they're data set dependent and should be set when necessary by operators within the config file.
 ---
 
 ### process
@@ -712,7 +706,7 @@ Usage: metgenc process [OPTIONS]
 Options:
   -c, --config TEXT   Path to configuration file  [required]
   -d, --dry-run       Don't stage files on S3 or publish messages to Kinesis
-  -e, --env TEXT      environment  [default: uat]
+  -e, --env TEXT      environment  [default: uat]  #note: this can be set to either `uat` or `prod`
   -n, --number count  Process at most 'count' granules.
   -wc, --write-cnm    Write CNM messages to files.
   -o, --overwrite     Overwrite existing UMM-G files.
@@ -721,9 +715,9 @@ Options:
 The **process** command can be run either with or without specifying the `-d` / `--dry-run` option.
 * When the dry run option is specified _and_ the `-wc` / `--write-cnm` option is invoked, or your config
 file contains `write_cnm_file = true` (instead of `= false`), CNM will be written locally to the output/cnm
-directory. This promotes operators having the ability to validate and visually QC their content before letting them guide ingest to CUAT.
+directory (the operator must have already created!). This promotes operators having the ability to validate and visually QC their content before ingesting a collection.
 * When run without the dry run option, metgenc will transfer CNM to AWS, kicking off end-to-end ingest of
-data and UMM-G files to CUAT.
+data and UMM-G files.
 
 #### Examples running process
 The following is an example of using the dry run option (-d) to generate UMM-G and write CNM as files (-wc) for three granules (-n 3):
@@ -733,10 +727,9 @@ The following is an example of using the dry run option (-d) to generate UMM-G a
 This next example would run end-to-end ingest of all granules (assuming < 1000000 granules) in the data directory specified in the test.ini config file
 and their UMM-G files into the CUAT environment:
 
-    $ metgenc process -c ./init/test.ini -e uat
-Note: Before running **process** to ingest granules to CUAT (i.e., you've not set it to dry run mode),
-**as a courtesy to Cumulus devs and ops folks, post Slack messages to NSIDC's `#Cumulus` and `cloud-ingest-ops`
-channels, and post a quick "done" note when you're done ingest testing.**
+    $ metgenc process -c ./init/test.ini -e <uat or prod>
+Note: Before running **process** without the dry run option, **post Slack messages to NSIDC's `#Cumulus` and `cloud-ingest-ops`
+channels, and post a quick "done" note when you're done ingest testing as a courtesy to Cumulus devs and ops folks**
 
 
 #### Troubleshooting metgenc process
