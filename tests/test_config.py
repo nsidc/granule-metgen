@@ -1,6 +1,6 @@
 import dataclasses
 import re
-from configparser import ConfigParser, ExtendedInterpolation
+from configparser import ConfigParser
 from unittest.mock import patch
 
 import pytest
@@ -53,26 +53,6 @@ def expected_keys():
             "name",
         ]
     )
-
-
-@pytest.fixture
-def cfg_parser():
-    cp = ConfigParser(interpolation=ExtendedInterpolation())
-    cp["Source"] = {"data_dir": "/data/example"}
-    cp["Collection"] = {"auth_id": "DATA-0001", "version": 42, "provider": "FOO"}
-    cp["Destination"] = {
-        "local_output_dir": "/output/here",
-        "ummg_dir": "ummg",
-        "kinesis_stream_name": "xyzzy-${environment}-stream",
-        "staging_bucket_name": "xyzzy-${environment}-bucket",
-        "write_cnm_file": False,
-    }
-    cp["Settings"] = {
-        "checksum_type": "SHA256",
-        "number": 1,
-        "log_dir": "/tmp",
-    }
-    return cp
 
 
 def test_config_parser_without_filename():

@@ -3,7 +3,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from nsidc.metgen import constants, metgen
+from nsidc.metgen import config, constants, metgen
 from nsidc.metgen.readers import utilities
 
 # Unit tests for the 'utilities' module functions.
@@ -294,12 +294,14 @@ def test_spo_is_geodetic():
 
 @patch("nsidc.metgen.readers.utilities.points_from_collection")
 def test_uses_spatial_from_collection(
-    collection_handler_mock, collection_spatial, simple_collection_metadata
+    collection_handler_mock, collection_spatial, simple_collection_metadata, cfg_parser
 ):
     simple_collection_metadata.spatial_extent = collection_spatial
     fake_granule = metgen.Granule("fake_granule", collection=simple_collection_metadata)
+    cfg_parser["Source"] = {"collection_geometry_override": True}
+    cfg = config.configuration(cfg_parser, {}, constants.DEFAULT_CUMULUS_ENVIRONMENT)
 
-    utilities.external_spatial_values(True, constants.CARTESIAN, fake_granule)
+    utilities.external_spatial_values(cfg, constants.CARTESIAN, fake_granule)
     assert collection_handler_mock.called
     assert collection_handler_mock.call_args.args[0] == collection_spatial
 
