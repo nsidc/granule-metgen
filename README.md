@@ -521,22 +521,36 @@ In the case where a file name element interrupts what would be a string common t
   - This hopefully is largely an example portraying a made-up edge case due to the way I'd added the _DUCk identifier to these files for early MetGenC testing!! But be aware of this if you find yourself dealing with complicated file names where the element meant to comprise the granule id are interrupted by other elements.   
 
 #### Using Premet and Spatial files
-When necessary, the following two .ini elements can be added to define the paths
-to directories containing `premet` and `spatial` files—they must be two separate directories, and separate from the data directory. 
-The user will be prompted for these values when running `metgenc init`.
+The following two .ini elements can be added to the .ini file to define paths
+to the directories containing `premet` and `spatial` files. The paths must define
+two distinct directories which must also be distinct from the data directory. 
+The user will be prompted for these values when running `metgenc init` (but are optional
+elements in the .ini file).
 | .ini element | .ini section |
 | ------------- | ------------- |
 | premet_dir    | Source        |
 | spatial_dir   | Source        |
 
-- The spatial_dir defines the path to the directory containing either .spatial or .spo files.
-- The composition of .spatial/.spo and .premet files and their naming convention is to remain exactly
-   it is/has been for their use with SIPSMetgen, and is described here: https://nsidc.org/sites/default/files/documents/other/guidelines-preliminary-metadata-creation-and-data-product-delivery.pdf
+- The spatial_dir is used to define a path to the directory containing either .spatial or .spo files.
+- The composition of .spatial/.spo and .premet files and their naming convention remains exactly
+   as it was for their use with SIPSMetgen (as described here: https://nsidc.org/sites/default/files/documents/other/guidelines-preliminary-metadata-creation-and-data-product-delivery.pdf).
   - This was done to avoid changing existing ops and/or data producer workflows/scripts.
-- Reminder for premets: there should be a compelling reason (i.e., preserving continuity of an existing collection) from
-  the pub team in order to include more attributes than just begin/end date/time. Most, if not all, new data sets requiring
+- Reminder for premets: there should be a compelling reason (such as a need to preserve granule-level
+  metadata continuity for an existing collection) from the pub team in order to include more
+  attributes than just begin/end date/time. Most, if not all, new data sets requiring
   premets should see them include only begin/end date/time.
-
+- At the moment with the production metgenc vm running **metgenc version 1.12.0**, when .spo files are used
+  for a data set, the .ini file needs to include a [Spatial] section defininig `spatial_polygon_enabled = false`
+  so that the vertices defined are used directly (instead of accidentally interpreted by MetGenC as a data set
+  footprint around which a gpolygon needs to be generated). 
+  e.g.,
+```
+[Spatial]
+spatial_polygon_enabled = false
+```
+(Note: A fix has been implemented in MetGenC version 1.13.0rc0; once version 1.13.0 is released and running
+on the production metgenc vm, the .spo issue will be a thing of the past).
+ 
 #### Setting Collection Spatial Extent as Granule Spatial Extent
 In cases of data sets where granule spatial information is not available
 by interrogating the data or via `spatial` or `.spo` files, the operator
