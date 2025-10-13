@@ -394,11 +394,11 @@ Note column:
 1. The file name pattern identifying the browse file(s) accompanying single or multi-file granules. Granules
    with multiple associated browse files work fine with MetGenC! The default is `_brws`, change it to reflect
    the browse file names of the data delivered. This element is prompted for when running `metgenc init`.
-3. The file name pattern to be used for multi-file granules to define a file name pattern to appropriately
+2. The granule_regex  to be used for multi-file granules to define a file name pattern to appropriately
    group files together as a granule using the elements common amongst their names.
    - This must result in a globally unique: product/name (in CNM), and Identifier (as the IdentifierType: ProducerGranuleId in UMM-G)
      generated for each granule. This init element value must be added manually as it's **not** included in the `metgenc init` prompts.
-5. The file name pattern identifying a single file for metgenc to reference as the primary
+3. The file name pattern identifying a single file for metgenc to reference as the primary
    file in a multi-file granule. This must be specified whenever working with multi-file granules. This element
    is prompted for when running `metgenc init`.
    * In the case of multi-file granules containing a CF-compliant netCDF science file and other supporting files
@@ -416,30 +416,29 @@ premet_dir = premet/ipflt1b
 spatial_dir = spatial/ipflt1b
 
 [Collection]
-auth_id = IPFLT1B_DUCk
+auth_id = IPFLT1B
 version = 1
-provider = OIB; metgenc version 1.10.0rc0
-granule_regex = (IPFLT1B_)(?P<granuleid>.+?(?=_)_)?(DUCk)
-reference_file_regex = _DUCk.kml
+provider = OIB
+granule_regex = (IPFLT1B_)(?P<granuleid>.+?(?=_)_\d*)(v01.0)
+reference_file_regex = .kml
 ```
 And a multi-file granule comprising the following files:
 ```
-IPFLT1B_20101226_085033_DUCk.dbf
-IPFLT1B_20101226_085033_DUCk.kml
-IPFLT1B_20101226_085033_DUCk.shp
-IPFLT1B_20101226_085033_DUCk.shx
-IPFLT1B_20101226_085033_DUCk.txt
+IPFLT1B_20101226_085033_v01.0.dbf
+IPFLT1B_20101226_085033_v01.0.kml
+IPFLT1B_20101226_085033_v01.0.shp
+IPFLT1B_20101226_085033_v01.0.shx
+IPFLT1B_20101226_085033_v01.0.txt
 ```
 The granule_regex sections:
 
-- `(IPFLT1B_)`, and `(DUCk)` identify the 1st and 3rd (the last) _Capture Groups_ to parse the constants to be included in each granule name: authID, and DUCk.
+- `(IPFLT1B_)` and (V01.0) identifies _Capture Groups_ to parse constants expected to be included in each granule name, in this case, the authID and version ID.
 
-- The _Named Capture Group granuleid_ `(?P<granuleid>.+?(?=_)_)?` matches the unique date range contained in each file name to be included in each granule name, e.g., `IPFLT1B_20101226_085033_`.
+- The _Named Capture Group granuleid_ `(?P<granuleid>.+?(?=_)_\d*)` matches the unique date range contained in each file name to be included in each multi-file granule name, e.g., `IPFLT1B_20101226_085033_`.
 
-- Thus, IPFLT1B_ and DUCk are combined with the granuleid capture group element to become the producerGranuleId reflected for each granule in EDSC's Granules listing. This will globally, uniquely identify all granules associated with a given collection from any other files in other collections in CUAT or CPROD. In this case that's `IPFLT1B_20101226_085033_DUCk`. This is reflected in the CNM as the product/name value, and the UMMG as the Identifier value.
-Note: Ideally there would also be a version ID in this file name, but version wasn't assigned in most IceBridge collection granule names.
+- Thus, IPFLT1B_ and v01.0 are combined with the granuleid capture group to form the producerGranuleId reflected for each granule in EDSC's Granules listing. This will globally, uniquely identify all granules associated with a given collection from any other files in other collections in CUAT or CPROD. In this case that's `IPFLT1B_20101226_085033_v01.0`. This is reflected in the CNM as the product/name value, and the UMMG as the Identifier value.
 
-##### INI File Example 2: Single-file granule with good file names and no browse-omit browse_regex and granule_regex
+##### INI File Example 2: Single-file granule with good file names and no browse; omit browse_regex and granule_regex
 This .ini file's \[Source\] and \[Collection\] contents apply to a single-file granule with no browse images:
 ```
 [Source]
@@ -454,7 +453,7 @@ provider = SnowEx
 ```
 No regex are necessary since the file name will simply become the granule name.
 
-##### INI File Example 3: Single-file granule with good file names and browse images-omit granule_regex
+##### INI File Example 3: Single-file granule with good file names and browse images; omit granule_regex
 This .ini file's \[Source\] and \[Collection\] contents work for single-file granules with browse images:
 ```
 [Source]
@@ -479,7 +478,7 @@ NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F18.png
 ```
 Only the browse_regex needs to be set to capture that which distinguishes the browse from the science files, in this case that's the presence of _F\d{2}, where _F\d{2} captures the number _F16, _F17, and _F18.
 
-##### INI File Example 4: Use of `granule_regex` and `browse_regex` for single-file granules with interrupted file names
+##### INI File Example 4: Use of `granule_regex` and `browse_regex` for single-file granules with interrupted file names (this _should_ be a seldom-seen scenario)
 Given the .ini file's \[Source\] and \[Collection\] contents:
 ```
 [Source]
