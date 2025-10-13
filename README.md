@@ -411,32 +411,40 @@ Given the Config file Source and Collection contents:
 
 ```
 [Source]
-data_dir = data/IPFLT1B_DUCk
-premet_dir = premet/ipflt1b
-spatial_dir = spatial/ipflt1b
+data_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX_MCS_Lidar_metgen/data
+premet_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX_MCS_Lidar_metgen/premet
+spatial_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX_MCS_Lidar_metgen/spatial
+collection_geometry_override = False
+collection_temporal_override = False
 
 [Collection]
-auth_id = IPFLT1B
+auth_id = SNEX_MCS_Lidar
 version = 1
-provider = OIB
-granule_regex = (IPFLT1B_)(?P<granuleid>.+?(?=_)_\d*)(v01.0)
-reference_file_regex = .kml
+provider = SnowEx
+granule_regex = (SNEX_MCS_Lidar_)(?P<granuleid>\d{8})(?:_[-a-zA-Z0-9]+)(?:_V01\.0) 
+reference_file_regex = _SD_
 ```
-And a multi-file granule comprising the following files:
+And two multi-file granules comprising the following files:
 ```
-IPFLT1B_20101226_085033_v01.0.dbf
-IPFLT1B_20101226_085033_v01.0.kml
-IPFLT1B_20101226_085033_v01.0.shp
-IPFLT1B_20101226_085033_v01.0.shx
-IPFLT1B_20101226_085033_v01.0.txt
+SNEX_MCS_Lidar_20250404_DSM_V01.0.tif
+SNEX_MCS_Lidar_20250404_DTM_V01.0.tif
+SNEX_MCS_Lidar_20250404_SD_V01.0.tif
+SNEX_MCS_Lidar_20250404_CHM_V01.0.tif
+
+SNEX_MCS_Lidar_20221208_DSM_V01.0.tif
+SNEX_MCS_Lidar_20221208_CHM_V01.0.tif
+SNEX_MCS_Lidar_20221208_DTM_V01.0.tif
+SNEX_MCS_Lidar_20221208_SD_V01.0.tif
 ```
 The granule_regex sections:
 
-- `(IPFLT1B_)` and (V01.0) identifies _Capture Groups_ to parse constants expected to be included in each granule name, in this case, the authID and version ID.
+- `(SNEX_MCS_Lidar_)` identifies a _Capturing Group_ which parses this constant expected to be included in each granule name, in this case it's the authID (NOTE: the versionID could/should also be made a capturing group. This particular data set sees ongoing ingest where originally the version ID was omitted from the multi-file granule names, so for consistency it's not included now and is made a non-capturing group, explained below.
 
-- The _Named Capture Group granuleid_ `(?P<granuleid>.+?(?=_)_\d*)` matches the unique date range contained in each file name to be included in each multi-file granule name, e.g., `IPFLT1B_20101226_085033_`.
+- The _Named Capture Group granuleid_ `(?P<granuleid>\d{8})` matches the unique date contained in each file name to be included in each multi-file granule name, e.g., `IPFLT1B_20101226_085033_`.
+  
+- `(?:_[-a-zA-Z0-9]+)` and `(?:_V01\.0)` identify _Non-Capturing Groups_ comprising the variables and the version id named in each file. The Non-Capturing groups allow the regex to acknowledge the presence of these elements in individual file names, but lead them to be omitted from the multi-file granule name.
 
-- Thus, IPFLT1B_ and v01.0 are combined with the granuleid capture group to form the producerGranuleId reflected for each granule in EDSC's Granules listing. This will globally, uniquely identify all granules associated with a given collection from any other files in other collections in CUAT or CPROD. In this case that's `IPFLT1B_20101226_085033_v01.0`. This is reflected in the CNM as the product/name value, and the UMMG as the Identifier value.
+- Thus, SNEX_MCS_Lidar_ is combined with the granuleid capture group's unique date to form the producerGranuleId reflected for each granule in EDSC's Granules listing, and in this example, they're: `SNEX_MCS_Lidar_20250404` and `SNEX_MCS_Lidar_20221208`. These names are found in the CNM as the product/name value, and in the UMMG files as the Identifier value.
 
 ##### INI File Example 2: Single-file granule with good file names and no browse; omit browse_regex and granule_regex
 This .ini file's \[Source\] and \[Collection\] contents apply to a single-file granule with no browse images:
