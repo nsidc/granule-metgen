@@ -399,11 +399,11 @@ Note column:
    - This must result in a globally unique: product/name (in CNM), and Identifier (as the IdentifierType: ProducerGranuleId in UMM-G)
      generated for each granule. This init element value must be added manually as it's **not** included in the `metgenc init` prompts.
 3. The file name pattern identifying a single file for metgenc to reference as the primary
-   file in a multi-file granule. This must be specified whenever working with multi-file granules. This element
+   file in a multi-file granule. This is required for processing multi-file granules. This element's value
    is prompted for when running `metgenc init`.
    * In the case of multi-file granules containing a CF-compliant netCDF science file and other supporting files
-     like .tif, or .txt files, etc., specifying the netCDF will allow MetGenC to parse it as it would any other CF-compliant
-     netCDF file, making it so operators don't need to supply premet/spatial files.
+     like .tif, or .txt files, etc., specifying the netCDF file allows MetGenC to parse it as it would any other CF-compliant
+     netCDF file, making it so operators won't need to supply premet/spatial files!!
 
 ##### INI File Example 1: Use of granule_regex for multi-file granules with no browse
 
