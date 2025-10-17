@@ -142,7 +142,7 @@ Available profiles are `cumulus-uat` and `cumulus-prod`.
   that variable is the same in every science file).
 
 ## MetGenC .ini File Assumtions
-* A `pixel_size` attribute is needed in a data set's .ini file when gridded science files don't include a GeoTransform attribute in the grid mapping variable. The value specified should be just a number—no units (m, km) need to be specified since they're assumed to be the same as the units of those defined by the spatial coordinate variables in the data set's science files.
+* A `pixel_size` attribute is needed in a data set's .ini file when gridded science files don't include a GeoTransform attribute in the grid mapping variable. The value specified should be just a number—no units (m, km) need to be specified since they're assumed to be the same as the units of those defined by the coordinate variables in the data set's science files.
   * e.g., `pixel_size = 25`
 * Date/time strings can be parsed using `datetime.fromisoformat`
 * The checksum_type must be SHA256
@@ -169,7 +169,7 @@ suggesting data producers include the Attributes used by MetGenC in their netCDF
 | geospatial_lat_min (global)   |                | R                | |
 | geospatial_lat_max (global)   |                | R                | |
 | geospatial_bounds (global)    |                | R                | 7, OC |
-| geospatial_bounds_crs (global) |               | ?                | 8    |
+| geospatial_bounds_crs (global) |               | R                | 8    |
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 5       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 6       |
 
@@ -186,7 +186,7 @@ Notes column key:
   time_coverage_start is `time_start_regex` = \<value\>, and for time_coverage_end the
   .ini attribute is `time_coverage_duration` = \<value\>.
 
- 2 = A grid mapping variable is required if the horizontal spatial coordinates are not
+ 2 = A grid mapping variable is required if the horizontal coordinate variables aren't
    longitude and latitude and the intent of the data provider is to geolocate
    the data. `grid_mapping` and `grid_mapping_name` allow programmatic identification of
    the variable holding information about the horizontal coordinate reference system.
@@ -209,7 +209,7 @@ Notes column key:
 
  7 = The `geospatial_bounds` netCDF file global attribute contains spatial boundary information as a
    WKT POLYGON string. When present and `prefer_geospatial_bounds = true` is set in the
-   .ini file, MetGenC will use this attribute instead of spatial coordinate values to generate
+   .ini file, MetGenC will use this attribute instead of coordinate variable values to generate
    spatial representations of granules in collections with a GEODETIC granule spatial representation.
    If the `geospatial_bounds_crs` attribute is also present in netCDF files, coordinates
    will be transformed to EPSG:4326 if needed. The corresponding .ini parameter is `prefer_geospatial_bounds` = true/false.
