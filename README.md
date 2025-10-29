@@ -74,15 +74,16 @@ nsidc@nsidc.org for more information.
 * from nusnow:
   `$ vssh production metgenc`
 
-* the one swell foop command line to kick off everything you need to run MetGenC:
+* a one-swell-foop command line to kick off everything you need to run MetGenC:
   ```
-  uat
+  for processing in uat
   cd metgenc;source .venv/bin/activate;source metgenc-env.sh cumulus-uat
 
-  prod
+  or for processing in prod
   cd metgenc;source .venv/bin/activate;source metgenc-env.sh cumulus-prod
   ```
-BE AWARE: IF YOU'BE BEEN TESTING/INGEST CUAT INGEST, WHEN YOU'RE READY TO INGEST TO CPRD, MAKE SURE TO RUN `source metgenc-env.sh cumulus-prod`. MetGenC will happily let you use the -e prod option, but you need to have the right credentials sourced!!
+BE AWARE: IF YOU'BE BEEN TESTING/INGEST CUAT INGEST, WHEN YOU'RE READY TO INGEST TO CPRD, MAKE SURE TO RUN `source metgenc-env.sh cumulus-prod`. 
+You need to have the right credentials sourced before processing will succeed to that environment!!
 If the creds aren't pointing to the right environment, MetGenC will return:
 ```
 * The kinesis stream does not exist.
