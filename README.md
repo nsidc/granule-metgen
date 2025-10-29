@@ -744,7 +744,7 @@ Options:
 The **process** command can be run either with or without specifying the `-d` / `--dry-run` option.
 * When the dry run option is specified _and_ the `-wc` / `--write-cnm` option is invoked, or your config
 file contains `write_cnm_file = true` (instead of `= false`), CNM will be written locally to the output/cnm
-directory (the operator must have already created!). This promotes operators having the ability to validate and visually QC their content before ingesting a collection.
+directory (**operator is responsible for creating the output and ummg, cnm subdirectories for each collection**). This promotes operators having the ability to validate and visually QC their content before ingesting a collection.
 * When run without the dry run option, metgenc will transfer CNM to AWS, kicking off end-to-end ingest of
 data and UMM-G files.
 
