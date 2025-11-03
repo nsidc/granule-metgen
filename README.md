@@ -487,7 +487,7 @@ NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F18.png
 ```
 Only the browse_regex needs to be set to capture that which distinguishes the browse from the science files, in this case that's the presence of _F\d{2}, where _F\d{2} captures the number _F16, _F17, and _F18.
 
-##### INI File Example 4: Use of `granule_regex` and `browse_regex` for single-file granules with interrupted file names (this _should_ be a seldom-seen scenario)
+##### INI File Example 4: Use of `granule_regex` and `browse_regex` for single-file granules with interrupted file names
 Given the .ini file's \[Source\] and \[Collection\] contents:
 ```
 [Source]
