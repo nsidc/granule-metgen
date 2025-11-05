@@ -395,10 +395,11 @@ Note column:
 1. The file name pattern identifying the browse file(s) accompanying single or multi-file granules. Granules
    with multiple associated browse files work fine with MetGenC! The default is `_brws`, change it to reflect
    the browse file names of the data delivered. This element is prompted for when running `metgenc init`.
-2. The granule_regex  to be used for multi-file granules to define a file name pattern to appropriately
+2. The granule_regex needs to be used for multi-file granules to define a file name pattern to appropriately
    group files together as a granule using the elements common amongst their names.
    - This must result in a globally unique: product/name (in CNM), and Identifier (as the IdentifierType: ProducerGranuleId in UMM-G)
-     generated for each granule. This init element value must be added manually as it's **not** included in the `metgenc init` prompts.
+     generated for each granule.
+   - This init element value must be added manually as it's **not** included in the `metgenc init` prompts.
 3. The file name pattern identifying a single file for metgenc to reference as the primary
    file in a multi-file granule. This is required for processing multi-file granules. This element's value
    is prompted for when running `metgenc init`.
@@ -519,14 +520,17 @@ The granule_regex sections:
 In the case where a file name element interrupts what would be a string common to both the science and browse file names, a granule_regex is required to identify the granule name.
 - `(NSIDC0081_SEAICE_PS_)`, `(_v2.0_)`, and `(DUCk)` identify the 1st, 3rd, and 4th (the last) _Capture Groups_. These are constants required to be present in each granules name: authID, version ID, and DUCk (the latter was only relevant for early CUAT testing). These are combined with the following...
 
-- The _Named Capture Group granuleid_ `(?P<granuleid>[NS]{1}\d{2}km_\d{8})` matches the region, resolution, and date elements unique to each file name (e.g., `N25km_20211101` and `S25km_20211102`), which are combined with the elements in the bullet above to form unique granule names. 
+- The _Named Capture Group granuleid_ `(?P<granuleid>[NS]{1}\d{2}km_\d{8})` matches the region, resolution, and date elements unique-yet-consistent within each file name (e.g., `N25km_20211101` and `S25km_20211102`), which are combined with the elements in the bullet above to form unique granule names. 
 
 - `(?:F\d{2}_)?` matches the F16_, F17_, and F18_ strings in the browse file names as a _Non-capture Group_; these elements will be matched but **won't** be included in granule names.
 
 - In summary: NSIDC0081_SEAICE_PS_, \_v2.0_, and DUCk are combined with the granuleid capture group element, `(?P<granuleid>[NS]{1}\d{2}km_\d{8})`, to form the producerGranuleId reflected for each granule, e.g., `NSIDC0081_SEAICE_PS_N25km_20211105_v2.0_DUCk.nc` and `NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc`. These are the names that will be shown for the granules in EDSC. They globally, uniquely distinguish granules in a specific collection from any other granules in any other collections in CUAT or CPROD. These names are found in the CNM as the `product`/`name` value, and the UMMG metadata file as the `Identifier value`.
   - If the granule_regex was omitted from the .ini file in this case, the cnm output would only define data and metadata files for ingest, the browse images would not be included!
   - Since metgenc validate doesn't check attribute values, no validation errors are thrown when this happens.
-  - This hopefully is largely an example portraying a made-up edge case due to the way I'd added the _DUCk identifier to these files for early MetGenC testing!! But be aware of this if you find yourself dealing with complicated file names where the element meant to comprise the granule id are interrupted by other elements.   
+  - This hopefully is largely an example portraying a made-up edge case due to the way I'd added the _DUCk identifier to these files for early MetGenC testing!! But be aware of this if you find yourself dealing with complicated file names where the element meant to comprise the granule id are interrupted by other elements.
+    
+ The granuleid _Named Capture Group_ can **only define common** file name elements. When considering renaming files for a data set, keep in mind: the elements that vary within each file name comprising a multi-file granule must not fall within the granuleid _Named Capture Group_. Variable elements must be situated such that a _Non-Capturing Group_ can be used to account for them to create an appropriate granule ID, but a  _Non-Capturing Group_ can't be nestled within the granuleid _Named Capture Group_.
+ 
 
 #### Using Premet and Spatial files
 The following two .ini elements can be added to the .ini file to define paths
