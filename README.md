@@ -427,17 +427,21 @@ provider = SnowEx
 granule_regex = (SNEX_MCS_Lidar_)(?P<granuleid>\d{8})(?:_[-a-zA-Z0-9]+)(?:_V01\.0) 
 reference_file_regex = _SD_
 ```
-And two multi-file granules comprising the following files:
+And two multi-file granules comprising the following files and their premet/spatial files named such that they reflect what will be the Granule ID:
 ```
 SNEX_MCS_Lidar_20250404_DSM_V01.0.tif
 SNEX_MCS_Lidar_20250404_DTM_V01.0.tif
 SNEX_MCS_Lidar_20250404_SD_V01.0.tif
 SNEX_MCS_Lidar_20250404_CHM_V01.0.tif
+SNEX_MCS_Lidar_20221208.premet
+SNEX_MCS_Lidar_20221208.spo
 
 SNEX_MCS_Lidar_20221208_DSM_V01.0.tif
 SNEX_MCS_Lidar_20221208_CHM_V01.0.tif
 SNEX_MCS_Lidar_20221208_DTM_V01.0.tif
 SNEX_MCS_Lidar_20221208_SD_V01.0.tif
+SNEX_MCS_Lidar_20221208.premet
+SNEX_MCS_Lidar_20221208.spo
 ```
 The granule_regex sections:
 
@@ -533,8 +537,13 @@ In the case where a file name element interrupts what would be a string common t
  The granuleid _Named Capture Group_ can **only define common** file name elements. When considering renaming files for a data set, keep in mind: the elements that vary within each file name comprising a multi-file granule must not fall within the granuleid _Named Capture Group_. Variable elements must be situated such that a _Non-Capturing Group_ can be used to account for them to create an appropriate granule ID, but a  _Non-Capturing Group_ can't be nestled within the granuleid _Named Capture Group_.
 
 ##### INI File Example 5: Use of `granule_regex` and `browse_regex` for multi-file granules with variables in file names
-ini file \[Collection\] contents:
+ini file \[Source\] and \[Collection\] contents:
 ```
+[Source]
+data_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX23_SD_TLI_metgen/data
+collection_geometry_override = True
+collection_temporal_override = True
+
 [Collection]
 auth_id = SNEX23_SD_TLI
 version = 1
@@ -553,7 +562,7 @@ SNEX17_SD_TLI_image_20161001-20170601_V01.0_brws.png
  - (SNEX23_SD_TLI_) and (V01\.0) are _Capture Groups_
  - (?:[a-z]+) is the _Non-Capturing Group_ to omit the variables (snowdepth, polemetadata, etc.) from the multi-file granule's granule ID
  - (?P<granuleid>\d{8}-\d{8}_) is the _granuleid_ _Named Capture Group_ to include the date in the granule ID
-The resulting multi-file granule ID is: `SNEX23_SD_TLI_20221014-20240601_V01.0`
+The resulting multi-file granule ID is: `SNEX23_SD_TLI_20221014-20240601_V01.0`. This collection didn't require premet/spatial files as it was set to use the collection's temporal extent, and its geometry as the spatial representation. FYI: _Had premet/spatial files been required_, they would have needed to be named `SNEX23_SD_TLI_20221014-20240601_V01.0.premet` and `SNEX23_SD_TLI_20221014-20240601_V01.0.spatial <or .spo>`.
 
 
 #### Using Premet and Spatial files
