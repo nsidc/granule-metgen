@@ -19,6 +19,7 @@
         * [INI File Example 2: Single-file granule with good file names and no browse-omit browse_regex and granule_regex](#ini-file-example-2-single-file-granule-with-good-file-names-and-no-browse-omit-browse_regex-and-granule_regex)
         * [INI File Example 3: Single-file granule with good file names and browse images-omit granule_regex](#ini-file-example-3-single-file-granule-with-good-file-names-and-browse-images-omit-granule_regex)
         * [INI File Example 4: Use of granule_regex and browse_regex for single-file granules with interrupted file names](#ini-file-example-4-use-of-granule_regex-and-browse_regex-for-single-file-granules-with-interrupted-file-names)
+        * [INI File Example 5: Use of granule_regex and browse_regex for multi-file granules with variables in file names](#ini-file-example-5-use-of-granule_regex-and-browse_regex-for-multi-file-granules-with-variables-in-file-names)
       - [Using Premet and Spatial Files](#using-premet-and-spatial-files)
       - [Setting Collection Spatial Extent as Granule Spatial Extent](#setting-collection-spatial-extent-as-granule-spatial-extent)
       - [Setting Collection Temporal Extent as Granule Temporal Extent](#setting-collection-temporal-extent-as-granule-temporal-extent)
@@ -530,7 +531,30 @@ In the case where a file name element interrupts what would be a string common t
   - This hopefully is largely an example portraying a made-up edge case due to the way I'd added the _DUCk identifier to these files for early MetGenC testing!! But be aware of this if you find yourself dealing with complicated file names where the element meant to comprise the granule id are interrupted by other elements.
     
  The granuleid _Named Capture Group_ can **only define common** file name elements. When considering renaming files for a data set, keep in mind: the elements that vary within each file name comprising a multi-file granule must not fall within the granuleid _Named Capture Group_. Variable elements must be situated such that a _Non-Capturing Group_ can be used to account for them to create an appropriate granule ID, but a  _Non-Capturing Group_ can't be nestled within the granuleid _Named Capture Group_.
- 
+
+##### INI File Example 5: Use of `granule_regex` and `browse_regex` for multi-file granules with variables in file names
+ini file \[Collection\] contents:
+```
+[Collection]
+auth_id = SNEX23_SD_TLI
+version = 1
+provider = SnowEx
+browse_regex = _brws
+granule_regex = (SNEX23_SD_TLI_)(?:[a-z]+)_(?P<granuleid>\d{8}-\d{8}_)(V01\.0)
+reference_file_regex = (SNEX23_SD_TLI_)(snowdepth_\d{8}-\d{8}_)(V01\.0)
+```
+and file names:
+```
+SNEX17_SD_TLI_snowdepth_20161001-20170601_V01.0.csv
+SNEX17_SD_TLI_polemetadata_20161001-20170601_V01.0.csv
+SNEX17_SD_TLI_labels_20161001-20170601_V01.0.csv
+SNEX17_SD_TLI_image_20161001-20170601_V01.0_brws.png
+```
+ - (SNEX23_SD_TLI_) and (V01\.0) are _Capture Groups_
+ - (?:[a-z]+) is the _Non-Capturing Group_ to omit the variables (snowdepth, polemetadata, etc.) from the multi-file granule's granule ID
+ - (?P<granuleid>\d{8}-\d{8}_) is the _granuleid_ _Named Capture Group_ to include the date in the granule ID
+The resulting multi-file granule ID is: `SNEX23_SD_TLI_20221014-20240601_V01.0`
+
 
 #### Using Premet and Spatial files
 The following two .ini elements can be added to the .ini file to define paths
