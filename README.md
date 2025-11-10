@@ -166,12 +166,12 @@ suggesting data producers include the Attributes used by MetGenC in their netCDF
 | grid_mapping_name (variable)  | RequiredC      | R+               | 2       |
 | crs_wkt (variable with `grid_mapping_name` attribute)      |  | R     | 3       |
 | GeoTransform (variable with `grid_mapping_name` attribute) |  | R     | 4, OC   |
-| geospatial_lon_min (global)   |                | R                | |
-| geospatial_lon_max (global)   |                | R                | |
-| geospatial_lat_min (global)   |                | R                | |
-| geospatial_lat_max (global)   |                | R                | |
-| geospatial_bounds (global)    |                | R                | 7, OC |
-| geospatial_bounds_crs (global) |               | R                | 8    |
+| geospatial_lon_min (global)   |                | R                | 7    |
+| geospatial_lon_max (global)   |                | R                | 7    |
+| geospatial_lat_min (global)   |                | R                | 7    |
+| geospatial_lat_max (global)   |                | R                | 7    |
+| geospatial_bounds (global)    |                | R                | 8, OC |
+| geospatial_bounds_crs (global) |               | R                | 9    |
 | standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 5       |
 | standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 6       |
 
@@ -209,14 +209,18 @@ Notes column key:
    with a value of `projection_y_coordinate` are reprojected and thinned to create a
    GPolygon, bounding rectangle, etc.
 
- 7 = The `geospatial_bounds` netCDF file global attribute contains spatial boundary information as a
+ 7 = When a collection's GranuleSpatialRepresentation is defined as Cartesian,
+   MetGenC will generate a bounding rectangle spatial representation using the
+   NetCDF file's geospatial_lat_max-min, geospatial_lon_max-min global attributes.
+
+ 8 = The `geospatial_bounds` netCDF file global attribute contains spatial boundary information as a
    WKT POLYGON string. When present and `prefer_geospatial_bounds = true` is set in the
    .ini file, MetGenC will use this attribute instead of coordinate variable values to generate
    spatial representations of granules in collections with a GEODETIC granule spatial representation.
    If the `geospatial_bounds_crs` attribute is also present in netCDF files, coordinates
    will be transformed to EPSG:4326 if needed. The corresponding .ini parameter is `prefer_geospatial_bounds` = true/false.
 
- 8 = The `geospatial_bounds_crs` netCDF file global attribute specifies the coordinate reference system
+ 9 = The `geospatial_bounds_crs` netCDF file global attribute specifies the coordinate reference system
    for the coordinates in the `geospatial_bounds` global attribute. It can be an EPSG identifier (e.g., "EPSG:4326")
    or other CRS format. When present, MetGenC will transform `geospatial_bounds` coordinates to EPSG:4326 if needed.
    **If `geospatial_bounds` is `true` and no `geospatial_bounds_crs` attribute exists, the
