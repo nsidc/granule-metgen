@@ -184,9 +184,11 @@ Notes column key:
  P = Premet file attributes that may be specified in a premet file; when used, a
   `premet_dir`path must be defined in the .ini file.
 
- 1 = Used to populate the time begin and end UMM-G values; OC .ini attribute for
-  time_coverage_start is `time_start_regex` = \<value\>, and for time_coverage_end the
-  .ini attribute is `time_coverage_duration` = \<value\>.
+ 1 = Used by MetGenC to populate the time begin and end UMM-G values, eliminating the need
+  for input premet files. If not included in the netCDF global attributes, OC .ini 
+  attributes can be specified: `time_start_regex` in lieu of time_coverage_start and
+  `time_coverage_duration` in lieu of time_coverage_end, for their use and caveats see
+  [Required and Optional Configuration Elements](#required-and-optional-configuration-elements).
 
  2 = A grid mapping variable is required if the horizontal coordinate variables aren't
    longitude and latitude and the intent of the data provider is to geolocate
