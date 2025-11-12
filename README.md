@@ -218,9 +218,9 @@ Notes column key:
  8 = The `geospatial_bounds` netCDF file global attribute contains spatial boundary information as a
    WKT POLYGON string. When present and `prefer_geospatial_bounds = true` is set in the
    .ini file, MetGenC will use this attribute instead of coordinate variable values to generate
-   spatial representations of granules in collections with a GEODETIC granule spatial representation.
+   spatial representations of granules in collections with a GEODETIC (= gpolygon) granule spatial representation.
    If the `geospatial_bounds_crs` attribute is also present in netCDF files, coordinates
-   will be transformed to EPSG:4326 if needed. The corresponding .ini parameter is `prefer_geospatial_bounds` = true/false.
+   will be transformed to EPSG:4326 if needed. OC .ini attributes for this are `time_start_regex` and `time_coverage_duration`.
 
  9 = The `geospatial_bounds_crs` netCDF file global attribute specifies the coordinate reference system
    for the coordinates in the `geospatial_bounds` global attribute. It can be an EPSG identifier (e.g., "EPSG:4326")
@@ -402,12 +402,14 @@ Note column:
 1. The file name pattern identifying the browse file(s) accompanying single or multi-file granules. Granules
    with multiple associated browse files work fine with MetGenC! The default is `_brws`, change it to reflect
    the browse file names of the data delivered. This element is prompted for when running `metgenc init`.
-2. The granule_regex needs to be used for multi-file granules to define a file name pattern to appropriately
-   group files together as a granule using the elements common amongst their names.
+2. The granule_regex is required for multi-file granules. It's what determines which files will be included 
+   within the same granule based on it defining the common file name elements to be reflected in the ProducerGranuleId
+   in the UMM-G file (= the granule name shown in EDSC).
    - This must result in a globally unique: product/name (in CNM), and Identifier (as the IdentifierType: ProducerGranuleId in UMM-G)
      generated for each granule.
+   - As a general rule, include in the (?P<granuleid>) section of the granule_regex as much of the contiguous common elements of file names possible .  
    - This init element value must be added manually as it's **not** included in the `metgenc init` prompts.
-3. The file name pattern identifying a single file for metgenc to reference as the primary
+4. The file name pattern identifying a single file for metgenc to reference as the primary
    file in a multi-file granule. This is required for processing multi-file granules. This element's value
    is prompted for when running `metgenc init`.
    * In the case of multi-file granules containing a CF-compliant netCDF science file and other supporting files
