@@ -231,12 +231,12 @@ Notes column key:
 ### How to query a netCDF file for presence of MetGenC-Required Attributes
 On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
 can run ncdump to check whether a netCDF representative of the collection's files contains the
-MetGenC-required attributes. When not reported, that attribute will have to be accommodated by
-its associated .ini attribute being added to the .ini file. See [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
-for full details/descriptions of these.
+MetGenC-required global and variable attributes. 
 ```
-ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e geospatial_bounds -e geospatial_bounds_crs -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
+ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e geospatial_bounds -e geospatial_bounds_crs -e geospatial_lat_ -e geospatial_lon_ -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
 ```
+For any not reported when you run this, that attribute may be able to be accommodated by
+an associated .ini OC attribute being added to the .ini file. See [Required and Optional Configuration Elements](#required-and-optional-configuration-elements) for full details/descriptions of these.
 
 ## Geometry Logic
 
