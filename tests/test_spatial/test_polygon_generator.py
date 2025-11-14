@@ -502,3 +502,78 @@ class TestPolygonGenerator:
         assert is_ccw, (
             f"Polygon for {description} has clockwise orientation. CMR requires counter-clockwise."
         )
+
+    def test_antimeridian_buffering_keeps_coordinates_valid(self):
+        """Test that buffering near antimeridian doesn't create invalid coordinates.
+
+        BUG: When buffering polygons that cross the antimeridian, buffer points
+        can extend beyond ±180°, creating invalid coordinates like -180.5° or 180.5°.
+
+        FIX: Clamp buffered coordinates to [-180, 180] range immediately after buffering.
+
+        This test uses sparse Arctic data that crosses the antimeridian. The combination
+        of antimeridian crossing + buffering + sparse points creates coordinates that
+        would exceed valid longitude bounds without the clamping fix.
+        """
+        # Sparse Arctic flightline crossing antimeridian (same as fixture but at high latitude)
+        lon = np.array([179, 179.5, -179.5, -179, -178.5])
+        lat = np.array([85, 85.5, 86, 86.5, 87])  # High latitude for aggressive buffering
+
+        polygon, metadata = create_flightline_polygon(
+            lon, lat,
+            target_coverage=0.98,
+            max_vertices=100,
+            cartesian_tolerance=0.0001
+        )
+
+        # Verify polygon is valid and coordinates are within bounds
+        assert polygon.geom_type == "Polygon"
+        assert polygon.is_valid
+
+        # Check all coordinates are within valid range
+        coords = list(polygon.exterior.coords)
+        lons = [c[0] for c in coords]
+        lats = [c[1] for c in coords]
+
+        assert all(-180 <= lon <= 180 for lon in lons), (
+            f"Found invalid longitude: min={min(lons)}, max={max(lons)}"
+        )
+        assert all(-90 <= lat <= 90 for lat in lats)
+
+    def test_antimeridian_dense_data_with_buffering(self):
+        """Test antimeridian crossing with dense data very close to ±180°.
+
+        This test simulates Arctic satellite tracks that:
+        1. Cross the antimeridian
+        2. Have points very close to ±180° (within 0.05°)
+        3. Span a large longitude range (~350°)
+
+        Without coordinate clamping, buffering would create coordinates beyond ±180°,
+        resulting in invalid geometry that CMR would reject.
+        """
+        # Dense Arctic track crossing antimeridian, very close to ±180°
+        t = np.linspace(0, 1, 100)
+        lon = -179.95 + 349.9 * t  # Goes from -179.95 to 169.95
+        lat = 87 + 0.5 * np.sin(2 * np.pi * t)  # High latitude oscillation
+
+        polygon, metadata = create_flightline_polygon(
+            lon, lat,
+            target_coverage=0.98,
+            max_vertices=100,
+            cartesian_tolerance=0.0001
+        )
+
+        # Should create valid single polygon
+        assert polygon.geom_type == "Polygon"
+        assert polygon.is_valid
+
+        # All coordinates must be valid
+        coords = list(polygon.exterior.coords)
+        lons = [c[0] for c in coords]
+
+        assert all(-180 <= lon <= 180 for lon in lons), (
+            f"Invalid coordinates after buffering: min={min(lons):.2f}, max={max(lons):.2f}"
+        )
+
+        # Should have enhanced coverage via buffering
+        assert metadata.get("coverage_enhanced", False) or metadata["final_data_coverage"] >= 0.95

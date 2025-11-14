@@ -350,6 +350,16 @@ def create_flightline_polygon(
                         metadata["post_buffer_vertices"] = buffered_vertices
                         metadata["area_increase_ratio"] = area_increase
 
+        # Clamp buffered polygon coordinates to [-180, 180] to prevent invalid coordinates
+        # Buffering near antimeridian can push coordinates beyond valid range
+        if hasattr(polygon, "exterior"):
+            coords = list(polygon.exterior.coords)
+            clamped_coords = []
+            for lon, lat in coords:
+                clamped_lon = max(-180.0, min(lon, 180.0))
+                clamped_coords.append((clamped_lon, lat))
+            polygon = Polygon(clamped_coords)
+
         metadata["final_data_coverage"] = coverage
 
         # Calculate final metrics
