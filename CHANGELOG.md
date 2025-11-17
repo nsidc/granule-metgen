@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.13.0rc1 (2025-11-17)
 
 * PSS-692: Ensure longitude values of the generated polygons stay in-bounds [-180,180].
 
