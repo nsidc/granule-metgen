@@ -70,6 +70,35 @@ def _filter_polygon_points_by_tolerance(polygon, tolerance=0.0001):
         return polygon
 
 
+def clamp_longitude(polygon):
+    """
+    Clamp polygon coordinates to valid longitude range [-180, 180].
+
+    When buffering polygons near the antimeridian (±180°), buffer points can
+    extend beyond valid longitude bounds, creating invalid coordinates like
+    -180.5° or 180.5°. This function clamps all longitude values to ensure
+    they remain within the valid range.
+
+    Parameters:
+    -----------
+    polygon : shapely.geometry.Polygon
+        Polygon whose coordinates may exceed valid longitude bounds
+
+    Returns:
+    --------
+    shapely.geometry.Polygon : Polygon with all longitudes clamped to [-180, 180]
+    """
+    if not isinstance(polygon, Polygon):
+        return polygon
+
+    coords = list(polygon.exterior.coords)
+    clamped_coords = []
+    for lon, lat in coords:
+        clamped_lon = max(-180.0, min(lon, 180.0))
+        clamped_coords.append((clamped_lon, lat))
+    return Polygon(clamped_coords)
+
+
 def create_flightline_polygon(
     lon, lat, target_coverage=0.98, max_vertices=100, cartesian_tolerance=0.0001
 ):
@@ -352,13 +381,7 @@ def create_flightline_polygon(
 
         # Clamp buffered polygon coordinates to [-180, 180] to prevent invalid coordinates
         # Buffering near antimeridian can push coordinates beyond valid range
-        if isinstance(polygon, Polygon):
-            coords = list(polygon.exterior.coords)
-            clamped_coords = []
-            for lon, lat in coords:
-                clamped_lon = max(-180.0, min(lon, 180.0))
-                clamped_coords.append((clamped_lon, lat))
-            polygon = Polygon(clamped_coords)
+        polygon = clamp_longitude(polygon)
 
         metadata["final_data_coverage"] = coverage
 
