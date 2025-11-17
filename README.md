@@ -430,7 +430,7 @@ collection_temporal_override = False
 [Collection]
 auth_id = SNEX_MCS_Lidar
 version = 1
-provider = SnowEx
+provider = Direct_to_Cumulus_S3
 granule_regex = (SNEX_MCS_Lidar_)(?P<granuleid>\d{8})(?:_[-a-zA-Z0-9]+)(?:_V01\.0) 
 reference_file_regex = _SD_
 ```
@@ -471,7 +471,7 @@ spatial_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX23_CSU_GPR_metgen/spatial
 [Collection]
 auth_id = SNEX23_CSU_GPR
 version = 1
-provider = SnowEx
+provider = Direct_to_Cumulus_S3
 ```
 No regex are necessary since the file name will simply become the granule name.
 
@@ -484,7 +484,7 @@ data_dir = ./data/0081
 [Collection]
 auth_id = NSIDC-0081
 version = 2
-provider = DPT
+provider = Direct_to_Cumulus_S3
 browse_regex = _F\d{2}
 ```
 And two granules + their associated browse files and good granule names:
@@ -509,7 +509,7 @@ data_dir = ./data/0081DUCk
 [Collection]
 auth_id = NSIDC-0081DUCk
 version = 2
-provider = DPT
+provider = Direct_to_Cumulus_S3
 browse_regex = _brws
 granule_regex = (NSIDC0081_SEAICE_PS_)(?P<granuleid>[NS]{1}\d{2}km_\d{8})(_v2.0_)(?:F\d{2}_)?(DUCk)
 ```
@@ -554,7 +554,7 @@ collection_temporal_override = True
 [Collection]
 auth_id = SNEX23_SD_TLI
 version = 1
-provider = SnowEx
+provider = Direct_to_Cumulus_S3
 browse_regex = _brws
 granule_regex = (SNEX23_SD_TLI_)(?:[a-z]+)_(?P<granuleid>\d{8}-\d{8}_)(V01\.0)
 reference_file_regex = (SNEX23_SD_TLI_)(snowdepth_\d{8}-\d{8}_)(V01\.0)
@@ -738,7 +738,7 @@ Using configuration:
   + data_dir: /disks/sidads_staging/SNOWEX_metgen/SNEX23_CSU_GPR_metgen/data
   + auth_id: SNEX23_CSU_GPR
   + version: 1
-  + provider: SnowEx
+  + provider: Direct_to_Cumulus_S3
   + local_output_dir: /share/apps/metgenc/SNEX23_CSU_GPR/output
   + ummg_dir: ummg
   + kinesis_stream_name: nsidc-cumulus-uat-external_notification
