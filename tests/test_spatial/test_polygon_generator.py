@@ -515,13 +515,15 @@ class TestPolygonGenerator:
         FIX: clamp_longitude clamps all coordinates to [-180, 180] range.
         """
         # Create polygon with out-of-bounds longitude coordinates
-        polygon = Polygon([
-            (180.5, 85.0),    # Over max
-            (-180.8, 86.0),   # Under min
-            (179.0, 87.0),    # Valid
-            (-179.0, 86.5),   # Valid
-            (180.5, 85.0)     # Closing point
-        ])
+        polygon = Polygon(
+            [
+                (180.5, 85.0),  # Over max
+                (-180.8, 86.0),  # Under min
+                (179.0, 87.0),  # Valid
+                (-179.0, 86.5),  # Valid
+                (180.5, 85.0),  # Closing point
+            ]
+        )
 
         clamped = clamp_longitude(polygon)
 
@@ -535,19 +537,15 @@ class TestPolygonGenerator:
         # Verify specific clamping
         assert coords[0][0] == 180.0  # 180.5 -> 180.0
         assert coords[1][0] == -180.0  # -180.8 -> -180.0
-        assert coords[2][0] == 179.0   # unchanged
+        assert coords[2][0] == 179.0  # unchanged
         assert coords[3][0] == -179.0  # unchanged
 
     def test_clamp_longitude_with_valid_coordinates(self):
         """Test that clamp_longitude doesn't modify already valid coordinates."""
         # Create polygon with all valid coordinates
-        polygon = Polygon([
-            (179.0, 85.0),
-            (-179.0, 86.0),
-            (0.0, 87.0),
-            (90.0, 86.5),
-            (179.0, 85.0)
-        ])
+        polygon = Polygon(
+            [(179.0, 85.0), (-179.0, 86.0), (0.0, 87.0), (90.0, 86.5), (179.0, 85.0)]
+        )
 
         clamped = clamp_longitude(polygon)
 
@@ -559,12 +557,9 @@ class TestPolygonGenerator:
 
     def test_clamp_longitude_preserves_latitude(self):
         """Test that clamp_longitude only modifies longitude, not latitude."""
-        polygon = Polygon([
-            (180.5, 85.123),
-            (-180.8, 86.456),
-            (179.0, 87.789),
-            (180.5, 85.123)
-        ])
+        polygon = Polygon(
+            [(180.5, 85.123), (-180.8, 86.456), (179.0, 87.789), (180.5, 85.123)]
+        )
 
         clamped = clamp_longitude(polygon)
         coords = list(clamped.exterior.coords)
@@ -576,12 +571,7 @@ class TestPolygonGenerator:
 
     def test_clamp_longitude_returns_valid_polygon(self):
         """Test that clamp_longitude returns a valid Shapely polygon."""
-        polygon = Polygon([
-            (180.9, 85.0),
-            (-180.9, 86.0),
-            (0.0, 87.0),
-            (180.9, 85.0)
-        ])
+        polygon = Polygon([(180.9, 85.0), (-180.9, 86.0), (0.0, 87.0), (180.9, 85.0)])
 
         clamped = clamp_longitude(polygon)
 
