@@ -352,7 +352,7 @@ def create_flightline_polygon(
 
         # Clamp buffered polygon coordinates to [-180, 180] to prevent invalid coordinates
         # Buffering near antimeridian can push coordinates beyond valid range
-        if hasattr(polygon, "exterior"):
+        if isinstance(polygon, Polygon):
             coords = list(polygon.exterior.coords)
             clamped_coords = []
             for lon, lat in coords:
@@ -363,7 +363,7 @@ def create_flightline_polygon(
         metadata["final_data_coverage"] = coverage
 
         # Calculate final metrics
-        if hasattr(polygon, "exterior"):
+        if isinstance(polygon, Polygon):
             metadata["vertices"] = len(polygon.exterior.coords) - 1
         else:
             metadata["vertices"] = 0
