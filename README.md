@@ -347,7 +347,7 @@ Example running **init**
 * The `kinesis_stream_name` and `staging_bucket_name` should never be edited
 * `auth_id` and `version` must accurately reflect the collection's authID and versionID
 * `log_dir` specifies the directory where metgenc log files will be written. Log files are named `metgenc-{config-name}-{timestamp}.log` where config-name is the base name of the .ini file and timestamp is in YYYYMMDD-HHMM format. The default log directory is `/share/logs/metgenc`, but this can be edited to write metgenc logs to a different existing, writable directory location.
-* `provider` is a free text attribute and should either be removed from the ini file or, if populated, the value should be `Direct_to_Cumulus_S3` must be VERBATIM! 
+* `provider` is [newly!!] a required attribute that must define the Cumulus Ingest Provider name. Currently, that'll be a value of `Direct_to_Cumulus_S3` as this, at the moment, is the Cumulus Ingest Provider most MetGenC data sets are relying on for ingest. If more Ingest Providers are created, the value for the .ini file's provider field just has to reflect the exact name of the Cumulus Ingest Provider set for the collection in Cumulus. 
 
 #### Required and Optional Configuration Elements
 Some attribute values may be read from the .ini file if the values
