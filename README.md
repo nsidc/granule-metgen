@@ -574,9 +574,9 @@ The resulting multi-file granule ID is: `SNEX23_SD_TLI_20221014-20240601_V01.0`.
 
 #### Using Premet and Spatial files
 The following two .ini elements can be added to the .ini file to define paths
-to the directories containing `premet` and `spatial` files. The paths must define
-two distinct directories which must also be distinct from the data directory. 
-The user will be prompted for these values when running `metgenc init` (but are optional
+to the directories containing `premet` and `spatial` files. The path (or path_s_ if you organize
+premet files separately from spatial files) must be distinct from the data directory. 
+You'll be prompted for these values when running `metgenc init` (but they're optional
 elements in the .ini file).
 | .ini element | .ini section |
 | ------------- | ------------- |
