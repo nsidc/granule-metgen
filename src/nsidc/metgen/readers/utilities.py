@@ -5,7 +5,7 @@ from dateutil.parser import parse
 from funcy import distinct, first, last, lkeep, partial
 
 from nsidc.metgen import config, constants
-from nsidc.metgen.spatial import create_flightline_polygon
+from nsidc.metgen.spatial.polygon_generator import create_flightline_polygon
 from nsidc.metgen.spatial.simple_polygon import create_buffered_polygon
 
 
@@ -252,27 +252,23 @@ def parse_spatial(spatial_values: list, configuration: config.Config = None):
             lons = [point["Longitude"] for point in spatial_values]
             lats = [point["Latitude"] for point in spatial_values]
 
-            # Choose algorithm based on configuration
+            # Choose algorithm based on configuration and create configured generator
             if configuration.spatial_polygon_algorithm == constants.PolygonAlgorithm.SIMPLE.value:
-                # Use simple line buffering algorithm
-                points = list(zip(lons, lats))
-                # Note: simple algorithm returns just polygon, not (polygon, metadata) tuple
-                polygon = create_buffered_polygon(
-                    points,
-                    buffer_distance=1.0,  # TODO: make this configurable?
-                    simplify_tolerance=0.01,
+                # Simple line buffering algorithm
+                generate_polygon = partial(
+                    create_buffered_polygon,
                     cartesian_tolerance=configuration.spatial_polygon_cartesian_tolerance,
                 )
-                metadata = {"method": "simple_buffer"}
             else:
-                # Use complex concave hull algorithm (default)
+                # Complex concave hull algorithm (default)
                 generate_polygon = partial(
                     create_flightline_polygon,
                     target_coverage=configuration.spatial_polygon_target_coverage,
                     max_vertices=configuration.spatial_polygon_max_vertices,
                     cartesian_tolerance=configuration.spatial_polygon_cartesian_tolerance,
                 )
-                polygon, metadata = generate_polygon(lons, lats)
+
+            polygon, metadata = generate_polygon(lons, lats)
 
             if polygon is not None:
                 coords = list(polygon.exterior.coords)

@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from shapely.geometry import Point, Polygon
 
-from nsidc.metgen.spatial import create_flightline_polygon
+from nsidc.metgen.spatial.polygon_generator import create_flightline_polygon
 from nsidc.metgen.spatial.spatial_utils import (
     clamp_longitude,
     filter_polygon_points_by_tolerance,

@@ -19,7 +19,7 @@ LIMITATIONS:
     this algorithm works correctly.
 """
 
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from shapely.geometry import LineString, Polygon
 
@@ -29,6 +29,11 @@ from .spatial_utils import (
     ensure_counter_clockwise,
     filter_polygon_points_by_tolerance,
 )
+
+# Default parameters for simple buffering algorithm
+DEFAULT_BUFFER_DISTANCE = 1.0  # degrees
+DEFAULT_SIMPLIFY_TOLERANCE = 0.01  # degrees
+DEFAULT_CARTESIAN_TOLERANCE = 0.0001  # degrees
 
 
 def has_antimeridian_crossing(points: List[Tuple[float, float]]) -> bool:
@@ -90,11 +95,12 @@ def unshift_western_hemi(geom: Polygon) -> Polygon:
 
 
 def create_buffered_polygon(
-    points: List[Tuple[float, float]],
-    buffer_distance: float,
-    simplify_tolerance: float = 0.01,
-    cartesian_tolerance: float = 0.0001,
-) -> Polygon:
+    lon: List[float],
+    lat: List[float],
+    buffer_distance: float = DEFAULT_BUFFER_DISTANCE,
+    simplify_tolerance: float = DEFAULT_SIMPLIFY_TOLERANCE,
+    cartesian_tolerance: float = DEFAULT_CARTESIAN_TOLERANCE,
+) -> Tuple[Polygon, Dict]:
     """
     Create a buffered polygon around a satellite ground track.
 
@@ -122,29 +128,42 @@ def create_buffered_polygon(
     GPolygon representation.
 
     Args:
-        points: List of (lon, lat) tuples in [-180, 180] range representing
-                the ground track
-        buffer_distance: Buffer distance in degrees
+        lon: Array of longitude values in [-180, 180] range
+        lat: Array of latitude values in [-90, 90] range
+        buffer_distance: Buffer distance in degrees (default: 1.0)
         simplify_tolerance: Tolerance for polygon simplification in degrees.
-                           Smaller values preserve more detail. Default is 0.01.
+                           Smaller values preserve more detail (default: 0.01)
         cartesian_tolerance: Minimum spacing between points in degrees for CMR
                             compliance (default: 0.0001)
 
     Returns:
-        A Polygon representing the buffered track.
-        For tracks crossing the antimeridian, returns a single polygon
-        with coordinates spanning from positive to negative longitudes.
+        Tuple of (polygon, metadata):
+            - polygon: A Polygon representing the buffered track.
+                      For tracks crossing the antimeridian, returns a single polygon
+                      with coordinates spanning from positive to negative longitudes.
+            - metadata: Dictionary containing algorithm metadata including:
+                       - method: Algorithm used ('simple_buffer')
+                       - buffer_distance: Buffer distance applied
+                       - vertices: Number of vertices in the final polygon
+                       - antimeridian_crossing: Whether track crossed antimeridian
 
     Raises:
         ValueError: If fewer than 2 points are provided
 
     Example:
-        >>> points = [(179.0, 80.0), (-179.0, 81.0), (-178.0, 82.0)]
-        >>> buffered = create_buffered_polygon(points, 1.0)
+        >>> lon = [179.0, -179.0, -178.0]
+        >>> lat = [80.0, 81.0, 82.0]
+        >>> polygon, metadata = create_buffered_polygon(lon, lat, buffer_distance=1.0)
         >>> # Returns a single Polygon spanning the antimeridian
     """
-    if len(points) < 2:
+    if len(lon) < 2 or len(lat) < 2:
         raise ValueError("Need at least 2 points to create a ground track")
+
+    if len(lon) != len(lat):
+        raise ValueError("lon and lat arrays must have the same length")
+
+    # Convert lon/lat arrays to points list
+    points = list(zip(lon, lat))
 
     # Check if track crosses antimeridian
     crosses_antimeridian = has_antimeridian_crossing(points)
@@ -177,4 +196,12 @@ def create_buffered_polygon(
     )
     buffered = ensure_counter_clockwise(buffered)
 
-    return buffered
+    # Build metadata
+    metadata = {
+        "method": "simple_buffer",
+        "buffer_distance": buffer_distance,
+        "vertices": len(buffered.exterior.coords) - 1,  # Excluding closing point
+        "antimeridian_crossing": crosses_antimeridian,
+    }
+
+    return buffered, metadata
