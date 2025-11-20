@@ -83,7 +83,7 @@ nsidc@nsidc.org for more information.
   or for processing in prod
   cd metgenc;source .venv/bin/activate;source metgenc-env.sh cumulus-prod
   ```
-BE AWARE: IF YOU'BE BEEN TESTING/INGEST CUAT INGEST, WHEN YOU'RE READY TO INGEST TO CPRD, MAKE SURE TO RUN `source metgenc-env.sh cumulus-prod`. 
+BE AWARE: IF YOU'BE BEEN TESTING/INGEST CUAT INGEST, WHEN YOU'RE READY TO INGEST TO CPRD, MAKE SURE TO RUN `source metgenc-env.sh cumulus-prod`.
 You need to have the right credentials sourced before processing will succeed to that environment!!
 If the creds aren't pointing to the right environment, MetGenC will return:
 ```
@@ -185,7 +185,7 @@ Notes column key:
   `premet_dir`path must be defined in the .ini file.
 
  1 = Used by MetGenC to populate the time begin and end UMM-G values, eliminating the need
-  for input premet files. If not included in the netCDF global attributes, OC .ini 
+  for input premet files. If not included in the netCDF global attributes, OC .ini
   attributes can be specified: `time_start_regex` in lieu of time_coverage_start and
   `time_coverage_duration` in lieu of time_coverage_end, for their use and caveats see
   [Required and Optional Configuration Elements](#required-and-optional-configuration-elements).
@@ -231,7 +231,7 @@ Notes column key:
 ### How to query a netCDF file for presence of MetGenC-Required Attributes
 On V0 wherever the data are staged (/disks/restricted_ftp or /disks/sidads_staging, etc.) you
 can run ncdump to check whether a netCDF representative of the collection's files contains the
-MetGenC-required global and variable attributes. 
+MetGenC-required global and variable attributes.
 ```
 ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e geospatial_bounds -e geospatial_bounds_crs -e geospatial_lat_ -e geospatial_lon_ -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
 ```
@@ -402,12 +402,12 @@ Note column:
 1. The file name pattern identifying the browse file(s) accompanying single or multi-file granules. Granules
    with multiple associated browse files work fine with MetGenC! The default is `_brws`, change it to reflect
    the browse file names of the data delivered. This element is prompted for when running `metgenc init`.
-2. The granule_regex is required for multi-file granules. It's what determines which files will be included 
+2. The granule_regex is required for multi-file granules. It's what determines which files will be included
    within the same granule based on it defining the common file name elements to be reflected in the ProducerGranuleId
    in the UMM-G file (= the granule name shown in EDSC).
    - This must result in a globally unique: product/name (in CNM), and Identifier (as the IdentifierType: ProducerGranuleId in UMM-G)
      generated for each granule.
-   - As a general rule, include in the (?P<granuleid>) section of the granule_regex as much of the contiguous common elements of file names possible .  
+   - As a general rule, include in the (?P<granuleid>) section of the granule_regex as much of the contiguous common elements of file names possible .
    - This init element value must be added manually as it's **not** included in the `metgenc init` prompts.
 4. The file name pattern identifying a single file for metgenc to reference as the primary
    file in a multi-file granule. This is required for processing multi-file granules. This element's value
@@ -432,7 +432,7 @@ collection_temporal_override = False
 auth_id = SNEX_MCS_Lidar
 version = 1
 provider = SnowEx
-granule_regex = (SNEX_MCS_Lidar_)(?P<granuleid>\d{8})(?:_[-a-zA-Z0-9]+)(?:_V01\.0) 
+granule_regex = (SNEX_MCS_Lidar_)(?P<granuleid>\d{8})(?:_[-a-zA-Z0-9]+)(?:_V01\.0)
 reference_file_regex = _SD_
 ```
 And two multi-file granules comprising the following files and their premet/spatial files named such that they reflect what will be the Granule ID:
@@ -456,7 +456,7 @@ The granule_regex sections:
 - `(SNEX_MCS_Lidar_)` identifies a _Capturing Group_ which parses this constant expected to be included in each granule name, in this case it's the authID (NOTE: the versionID could/should also be made a capturing group. This particular data set sees ongoing ingest where originally the version ID was omitted from the multi-file granule names, so for consistency it's not included now and is made a non-capturing group, explained below.
 
 - The _Named Capture Group granuleid_ `(?P<granuleid>\d{8})` matches the unique date contained in each file name to be included in each multi-file granule name, e.g., `IPFLT1B_20101226_085033_`.
-  
+
 - `(?:_[-a-zA-Z0-9]+)` and `(?:_V01\.0)` identify _Non-Capturing Groups_ comprising the variables and the version id named in each file. The Non-Capturing groups allow the regex to acknowledge the presence of these elements in individual file names, but lead them to be omitted from the multi-file granule name.
 
 - Thus, SNEX_MCS_Lidar_ is combined with the granuleid capture group's unique date to form the producerGranuleId reflected for each granule in EDSC's Granules listing, and in this example, they're: `SNEX_MCS_Lidar_20250404` and `SNEX_MCS_Lidar_20221208`. These names are found in the CNM as the product/name value, and in the UMMG files as the Identifier value.
@@ -533,7 +533,7 @@ The granule_regex sections:
 In the case where a file name element interrupts what would be a string common to both the science and browse file names, a granule_regex is required to identify the granule name.
 - `(NSIDC0081_SEAICE_PS_)`, `(_v2.0_)`, and `(DUCk)` identify the 1st, 3rd, and 4th (the last) _Capture Groups_. These are constants required to be present in each granules name: authID, version ID, and DUCk (the latter was only relevant for early CUAT testing). These are combined with the following...
 
-- The _Named Capture Group granuleid_ `(?P<granuleid>[NS]{1}\d{2}km_\d{8})` matches the region, resolution, and date elements unique-yet-consistent within each file name (e.g., `N25km_20211101` and `S25km_20211102`), which are combined with the elements in the bullet above to form unique granule names. 
+- The _Named Capture Group granuleid_ `(?P<granuleid>[NS]{1}\d{2}km_\d{8})` matches the region, resolution, and date elements unique-yet-consistent within each file name (e.g., `N25km_20211101` and `S25km_20211102`), which are combined with the elements in the bullet above to form unique granule names.
 
 - `(?:F\d{2}_)?` matches the F16_, F17_, and F18_ strings in the browse file names as a _Non-capture Group_; these elements will be matched but **won't** be included in granule names.
 
@@ -541,7 +541,7 @@ In the case where a file name element interrupts what would be a string common t
   - If the granule_regex was omitted from the .ini file in this case, the cnm output would only define data and metadata files for ingest, the browse images would not be included!
   - Since metgenc validate doesn't check attribute values, no validation errors are thrown when this happens.
   - This hopefully is largely an example portraying a made-up edge case due to the way I'd added the _DUCk identifier to these files for early MetGenC testing!! But be aware of this if you find yourself dealing with complicated file names where the element meant to comprise the granule id are interrupted by other elements.
-    
+
  The granuleid _Named Capture Group_ can **only define common** file name elements. When considering renaming files for a data set, keep in mind: the elements that vary within each file name comprising a multi-file granule must not fall within the granuleid _Named Capture Group_. Variable elements must be situated such that a _Non-Capturing Group_ can be used to account for them to create an appropriate granule ID, but a  _Non-Capturing Group_ can't be nestled within the granuleid _Named Capture Group_.
 
 ##### INI File Example 5: Use of `granule_regex` and `browse_regex` for multi-file granules with variables in file names
@@ -576,7 +576,7 @@ The resulting multi-file granule ID is: `SNEX23_SD_TLI_20221014-20240601_V01.0`.
 #### Using Premet and Spatial files
 The following two .ini elements can be added to the .ini file to define paths
 to the directories containing `premet` and `spatial` files. The paths must define
-two distinct directories which must also be distinct from the data directory. 
+two distinct directories which must also be distinct from the data directory.
 The user will be prompted for these values when running `metgenc init` (but are optional
 elements in the .ini file).
 | .ini element | .ini section |
@@ -595,7 +595,7 @@ elements in the .ini file).
 - At the moment with the production metgenc vm running **metgenc version 1.12.0**, when .spo files are used
   for a data set, the .ini file needs to include a [Spatial] section defininig `spatial_polygon_enabled = false`
   so that the vertices defined are used directly (instead of accidentally interpreted by MetGenC as a data set
-  footprint around which a gpolygon needs to be generated). 
+  footprint around which a gpolygon needs to be generated).
   e.g.,
 ```
 [Spatial]
@@ -603,7 +603,7 @@ spatial_polygon_enabled = false
 ```
 (Note: A fix has been implemented in MetGenC version 1.13.0rc0; once version 1.13.0 is released and running
 on the production metgenc vm, the .spo issue will be a thing of the past).
- 
+
 #### Setting Collection Spatial Extent as Granule Spatial Extent
 In cases of data sets where granule spatial information is not available
 by interrogating the data or via `spatial` or `.spo` files, the operator
@@ -637,7 +637,7 @@ MetGenC includes optimized polygon generation capabilities for creating spatial 
 
 When a granule has an associated `.spatial` file containing geodetic point data (≥3 points), MetGenC will automatically generate an optimized polygon to enclose the data points instead of using the basic point-to-point polygon method. This results in more accurate spatial coverage with fewer vertices.
 
-**This feature, while optional, is always enabled by default in MetGenC**. 
+**This feature, while optional, is always enabled by default in MetGenC**.
 - To disable it entirely, edit the .ini file, add a \[Spatial\] section if necessary, and add the line `spatial_polygon_enabled = false`. **CURRENTLY RECOMMENDED TO SET `spatial_polygon_enabled = false` WHENEVER .SPO FILES ARE USED.**
 - When `spatial_polygon_enabled = true` (either by default or when set as such in the .ini file) the other parameters listed below can be added to
   and edited in the .ini file. For the most part, the values shouldn't need to be altered! However, if ingest fails due to GPolygonSpatial errors,
@@ -649,22 +649,60 @@ When a granule has an associated `.spatial` file containing geodetic point data 
 | .ini section | .ini element                    | Type    | Default | Description |
 | ------------- | -------------------------------- | ------- | ------- | ----------- |
 | Spatial       | spatial_polygon_enabled          | boolean | true    | Enable/disable polygon generation for .spatial files |
-| Spatial       | spatial_polygon_target_coverage  | float   | 0.98    | Target data coverage percentage (0.80-1.0) |
-| Spatial       | spatial_polygon_max_vertices     | integer | 100     | Maximum vertices in generated polygon (10-1000) |
+| Spatial       | spatial_polygon_algorithm        | string  | complex | Algorithm to use: 'simple' or 'complex' (see below) |
+| Spatial       | spatial_polygon_target_coverage  | float   | 0.98    | Target data coverage percentage (0.80-1.0) - complex algorithm only |
+| Spatial       | spatial_polygon_max_vertices     | integer | 100     | Maximum vertices in generated polygon (10-1000) - complex algorithm only |
 | Spatial       | spatial_polygon_cartesian_tolerance | float | 0.0001  | Minimum distance between polygon points in degrees (0.00001-0.01) |
 
+**Algorithm Selection:**
+
+MetGenC provides two polygon generation algorithms:
+
+- **`complex` (default)**: Advanced concave hull algorithm optimized for complex flight paths and LIDAR data
+  - Generates tight-fitting polygons that closely follow data coverage patterns
+  - Supports configurable target coverage and vertex limits
+  - Best for: Flight line data, complex spatial patterns, LIDAR swaths
+  - Uses parameters: `spatial_polygon_target_coverage`, `spatial_polygon_max_vertices`, `spatial_polygon_cartesian_tolerance`
+
+- **`simple`**: Straightforward line buffering algorithm for basic ground tracks
+  - Creates buffered polygons around satellite ground tracks
+  - Faster processing with simpler geometry
+  - Best for: Simple satellite passes, straightforward ground tracks
+  - Uses parameters: `spatial_polygon_cartesian_tolerance` only (buffer distance and simplification are hardcoded)
+
+**When to change from the default (complex) algorithm:**
+
+The `complex` algorithm is the default and recommended for most use cases. Consider switching to `simple` if:
+- Your data represents simple, linear ground tracks (e.g., single satellite passes)
+- The complex algorithm is producing overly detailed polygons for simple data patterns
+
+To change the algorithm, add to your .ini file:
+```ini
+[Spatial]
+spatial_polygon_algorithm = simple
+```
+
 ##### Example Spatial Polygon Generation Configuration
-Example showing content added to an .ini file, having edited the CMR default vertex tolerance
-(distance between two vertices) to decrease the precision of the GPoly coordinate pairs listed
-in the UMMG json files MetGenC generates:
+
+Example showing the default complex algorithm with custom parameters:
 ```ini
 [Spatial]
 spatial_polygon_enabled = true
+spatial_polygon_algorithm = complex
 spatial_polygon_target_coverage = 0.98
 spatial_polygon_max_vertices = 100
-spatial_polygon_cartesian_tolerance = .01
+spatial_polygon_cartesian_tolerance = 0.01
 ```
-Example showing the key pair added to an .ini file to disable spatial polygon generation:
+
+Example showing simple algorithm configuration:
+```ini
+[Spatial]
+spatial_polygon_enabled = true
+spatial_polygon_algorithm = simple
+spatial_polygon_cartesian_tolerance = 0.0001
+```
+
+Example showing how to disable spatial polygon generation entirely:
 ```ini
 [Spatial]
 spatial_polygon_enabled = false
@@ -832,7 +870,7 @@ The configuration is invalid:
 ```
   e.g., grep -A 46 43eae1561cba metgenc.log
 ```
-  
+
 ---
 
 ### validate
@@ -862,7 +900,7 @@ running the following is an alternate way to validate ummg and cnm json files, b
 
     $ check-jsonschema --schemafile <path to schema file> <path to CNM or UMM-G file to check>
 
-If running `metgenc validate` fails, check the metgenc.log for an error message to begin troubleshooting.   
+If running `metgenc validate` fails, check the metgenc.log for an error message to begin troubleshooting.
 
 ### Pretty-print a json file in your shell
 Handy tip: While not a MetGenC command, a handy way to show a file's contents without having
