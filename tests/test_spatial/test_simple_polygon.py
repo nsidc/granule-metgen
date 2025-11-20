@@ -6,10 +6,10 @@ import pytest
 from shapely.geometry import Polygon
 
 from nsidc.metgen.spatial.simple_polygon import (
+    create_buffered_polygon,
     has_antimeridian_crossing,
     shift_western_hemi,
     unshift_western_hemi,
-    create_buffered_polygon,
 )
 
 

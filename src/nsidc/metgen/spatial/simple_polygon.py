@@ -20,7 +20,8 @@ LIMITATIONS:
 """
 
 from typing import List, Tuple
-from shapely.geometry import LineString, Polygon, MultiPolygon
+
+from shapely.geometry import LineString, Polygon
 
 
 def has_antimeridian_crossing(points: List[Tuple[float, float]]) -> bool:
