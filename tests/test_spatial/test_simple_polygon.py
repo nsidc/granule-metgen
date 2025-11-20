@@ -105,24 +105,48 @@ class TestUnshiftWesternHemi:
     def test_unshift_polygon_from_360_range(self):
         """Test unshifting a polygon from [180, 360) back to [-180, 0)."""
         # Polygon created after shifting, with coords in [180, 360) range
-        coords = [(190.0, 80.0), (200.0, 80.0), (200.0, 85.0), (190.0, 85.0), (190.0, 80.0)]
+        coords = [
+            (190.0, 80.0),
+            (200.0, 80.0),
+            (200.0, 85.0),
+            (190.0, 85.0),
+            (190.0, 80.0),
+        ]
         poly = Polygon(coords)
 
         unshifted = unshift_western_hemi(poly)
 
-        expected_coords = [(-170.0, 80.0), (-160.0, 80.0), (-160.0, 85.0), (-170.0, 85.0), (-170.0, 80.0)]
+        expected_coords = [
+            (-170.0, 80.0),
+            (-160.0, 80.0),
+            (-160.0, 85.0),
+            (-170.0, 85.0),
+            (-170.0, 80.0),
+        ]
         assert list(unshifted.exterior.coords) == expected_coords
 
     def test_unshift_polygon_mixed_range(self):
         """Test unshifting polygon with mixed coordinate ranges."""
         # Polygon spanning the original antimeridian position
-        coords = [(170.0, 80.0), (190.0, 80.0), (190.0, 85.0), (170.0, 85.0), (170.0, 80.0)]
+        coords = [
+            (170.0, 80.0),
+            (190.0, 80.0),
+            (190.0, 85.0),
+            (170.0, 85.0),
+            (170.0, 80.0),
+        ]
         poly = Polygon(coords)
 
         unshifted = unshift_western_hemi(poly)
 
         # Only coordinates >= 180 should be shifted
-        expected_coords = [(170.0, 80.0), (-170.0, 80.0), (-170.0, 85.0), (170.0, 85.0), (170.0, 80.0)]
+        expected_coords = [
+            (170.0, 80.0),
+            (-170.0, 80.0),
+            (-170.0, 85.0),
+            (170.0, 85.0),
+            (170.0, 80.0),
+        ]
         assert list(unshifted.exterior.coords) == expected_coords
 
     def test_unshift_polygon_no_change(self):
@@ -136,18 +160,36 @@ class TestUnshiftWesternHemi:
 
     def test_unshift_polygon_at_boundary(self):
         """Test unshifting polygon with coordinates at 180 boundary."""
-        coords = [(180.0, 80.0), (190.0, 80.0), (190.0, 85.0), (180.0, 85.0), (180.0, 80.0)]
+        coords = [
+            (180.0, 80.0),
+            (190.0, 80.0),
+            (190.0, 85.0),
+            (180.0, 85.0),
+            (180.0, 80.0),
+        ]
         poly = Polygon(coords)
 
         unshifted = unshift_western_hemi(poly)
 
         # 180.0 should be shifted to -180.0
-        expected_coords = [(-180.0, 80.0), (-170.0, 80.0), (-170.0, 85.0), (-180.0, 85.0), (-180.0, 80.0)]
+        expected_coords = [
+            (-180.0, 80.0),
+            (-170.0, 80.0),
+            (-170.0, 85.0),
+            (-180.0, 85.0),
+            (-180.0, 80.0),
+        ]
         assert list(unshifted.exterior.coords) == expected_coords
 
     def test_unshift_preserves_validity(self):
         """Test that unshifting preserves polygon validity."""
-        coords = [(200.0, 80.0), (210.0, 80.0), (210.0, 85.0), (200.0, 85.0), (200.0, 80.0)]
+        coords = [
+            (200.0, 80.0),
+            (210.0, 80.0),
+            (210.0, 85.0),
+            (200.0, 85.0),
+            (200.0, 80.0),
+        ]
         poly = Polygon(coords)
 
         unshifted = unshift_western_hemi(poly)
@@ -234,12 +276,7 @@ class TestCreateBufferedPolygon:
 
     def test_track_multiple_antimeridian_crossings(self):
         """Test track that crosses antimeridian multiple times."""
-        points = [
-            (170.0, 75.0),
-            (-170.0, 76.0),
-            (175.0, 77.0),
-            (-175.0, 78.0)
-        ]
+        points = [(170.0, 75.0), (-170.0, 76.0), (175.0, 77.0), (-175.0, 78.0)]
         buffer_distance = 1.0
 
         result = create_buffered_polygon(points, buffer_distance)
@@ -262,7 +299,9 @@ class TestCreateBufferedPolygon:
 
         for points, buffer_dist in test_cases:
             result = create_buffered_polygon(points, buffer_dist)
-            assert result.is_valid, f"Invalid geometry for points={points}, buffer={buffer_dist}"
+            assert result.is_valid, (
+                f"Invalid geometry for points={points}, buffer={buffer_dist}"
+            )
 
     def test_zero_buffer_distance(self):
         """Test with zero buffer distance."""
@@ -419,7 +458,9 @@ class TestPolygonSimplification:
         num_coords = len(result.exterior.coords)
         # Simplified polygon should have significantly fewer points than the buffered version
         # A buffered polygon from 1000 points would normally have thousands of coordinates
-        assert num_coords < 500, f"Polygon not simplified enough: {num_coords} coordinates"
+        assert num_coords < 500, (
+            f"Polygon not simplified enough: {num_coords} coordinates"
+        )
 
     def test_simplification_preserves_coverage(self):
         """Test that simplified polygon still covers the input track."""
@@ -430,10 +471,12 @@ class TestPolygonSimplification:
 
         # All original points should be within the buffered polygon
         from shapely.geometry import Point
+
         for lon, lat in points:
             point = Point(lon, lat)
-            assert result.contains(point) or result.touches(point), \
+            assert result.contains(point) or result.touches(point), (
                 f"Point ({lon}, {lat}) not covered by simplified polygon"
+            )
 
     def test_simplification_maintains_validity(self):
         """Test that simplified polygons are always valid."""
@@ -448,7 +491,9 @@ class TestPolygonSimplification:
 
         for points, buffer_dist in test_cases:
             result = create_buffered_polygon(points, buffer_dist)
-            assert result.is_valid, f"Simplified polygon invalid for {len(points)} points"
+            assert result.is_valid, (
+                f"Simplified polygon invalid for {len(points)} points"
+            )
 
     def test_simplification_small_track_unchanged(self):
         """Test that small tracks don't get over-simplified."""

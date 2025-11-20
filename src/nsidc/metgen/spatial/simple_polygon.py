@@ -74,6 +74,7 @@ def unshift_western_hemi(geom: Polygon) -> Polygon:
     Returns:
         The same geometry with longitudes >= 180 shifted to negative values
     """
+
     def shift_coords(coords):
         return [(lon - 360 if lon >= 180 else lon, lat) for lon, lat in coords]
 
@@ -102,6 +103,7 @@ def clamp_latitude(geom: Polygon) -> Polygon:
     Returns:
         A Polygon with latitude clamped to valid range
     """
+
     def clamp_coords(coords):
         clamped = []
         prev_coord = None
@@ -146,6 +148,7 @@ def clamp_longitude(geom: Polygon) -> Polygon:
     Returns:
         A Polygon with longitude clamped to [-180, 180]
     """
+
     def clamp_coords(coords):
         return [(max(-180.0, min(180.0, lon)), lat) for lon, lat in coords]
 
@@ -156,7 +159,7 @@ def clamp_longitude(geom: Polygon) -> Polygon:
 def create_buffered_polygon(
     points: List[Tuple[float, float]],
     buffer_distance: float,
-    simplify_tolerance: float = 0.01
+    simplify_tolerance: float = 0.01,
 ) -> Polygon:
     """
     Create a buffered polygon around a satellite ground track.

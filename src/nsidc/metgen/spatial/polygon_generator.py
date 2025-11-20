@@ -98,6 +98,7 @@ def clamp_longitude(polygon):
         clamped_coords.append((clamped_lon, lat))
     return Polygon(clamped_coords)
 
+
 def enhance_longitude(polygon):
     """
     Insert points between widely-separated points (in longitude).
