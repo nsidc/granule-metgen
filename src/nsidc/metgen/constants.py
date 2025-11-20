@@ -2,6 +2,15 @@
 Constant values used throughout the `nsidc.metgen` package's submodules.
 """
 
+from enum import Enum
+
+
+class PolygonAlgorithm(str, Enum):
+    """Polygon generation algorithm choices."""
+
+    SIMPLE = "simple"
+    COMPLEX = "complex"
+
 # Default configuration values
 DEFAULT_CUMULUS_ENVIRONMENT = "uat"
 DEFAULT_KINESIS_PARTITION_KEY = "metgenc-duck"
@@ -19,6 +28,7 @@ DEFAULT_LOG_DIR = "/share/logs/metgenc"
 
 # Spatial polygon defaults
 DEFAULT_SPATIAL_POLYGON_ENABLED = True
+DEFAULT_SPATIAL_POLYGON_ALGORITHM = PolygonAlgorithm.COMPLEX
 DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE = 0.98
 DEFAULT_SPATIAL_POLYGON_MAX_VERTICES = 100
 DEFAULT_SPATIAL_POLYGON_CARTESIAN_TOLERANCE = 0.0001  # degrees
