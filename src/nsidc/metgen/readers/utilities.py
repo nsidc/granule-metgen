@@ -253,7 +253,10 @@ def parse_spatial(spatial_values: list, configuration: config.Config = None):
             lats = [point["Latitude"] for point in spatial_values]
 
             # Choose algorithm based on configuration and create configured generator
-            if configuration.spatial_polygon_algorithm == constants.PolygonAlgorithm.SIMPLE.value:
+            if (
+                configuration.spatial_polygon_algorithm
+                == constants.PolygonAlgorithm.SIMPLE.value
+            ):
                 # Simple line buffering algorithm
                 generate_polygon = partial(
                     create_buffered_polygon,

@@ -11,6 +11,7 @@ class PolygonAlgorithm(str, Enum):
     SIMPLE = "simple"
     COMPLEX = "complex"
 
+
 # Default configuration values
 DEFAULT_CUMULUS_ENVIRONMENT = "uat"
 DEFAULT_KINESIS_PARTITION_KEY = "metgenc-duck"

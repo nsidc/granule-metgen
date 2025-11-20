@@ -205,7 +205,9 @@ class TestCreateBufferedPolygon:
         points = [(10.0, 45.0), (20.0, 46.0), (30.0, 47.0)]
         buffer_distance = 1.0
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         assert isinstance(result, Polygon)
         # Check that all coordinates are in valid range
@@ -220,7 +222,9 @@ class TestCreateBufferedPolygon:
         points = [(179.0, 80.0), (-179.0, 81.0), (-178.0, 82.0)]
         buffer_distance = 1.0
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         assert isinstance(result, Polygon)
 
@@ -242,8 +246,12 @@ class TestCreateBufferedPolygon:
         """Test that buffer distance affects polygon size."""
         points = [(10.0, 45.0), (20.0, 46.0), (30.0, 47.0)]
 
-        small_buffer, _ = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], 0.5)
-        large_buffer, _ = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], 2.0)
+        small_buffer, _ = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], 0.5
+        )
+        large_buffer, _ = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], 2.0
+        )
 
         # Larger buffer should create larger polygon
         assert large_buffer.area > small_buffer.area
@@ -258,7 +266,9 @@ class TestCreateBufferedPolygon:
         points = [(10.0, 45.0), (20.0, 46.0)]
         buffer_distance = 1.0
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         assert isinstance(result, Polygon)
         assert result.is_valid
@@ -269,7 +279,9 @@ class TestCreateBufferedPolygon:
         points = [(i * 0.1, 45.0 + i * 0.01) for i in range(100)]
         buffer_distance = 0.5
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         assert isinstance(result, Polygon)
         assert result.is_valid
@@ -279,7 +291,9 @@ class TestCreateBufferedPolygon:
         points = [(170.0, 75.0), (-170.0, 76.0), (175.0, 77.0), (-175.0, 78.0)]
         buffer_distance = 1.0
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         assert isinstance(result, Polygon)
         assert result.is_valid
@@ -298,7 +312,9 @@ class TestCreateBufferedPolygon:
         ]
 
         for points, buffer_dist in test_cases:
-            result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_dist)
+            result, metadata = create_buffered_polygon(
+                [p[0] for p in points], [p[1] for p in points], buffer_dist
+            )
             assert result.is_valid, (
                 f"Invalid geometry for points={points}, buffer={buffer_dist}"
             )
@@ -307,7 +323,9 @@ class TestCreateBufferedPolygon:
         """Test with zero buffer distance."""
         points = [(10.0, 45.0), (20.0, 46.0)]
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], 0.0)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], 0.0
+        )
 
         # Should still return a valid geometry (though might be degenerate)
         assert isinstance(result, Polygon)
@@ -317,7 +335,9 @@ class TestCreateBufferedPolygon:
         points = [(-120.0, 35.0), (-119.0, 36.0), (-118.0, 37.0)]
         buffer_distance = 0.5
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         assert isinstance(result, Polygon)
         assert result.is_valid
@@ -337,7 +357,9 @@ class TestCoordinateClamping:
         points = [(0.0, 88.0), (10.0, 89.0), (20.0, 89.5)]
         buffer_distance = 2.0  # Large buffer that would exceed 89.9
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         coords = list(result.exterior.coords)
         for lon, lat in coords:
@@ -348,7 +370,9 @@ class TestCoordinateClamping:
         points = [(0.0, -88.0), (10.0, -89.0), (20.0, -89.5)]
         buffer_distance = 2.0
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         coords = list(result.exterior.coords)
         for lon, lat in coords:
@@ -360,7 +384,9 @@ class TestCoordinateClamping:
         points = [(179.0, 80.0), (-179.0, 81.0), (-178.0, 82.0)]
         buffer_distance = 1.0
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         coords = list(result.exterior.coords)
         for lon, lat in coords:
@@ -371,7 +397,9 @@ class TestCoordinateClamping:
         points = [(10.0, 45.0), (20.0, 46.0), (30.0, 47.0)]
         buffer_distance = 1.0
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         # Should still be valid without clamping
         coords = list(result.exterior.coords)
@@ -385,7 +413,9 @@ class TestCoordinateClamping:
         points = [(175.0, 45.0), (178.0, 46.0), (179.0, 47.0)]
         buffer_distance = 2.0  # Large buffer
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         coords = list(result.exterior.coords)
         for lon, lat in coords:
@@ -397,7 +427,9 @@ class TestCoordinateClamping:
         points = [(-178.0, 45.0), (-179.0, 46.0), (-179.5, 47.0)]
         buffer_distance = 2.0
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         coords = list(result.exterior.coords)
         for lon, lat in coords:
@@ -409,7 +441,9 @@ class TestCoordinateClamping:
         points = [(0.0, 88.5), (30.0, 89.0), (60.0, 89.0), (90.0, 88.5)]
         buffer_distance = 1.5
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         assert result.is_valid
         coords = list(result.exterior.coords)
@@ -429,7 +463,9 @@ class TestCoordinateClamping:
         points = [(0.0, -88.5), (30.0, -89.0), (60.0, -89.0), (90.0, -88.5)]
         buffer_distance = 1.5
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         assert result.is_valid
         coords = list(result.exterior.coords)
@@ -453,7 +489,9 @@ class TestPolygonSimplification:
         points = [(i * 0.1, 45.0 + i * 0.01) for i in range(1000)]
         buffer_distance = 0.5
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         num_coords = len(result.exterior.coords)
         # Simplified polygon should have significantly fewer points than the buffered version
@@ -467,7 +505,9 @@ class TestPolygonSimplification:
         points = [(i * 0.1, 45.0 + i * 0.01) for i in range(100)]
         buffer_distance = 0.5
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         # All original points should be within the buffered polygon
         from shapely.geometry import Point
@@ -490,7 +530,9 @@ class TestPolygonSimplification:
         ]
 
         for points, buffer_dist in test_cases:
-            result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_dist)
+            result, metadata = create_buffered_polygon(
+                [p[0] for p in points], [p[1] for p in points], buffer_dist
+            )
             assert result.is_valid, (
                 f"Simplified polygon invalid for {len(points)} points"
             )
@@ -501,7 +543,9 @@ class TestPolygonSimplification:
         points = [(10.0, 45.0), (20.0, 46.0), (30.0, 47.0)]
         buffer_distance = 1.0
 
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         # Should still be valid with reasonable number of points
         assert result.is_valid
@@ -516,7 +560,9 @@ class TestPolygonSimplification:
 
         # This test assumes we might add a tolerance parameter in the future
         # For now, just test with default behavior
-        result, metadata = create_buffered_polygon([p[0] for p in points], [p[1] for p in points], buffer_distance)
+        result, metadata = create_buffered_polygon(
+            [p[0] for p in points], [p[1] for p in points], buffer_distance
+        )
 
         assert result.is_valid
         # Simplified polygon should have manageable number of coordinates
