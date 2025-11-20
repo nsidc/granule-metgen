@@ -23,6 +23,13 @@ from typing import List, Tuple
 
 from shapely.geometry import LineString, Polygon
 
+from .spatial_utils import (
+    clamp_latitude,
+    clamp_longitude,
+    ensure_counter_clockwise,
+    filter_polygon_points_by_tolerance,
+)
+
 
 def has_antimeridian_crossing(points: List[Tuple[float, float]]) -> bool:
     """
@@ -82,84 +89,11 @@ def unshift_western_hemi(geom: Polygon) -> Polygon:
     return Polygon(exterior)
 
 
-def clamp_latitude(geom: Polygon) -> Polygon:
-    """
-    Clamp latitude coordinates to valid range.
-
-    Only clamps latitude to [-89.9, 89.9] range. Longitude is not clamped
-    to allow this function to work in both standard [-180, 180] and shifted
-    [0, 360) coordinate spaces.
-
-    Latitude is clamped to ±89.9° instead of ±90° to avoid geometric
-    degeneracies at the poles where multiple points at the same latitude
-    can create self-intersecting polygons.
-
-    Removes duplicate consecutive points that may result from clamping
-    to prevent invalid geometries.
-
-    Args:
-        geom: A Polygon
-
-    Returns:
-        A Polygon with latitude clamped to valid range
-    """
-
-    def clamp_coords(coords):
-        clamped = []
-        prev_coord = None
-
-        for lon, lat in coords:
-            # Clamp latitude to [-89.9, 89.9] to avoid pole degeneracies
-            lat = max(-89.9, min(89.9, lat))
-
-            # Skip duplicate consecutive points
-            current_coord = (lon, lat)
-            if current_coord != prev_coord:
-                clamped.append(current_coord)
-                prev_coord = current_coord
-
-        # Ensure we have at least 3 unique points for a valid polygon
-        # (Shapely will close it, so we need 3 distinct points minimum)
-        if len(clamped) < 3:
-            return None
-
-        return clamped
-
-    exterior = clamp_coords(geom.exterior.coords)
-
-    if exterior is None:
-        # Degenerate case - return a very small valid polygon
-        # This shouldn't happen in practice with reasonable inputs
-        return geom
-
-    return Polygon(exterior)
-
-
-def clamp_longitude(geom: Polygon) -> Polygon:
-    """
-    Clamp longitude coordinates to [-180, 180] range.
-
-    This should only be called after unshifting from [0, 360) space to ensure
-    we're clamping in the correct coordinate system.
-
-    Args:
-        geom: A Polygon in standard [-180, 180] longitude space
-
-    Returns:
-        A Polygon with longitude clamped to [-180, 180]
-    """
-
-    def clamp_coords(coords):
-        return [(max(-180.0, min(180.0, lon)), lat) for lon, lat in coords]
-
-    exterior = clamp_coords(geom.exterior.coords)
-    return Polygon(exterior)
-
-
 def create_buffered_polygon(
     points: List[Tuple[float, float]],
     buffer_distance: float,
     simplify_tolerance: float = 0.01,
+    cartesian_tolerance: float = 0.0001,
 ) -> Polygon:
     """
     Create a buffered polygon around a satellite ground track.
@@ -174,6 +108,8 @@ def create_buffered_polygon(
         3. Simplify the polygon to reduce coordinate count (in shifted space if needed)
         4. If antimeridian crossing: shift back [180, 360) to [-180, 0)
         5. Clamp latitude to [-89.9, 89.9] and longitude to [-180, 180]
+        6. Filter polygon points by CMR tolerance (minimum point separation)
+        7. Ensure counter-clockwise orientation for CMR compliance
 
     Note: Simplification (step 3) happens in the shifted space before unshifting
     to avoid creating invalid geometries. Simplification after unshifting can create
@@ -191,6 +127,8 @@ def create_buffered_polygon(
         buffer_distance: Buffer distance in degrees
         simplify_tolerance: Tolerance for polygon simplification in degrees.
                            Smaller values preserve more detail. Default is 0.01.
+        cartesian_tolerance: Minimum spacing between points in degrees for CMR
+                            compliance (default: 0.0001)
 
     Returns:
         A Polygon representing the buffered track.
@@ -232,5 +170,9 @@ def create_buffered_polygon(
     # Clamp coordinates to valid ranges (after unshifting)
     buffered = clamp_latitude(buffered)
     buffered = clamp_longitude(buffered)
+
+    # Apply CMR compliance: filter points by tolerance and ensure counter-clockwise
+    buffered = filter_polygon_points_by_tolerance(buffered, tolerance=cartesian_tolerance)
+    buffered = ensure_counter_clockwise(buffered)
 
     return buffered

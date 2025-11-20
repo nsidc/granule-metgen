@@ -7,9 +7,9 @@ import pytest
 from shapely.geometry import Point, Polygon
 
 from nsidc.metgen.spatial import create_flightline_polygon
-from nsidc.metgen.spatial.polygon_generator import (
-    _filter_polygon_points_by_tolerance,
+from nsidc.metgen.spatial.spatial_utils import (
     clamp_longitude,
+    filter_polygon_points_by_tolerance,
 )
 
 
@@ -333,7 +333,7 @@ class TestPolygonGenerator:
 
         # Test with default tolerance
         tolerance = 0.0001
-        filtered_polygon = _filter_polygon_points_by_tolerance(
+        filtered_polygon = filter_polygon_points_by_tolerance(
             polygon, tolerance=tolerance
         )
 
