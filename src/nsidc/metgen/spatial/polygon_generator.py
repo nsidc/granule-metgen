@@ -13,9 +13,7 @@ import time
 
 import numpy as np
 from concave_hull import concave_hull
-from shapely import set_precision
 from shapely.geometry import Point, Polygon
-from shapely.geometry.polygon import orient
 from shapely.validation import make_valid
 
 from .spatial_utils import (

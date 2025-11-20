@@ -172,7 +172,9 @@ def create_buffered_polygon(
     buffered = clamp_longitude(buffered)
 
     # Apply CMR compliance: filter points by tolerance and ensure counter-clockwise
-    buffered = filter_polygon_points_by_tolerance(buffered, tolerance=cartesian_tolerance)
+    buffered = filter_polygon_points_by_tolerance(
+        buffered, tolerance=cartesian_tolerance
+    )
     buffered = ensure_counter_clockwise(buffered)
 
     return buffered
