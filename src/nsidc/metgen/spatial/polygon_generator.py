@@ -25,35 +25,6 @@ from .spatial_utils import (
 logger = logging.getLogger(__name__)
 
 
-def enhance_longitude(polygon):
-    """
-    Insert points between widely-separated points (in longitude).
-    """
-    if not isinstance(polygon, Polygon):
-        return polygon
-
-    coords = list(polygon.exterior.coords)
-    enhanced_coords = []
-    for i in range(len(coords) - 1):
-        lon1, lat1 = coords[i]
-        lon2, lat2 = coords[i + 1]
-        enhanced_coords.append((lon1, lat1))
-
-        # Check for large longitude gap
-        lon_diff = abs(lon2 - lon1)
-        if lon_diff > 10.0:  # Threshold for inserting points
-            num_inserts = int(lon_diff // 10)
-            for j in range(1, num_inserts + 1):
-                fraction = j / (num_inserts + 1)
-                new_lon = lon1 + fraction * (lon2 - lon1)
-                new_lat = lat1 + fraction * (lat2 - lat1)
-                enhanced_coords.append((new_lon, new_lat))
-
-    # Add the last point
-    enhanced_coords.append(coords[-1])
-    return Polygon(enhanced_coords)
-
-
 def create_flightline_polygon(
     lon, lat, target_coverage=0.98, max_vertices=100, cartesian_tolerance=0.0001
 ):
@@ -337,8 +308,6 @@ def create_flightline_polygon(
         # Clamp buffered polygon coordinates to [-180, 180] to prevent invalid coordinates
         # Buffering near antimeridian can push coordinates beyond valid range
         polygon = clamp_longitude(polygon)
-
-        polygon = enhance_longitude(polygon)
 
         metadata["final_data_coverage"] = coverage
 

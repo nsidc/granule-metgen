@@ -36,36 +36,30 @@ def clamp_latitude(geom: Polygon) -> Polygon:
     Returns:
         A Polygon with latitude clamped to valid range
     """
+    if not isinstance(geom, Polygon):
+        return geom
 
-    def clamp_coords(coords):
-        clamped = []
-        prev_coord = None
+    clamped = []
+    prev_coord = None
 
-        for lon, lat in coords:
-            # Clamp latitude to [-89.9, 89.9] to avoid pole degeneracies
-            lat = max(-89.9, min(89.9, lat))
+    for lon, lat in geom.exterior.coords:
+        # Clamp latitude to [-89.9, 89.9] to avoid pole degeneracies
+        lat = max(-89.9, min(89.9, lat))
 
-            # Skip duplicate consecutive points
-            current_coord = (lon, lat)
-            if current_coord != prev_coord:
-                clamped.append(current_coord)
-                prev_coord = current_coord
+        # Skip duplicate consecutive points
+        current_coord = (lon, lat)
+        if current_coord != prev_coord:
+            clamped.append(current_coord)
+            prev_coord = current_coord
 
-        # Ensure we have at least 3 unique points for a valid polygon
-        # (Shapely will close it, so we need 3 distinct points minimum)
-        if len(clamped) < 3:
-            return None
-
-        return clamped
-
-    exterior = clamp_coords(geom.exterior.coords)
-
-    if exterior is None:
-        # Degenerate case - return a very small valid polygon
+    # Ensure we have at least 3 unique points for a valid polygon
+    # (Shapely will close it, so we need 3 distinct points minimum)
+    if len(clamped) < 3:
+        # Degenerate case - return original polygon
         # This shouldn't happen in practice with reasonable inputs
         return geom
 
-    return Polygon(exterior)
+    return Polygon(clamped)
 
 
 def clamp_longitude(geom: Polygon) -> Polygon:
@@ -89,11 +83,8 @@ def clamp_longitude(geom: Polygon) -> Polygon:
     if not isinstance(geom, Polygon):
         return geom
 
-    def clamp_coords(coords):
-        return [(max(-180.0, min(180.0, lon)), lat) for lon, lat in coords]
-
-    exterior = clamp_coords(geom.exterior.coords)
-    return Polygon(exterior)
+    clamped = [(max(-180.0, min(180.0, lon)), lat) for lon, lat in geom.exterior.coords]
+    return Polygon(clamped)
 
 
 def filter_polygon_points_by_tolerance(polygon, tolerance=0.0001):
