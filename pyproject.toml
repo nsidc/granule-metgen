@@ -131,7 +131,7 @@ addopts = [
     "--import-mode=importlib",
 ]
 filterwarnings = [
-    'ignore:.*utcnow.*deprecated.*:DeprecationWarning'
+    'ignore:.*utcnow.*deprecated.*:DeprecationWarning:botocore.auth'
 ]
 
 [tool.poetry.scripts]
