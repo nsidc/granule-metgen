@@ -347,8 +347,7 @@ Example running **init**
 * The `kinesis_stream_name` and `staging_bucket_name` should never be edited
 * `auth_id` and `version` must accurately reflect the collection's authID and versionID
 * `log_dir` specifies the directory where metgenc log files will be written. Log files are named `metgenc-{config-name}-{timestamp}.log` where config-name is the base name of the .ini file and timestamp is in YYYYMMDD-HHMM format. The default log directory is `/share/logs/metgenc`, but this can be edited to write metgenc logs to a different existing, writable directory location.
-* provider is a free text attribute where, for now, the version of metgenc being run should be documented
-  * running `metgenc --version` will return the current version
+* `provider` is [newly!!] a _**required**_ attribute that must define the Cumulus Ingest Provider name to successfully ingest data into CUAT. Currently, that'd be `provider = Direct_to_Cumulus_S3` as this is the Cumulus Ingest Provider most (probably all) MetGenC data sets are relying on for ingest. If more Ingest Providers are created, the value for the .ini file's provider field just needs to reflect the exact name of the Cumulus Ingest Provider set for the collection in Cumulus.
 
 #### Required and Optional Configuration Elements
 Some attribute values may be read from the .ini file if the values
@@ -431,7 +430,7 @@ collection_temporal_override = False
 [Collection]
 auth_id = SNEX_MCS_Lidar
 version = 1
-provider = SnowEx
+provider = Direct_to_Cumulus_S3
 granule_regex = (SNEX_MCS_Lidar_)(?P<granuleid>\d{8})(?:_[-a-zA-Z0-9]+)(?:_V01\.0)
 reference_file_regex = _SD_
 ```
@@ -472,7 +471,7 @@ spatial_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX23_CSU_GPR_metgen/spatial
 [Collection]
 auth_id = SNEX23_CSU_GPR
 version = 1
-provider = SnowEx
+provider = Direct_to_Cumulus_S3
 ```
 No regex are necessary since the file name will simply become the granule name.
 
@@ -485,7 +484,7 @@ data_dir = ./data/0081
 [Collection]
 auth_id = NSIDC-0081
 version = 2
-provider = DPT
+provider = Direct_to_Cumulus_S3
 browse_regex = _F\d{2}
 ```
 And two granules + their associated browse files and good granule names:
@@ -510,7 +509,7 @@ data_dir = ./data/0081DUCk
 [Collection]
 auth_id = NSIDC-0081DUCk
 version = 2
-provider = DPT
+provider = Direct_to_Cumulus_S3
 browse_regex = _brws
 granule_regex = (NSIDC0081_SEAICE_PS_)(?P<granuleid>[NS]{1}\d{2}km_\d{8})(_v2.0_)(?:F\d{2}_)?(DUCk)
 ```
@@ -555,7 +554,7 @@ collection_temporal_override = True
 [Collection]
 auth_id = SNEX23_SD_TLI
 version = 1
-provider = SnowEx
+provider = Direct_to_Cumulus_S3
 browse_regex = _brws
 granule_regex = (SNEX23_SD_TLI_)(?:[a-z]+)_(?P<granuleid>\d{8}-\d{8}_)(V01\.0)
 reference_file_regex = (SNEX23_SD_TLI_)(snowdepth_\d{8}-\d{8}_)(V01\.0)
@@ -575,9 +574,9 @@ The resulting multi-file granule ID is: `SNEX23_SD_TLI_20221014-20240601_V01.0`.
 
 #### Using Premet and Spatial files
 The following two .ini elements can be added to the .ini file to define paths
-to the directories containing `premet` and `spatial` files. The paths must define
-two distinct directories which must also be distinct from the data directory.
-The user will be prompted for these values when running `metgenc init` (but are optional
+to the directories containing `premet` and `spatial` files. The path (or path_s_ if you organize
+premet files separately from spatial files) must be distinct from the data directory.
+You'll be prompted for these values when running `metgenc init` (but they're optional
 elements in the .ini file).
 | .ini element | .ini section |
 | ------------- | ------------- |
@@ -777,7 +776,7 @@ Using configuration:
   + data_dir: /disks/sidads_staging/SNOWEX_metgen/SNEX23_CSU_GPR_metgen/data
   + auth_id: SNEX23_CSU_GPR
   + version: 1
-  + provider: SnowEx
+  + provider: Direct_to_Cumulus_S3
   + local_output_dir: /share/apps/metgenc/SNEX23_CSU_GPR/output
   + ummg_dir: ummg
   + kinesis_stream_name: nsidc-cumulus-uat-external_notification
