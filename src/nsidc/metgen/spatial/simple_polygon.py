@@ -31,7 +31,7 @@ from .spatial_utils import (
 )
 
 # Default parameters for simple buffering algorithm
-DEFAULT_BUFFER_DISTANCE = 1.0  # degrees
+DEFAULT_BUFFER_DISTANCE = 0.1  # degrees
 DEFAULT_SIMPLIFY_TOLERANCE = 0.01  # degrees
 DEFAULT_CARTESIAN_TOLERANCE = 0.0001  # degrees
 
