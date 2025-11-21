@@ -47,6 +47,7 @@ class Config:
     granule_regex: Optional[str] = None
     reference_file_regex: Optional[str] = None
     spatial_polygon_enabled: Optional[bool] = False
+    spatial_polygon_algorithm: Optional[str] = None
     spatial_polygon_target_coverage: Optional[float] = None
     spatial_polygon_max_vertices: Optional[int] = None
     spatial_polygon_cartesian_tolerance: Optional[float] = None
@@ -152,6 +153,7 @@ def configuration(
         "collection_geometry_override": constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE,
         "collection_temporal_override": constants.DEFAULT_COLLECTION_TEMPORAL_OVERRIDE,
         "spatial_polygon_enabled": constants.DEFAULT_SPATIAL_POLYGON_ENABLED,
+        "spatial_polygon_algorithm": constants.DEFAULT_SPATIAL_POLYGON_ALGORITHM.value,
         "spatial_polygon_target_coverage": constants.DEFAULT_SPATIAL_POLYGON_TARGET_COVERAGE,
         "spatial_polygon_max_vertices": constants.DEFAULT_SPATIAL_POLYGON_MAX_VERTICES,
         "spatial_polygon_cartesian_tolerance": constants.DEFAULT_SPATIAL_POLYGON_CARTESIAN_TOLERANCE,
@@ -306,6 +308,14 @@ def configuration(
             _get_configuration_value(
                 environment,
                 "Spatial",
+                "spatial_polygon_algorithm",
+                str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Spatial",
                 "spatial_polygon_target_coverage",
                 float,
                 config_parser,
@@ -398,6 +408,11 @@ def validate(configuration):
             "number",
             lambda number: 0 < number,
             "The number of granules to process must be positive.",
+        ],
+        [
+            "spatial_polygon_algorithm",
+            lambda alg: alg in [e.value for e in constants.PolygonAlgorithm],
+            f"The spatial polygon algorithm must be one of: {', '.join([e.value for e in constants.PolygonAlgorithm])}.",
         ],
         [
             "spatial_polygon_target_coverage",

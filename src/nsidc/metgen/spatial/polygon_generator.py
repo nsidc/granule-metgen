@@ -13,61 +13,16 @@ import time
 
 import numpy as np
 from concave_hull import concave_hull
-from shapely import set_precision
 from shapely.geometry import Point, Polygon
-from shapely.geometry.polygon import orient
 from shapely.validation import make_valid
 
+from .spatial_utils import (
+    clamp_longitude,
+    ensure_counter_clockwise,
+    filter_polygon_points_by_tolerance,
+)
+
 logger = logging.getLogger(__name__)
-
-
-def _filter_polygon_points_by_tolerance(polygon, tolerance=0.0001):
-    """
-    Filter polygon points to ensure minimum spacing according to CMR tolerance requirements.
-
-    Uses Shapely's set_precision to snap points to a grid, which automatically
-    merges vertices that are closer than the tolerance. This ensures that no two
-    successive points in the polygon boundary are within the tolerance distance.
-
-    Parameters:
-    -----------
-    polygon : shapely.geometry.Polygon
-        Polygon whose vertices need filtering
-    tolerance : float
-        Minimum required distance between points in degrees (default: 0.0001)
-
-    Returns:
-    --------
-    shapely.geometry.Polygon : Filtered polygon with tolerance-compliant vertices
-    """
-    if not hasattr(polygon, "exterior") or len(polygon.exterior.coords) <= 4:
-        return polygon
-
-    try:
-        # Use set_precision to snap to a grid with spacing equal to tolerance
-        # This automatically merges points that are within tolerance of each other
-        # mode='pointwise' ensures individual vertices are snapped independently
-        filtered_polygon = set_precision(polygon, grid_size=tolerance, mode="pointwise")
-
-        # Ensure the result is valid
-        if not filtered_polygon.is_valid:
-            filtered_polygon = make_valid(filtered_polygon)
-
-        # Check if we still have enough vertices for a valid polygon
-        if (
-            hasattr(filtered_polygon, "exterior")
-            and len(filtered_polygon.exterior.coords) >= 4
-        ):
-            return filtered_polygon
-        else:
-            logger.warning(
-                "Tolerance filtering resulted in degenerate polygon, keeping original"
-            )
-            return polygon
-
-    except Exception as e:
-        logger.error(f"Failed to filter polygon by tolerance: {e}")
-        return polygon
 
 
 def create_flightline_polygon(
@@ -249,7 +204,7 @@ def create_flightline_polygon(
         pre_filter_vertices = (
             len(polygon.exterior.coords) - 1 if hasattr(polygon, "exterior") else 0
         )
-        polygon = _filter_polygon_points_by_tolerance(
+        polygon = filter_polygon_points_by_tolerance(
             polygon, tolerance=cartesian_tolerance
         )
         post_filter_vertices = (
@@ -350,10 +305,14 @@ def create_flightline_polygon(
                         metadata["post_buffer_vertices"] = buffered_vertices
                         metadata["area_increase_ratio"] = area_increase
 
+        # Clamp buffered polygon coordinates to [-180, 180] to prevent invalid coordinates
+        # Buffering near antimeridian can push coordinates beyond valid range
+        polygon = clamp_longitude(polygon)
+
         metadata["final_data_coverage"] = coverage
 
         # Calculate final metrics
-        if hasattr(polygon, "exterior"):
+        if isinstance(polygon, Polygon):
             metadata["vertices"] = len(polygon.exterior.coords) - 1
         else:
             metadata["vertices"] = 0
@@ -377,7 +336,7 @@ def create_flightline_polygon(
 
     # Final step: ensure counter-clockwise orientation for CMR compliance
     if polygon is not None:
-        polygon = _ensure_counter_clockwise(polygon)
+        polygon = ensure_counter_clockwise(polygon)
 
     return polygon, metadata
 
@@ -707,36 +666,4 @@ def _normalize_polygon_coordinates(polygon):
 
     except Exception as e:
         logger.error(f"Coordinate normalization failed: {e}")
-        return polygon
-
-
-def _ensure_counter_clockwise(polygon):
-    """
-    Ensure polygon has counter-clockwise winding order as required by CMR.
-
-    The Common Metadata Repository (CMR) requires that polygon points be
-    specified in counter-clockwise order. This function checks the orientation
-    and corrects it if necessary.
-
-    Parameters:
-    -----------
-    polygon : shapely.geometry.Polygon
-        Polygon to check and potentially reorient
-
-    Returns:
-    --------
-    shapely.geometry.Polygon : Polygon with counter-clockwise exterior ring
-    """
-    try:
-        if not hasattr(polygon, "exterior"):
-            return polygon
-
-        # Use shapely's orient function to ensure counter-clockwise orientation
-        # sign=1.0 ensures counter-clockwise exterior, clockwise holes
-        oriented_polygon = orient(polygon, sign=1.0)
-
-        return oriented_polygon
-
-    except Exception as e:
-        logger.error(f"Failed to ensure counter-clockwise orientation: {e}")
         return polygon

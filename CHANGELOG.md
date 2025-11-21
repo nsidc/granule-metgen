@@ -1,3 +1,13 @@
+## UNRELEASED
+
+* Add a new configuration parameter 'spatial_polygon_algorithm' to select simple or
+  complex polygon methods. The new simple method is used for satellite ground tracks
+  or similarly less-complex geometries.
+
+## v1.13.0rc1 (2025-11-17)
+
+* PSS-692: Ensure longitude values of the generated polygons stay in-bounds [-180,180].
+
 ## v1.13.0rc0 (2025-09-17)
 
 * Issue 292: Exclude `.spo` files from polygon-generation logic, regardless of

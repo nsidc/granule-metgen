@@ -6,8 +6,11 @@ import numpy as np
 import pytest
 from shapely.geometry import Point, Polygon
 
-from nsidc.metgen.spatial import create_flightline_polygon
-from nsidc.metgen.spatial.polygon_generator import _filter_polygon_points_by_tolerance
+from nsidc.metgen.spatial.polygon_generator import create_flightline_polygon
+from nsidc.metgen.spatial.spatial_utils import (
+    clamp_longitude,
+    filter_polygon_points_by_tolerance,
+)
 
 
 class TestPolygonGenerator:
@@ -330,7 +333,7 @@ class TestPolygonGenerator:
 
         # Test with default tolerance
         tolerance = 0.0001
-        filtered_polygon = _filter_polygon_points_by_tolerance(
+        filtered_polygon = filter_polygon_points_by_tolerance(
             polygon, tolerance=tolerance
         )
 
@@ -502,3 +505,76 @@ class TestPolygonGenerator:
         assert is_ccw, (
             f"Polygon for {description} has clockwise orientation. CMR requires counter-clockwise."
         )
+
+    def test_clamp_longitude_with_out_of_bounds_coordinates(self):
+        """Test that clamp_longitude clamps out-of-bounds coordinates to [-180, 180].
+
+        BUG: When buffering polygons near ±180°, buffer points can extend beyond
+        valid longitude bounds, creating invalid coordinates like -180.5° or 180.5°.
+
+        FIX: clamp_longitude clamps all coordinates to [-180, 180] range.
+        """
+        # Create polygon with out-of-bounds longitude coordinates
+        polygon = Polygon(
+            [
+                (180.5, 85.0),  # Over max
+                (-180.8, 86.0),  # Under min
+                (179.0, 87.0),  # Valid
+                (-179.0, 86.5),  # Valid
+                (180.5, 85.0),  # Closing point
+            ]
+        )
+
+        clamped = clamp_longitude(polygon)
+
+        # Check all coordinates are within valid range
+        coords = list(clamped.exterior.coords)
+        lons = [c[0] for c in coords]
+
+        assert all(-180 <= lon <= 180 for lon in lons), (
+            f"Found invalid longitude: min={min(lons)}, max={max(lons)}"
+        )
+        # Verify specific clamping
+        assert coords[0][0] == 180.0  # 180.5 -> 180.0
+        assert coords[1][0] == -180.0  # -180.8 -> -180.0
+        assert coords[2][0] == 179.0  # unchanged
+        assert coords[3][0] == -179.0  # unchanged
+
+    def test_clamp_longitude_with_valid_coordinates(self):
+        """Test that clamp_longitude doesn't modify already valid coordinates."""
+        # Create polygon with all valid coordinates
+        polygon = Polygon(
+            [(179.0, 85.0), (-179.0, 86.0), (0.0, 87.0), (90.0, 86.5), (179.0, 85.0)]
+        )
+
+        clamped = clamp_longitude(polygon)
+
+        # Coordinates should be unchanged
+        original_coords = list(polygon.exterior.coords)
+        clamped_coords = list(clamped.exterior.coords)
+
+        assert original_coords == clamped_coords
+
+    def test_clamp_longitude_preserves_latitude(self):
+        """Test that clamp_longitude only modifies longitude, not latitude."""
+        polygon = Polygon(
+            [(180.5, 85.123), (-180.8, 86.456), (179.0, 87.789), (180.5, 85.123)]
+        )
+
+        clamped = clamp_longitude(polygon)
+        coords = list(clamped.exterior.coords)
+
+        # Latitudes should be preserved exactly
+        assert coords[0][1] == 85.123
+        assert coords[1][1] == 86.456
+        assert coords[2][1] == 87.789
+
+    def test_clamp_longitude_returns_valid_polygon(self):
+        """Test that clamp_longitude returns a valid Shapely polygon."""
+        polygon = Polygon([(180.9, 85.0), (-180.9, 86.0), (0.0, 87.0), (180.9, 85.0)])
+
+        clamped = clamp_longitude(polygon)
+
+        assert isinstance(clamped, Polygon)
+        assert clamped.is_valid
+        assert clamped.geom_type == "Polygon"
