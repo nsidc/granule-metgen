@@ -130,6 +130,9 @@ pythonpath = ["src"]
 addopts = [
     "--import-mode=importlib",
 ]
+filterwarnings = [
+    'ignore:.*utcnow.*deprecated.*:DeprecationWarning'
+]
 
 [tool.poetry.scripts]
 metgenc = 'nsidc.metgen.cli:cli'
