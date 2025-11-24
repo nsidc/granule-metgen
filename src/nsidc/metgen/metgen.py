@@ -230,6 +230,20 @@ def init_config(configuration_file):
     )
 
     print()
+    print("Spatial Parameters")
+    print("--------------------------------------------------")
+    cfg_parser.add_section("Spatial")
+    cfg_parser.set(
+        "Spatial",
+        "spatial_polygon_algorithm",
+        Prompt.ask(
+            "Polygon algorithm (simple/complex)",
+            default=constants.DEFAULT_SPATIAL_POLYGON_ALGORITHM.value,
+            choices=[e.value for e in constants.PolygonAlgorithm],
+        ),
+    )
+
+    print()
     print(f"{constants.SETTINGS_SECTION_NAME} Parameters")
     print("--------------------------------------------------")
     cfg_parser.add_section(constants.SETTINGS_SECTION_NAME)
