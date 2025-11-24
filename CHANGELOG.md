@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.13.0 (2025-11-24)
 
 * Add a new configuration parameter 'spatial_polygon_algorithm' to select simple or
   complex polygon methods. The new simple method is used for satellite ground tracks
