@@ -591,17 +591,6 @@ elements in the .ini file).
   metadata continuity for an existing collection) from the pub team in order to include more
   attributes than just begin/end date/time. Most, if not all, new data sets requiring
   premets should see them include only begin/end date/time.
-- At the moment with the production metgenc vm running **metgenc version 1.12.0**, when .spo files are used
-  for a data set, the .ini file needs to include a [Spatial] section defininig `spatial_polygon_enabled = false`
-  so that the vertices defined are used directly (instead of accidentally interpreted by MetGenC as a data set
-  footprint around which a gpolygon needs to be generated).
-  e.g.,
-```
-[Spatial]
-spatial_polygon_enabled = false
-```
-(Note: A fix has been implemented in MetGenC version 1.13.0rc0; once version 1.13.0 is released and running
-on the production metgenc vm, the .spo issue will be a thing of the past).
 
 #### Setting Collection Spatial Extent as Granule Spatial Extent
 In cases of data sets where granule spatial information is not available
@@ -616,7 +605,7 @@ use the collection's spatial extent for each granule.
 | collection_geometry_override | Source        |
 
 #### Setting Collection Temporal Extent as Granule Temporal Extent
-RARELY APPLICABLE (if ever)!! An operator may set an .ini flag to indicate
+An operator may set an .ini flag to indicate
 that a collection's temporal extent should be used to populate every granule
 via granule-level UMMG json to be the same TemporalExtent (SingleDateTime or
 BeginningDateTime and EndingDateTime) as what's defined for the collection.
@@ -637,7 +626,7 @@ MetGenC includes optimized polygon generation capabilities for creating spatial 
 When a granule has an associated `.spatial` file containing geodetic point data (≥3 points), MetGenC will automatically generate an optimized polygon to enclose the data points instead of using the basic point-to-point polygon method. This results in more accurate spatial coverage with fewer vertices.
 
 **This feature, while optional, is always enabled by default in MetGenC**.
-- To disable it entirely, edit the .ini file, add a \[Spatial\] section if necessary, and add the line `spatial_polygon_enabled = false`. **CURRENTLY RECOMMENDED TO SET `spatial_polygon_enabled = false` WHENEVER .SPO FILES ARE USED.**
+- To disable it entirely, edit the .ini file, add a \[Spatial\] section if necessary, and add the line `spatial_polygon_enabled = false`, however this shouldn't be necessary as MetGenC would only invoke the spatial polygon algorithm when input file circumstances call for it. 
 - When `spatial_polygon_enabled = true` (either by default or when set as such in the .ini file) the other parameters listed below can be added to
   and edited in the .ini file. For the most part, the values shouldn't need to be altered! However, if ingest fails due to GPolygonSpatial errors,
   the first attribute to add to or edit in the .ini file should be `spatial_polygon_cartesian_tolerance` by decreasing its coordinate precision
