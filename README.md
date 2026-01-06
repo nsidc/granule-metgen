@@ -859,6 +859,12 @@ The configuration is invalid:
   e.g., grep -A 46 43eae1561cba metgenc.log
 ```
 
+* If running metgenc process without the -d / --dry-run option fails with the following:
+```
+Unable to process data: EARTHDATA_USERNAME and EARTHDATA_PASSWORD are not set in the current environment, try setting them or use a different strategy (netrc, interactive)
+```
+run `source /etc/profile.d/metgenc-init.sh` to set the uname and pw in the current environment.
+
 ---
 
 ### validate
