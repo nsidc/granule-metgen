@@ -833,7 +833,7 @@ channels, and post a quick "done" note when you're done ingest testing as a cour
 
 
 #### Troubleshooting metgenc process
-* MetGenC processing, `metgenc process -d -c init/xxxxx.ini`, must be run at the ~/metgenc level in the
+EG 1. MetGenC processing, `metgenc process -d -c init/xxxxx.ini`, must be run at the ~/metgenc level in the
   vm's virtual environment, e.g., `vagrant@vmpolark2:~/metgenc$`. If you run it in the data/, or init/, or any other
   directory, you'll see errors like:
 ```
@@ -843,10 +843,10 @@ The configuration is invalid:
   * The spatial_dir does not exist.
   * The local_output_dir does not exist.
 ```
-* If running `metgenc process` fails for other reasons, check for an error message in the metgenc log. This is written by default to/as (/share/logs/metgenc/`metgenc-{config-name}-{timestamp}.log`).
+EG 2. If running `metgenc process` fails for other reasons, check for an error message in the metgenc log. This is written by default to/as (/share/logs/metgenc/`metgenc-{config-name}-{timestamp}.log`).
   * The metgenc.log will spell out the reason for the error for the operator, so the .ini file or paths pointed to in the .ini file can be spiffed up.
 
-* If running metgenc process without the -d / --dry-run option leads to the following warning:
+EG 3. If running metgenc process without the -d / --dry-run option leads to the following warning:
 ```
   The configuration is invalid:
     The kinesis stream does not exist.
@@ -854,16 +854,29 @@ The configuration is invalid:
 ```
   It's almost certainly indicating that you've not sourced the credentials required (cumulus-uat, cumulus-prod) for the environment you're telling MetGenC to process in.
 
-* If metgenc reports "Successful   : False" for a specific granule, you can copy the UUID (or, just the last alphanumeric block after the dash is adequate), and then grep the metgenc log for that processing run for that id specifying only 46 lines after the id to be returned. That'll show you the log details just for that granule!
+EG 4. If metgenc reports "Successful   : False" for a specific granule, you can copy the UUID (or, just the last alphanumeric block after the dash is adequate), and then grep the metgenc log for that processing run for that id specifying only 46 lines after the id to be returned. That'll show you the log details just for that granule!
 ```
   e.g., grep -A 46 43eae1561cba metgenc.log
 ```
 
-* If running metgenc process without the -d / --dry-run option fails with the following:
+EG 5. If running metgenc process without the -d / --dry-run option fails with the following:
 ```
 Unable to process data: EARTHDATA_USERNAME and EARTHDATA_PASSWORD are not set in the current environment, try setting them or use a different strategy (netrc, interactive)
 ```
 run `source /etc/profile.d/metgenc-init.sh` to set the uname and pw in the current environment.
+
+EG 6. If running metgenc process with an ini file configured to generate single-file granules for the data set, but you receive the error: 
+```
+Unable to process data: Granule has multiple science files but reference_file_regex is not set.
+```
+Check the file naming convention. MetGenC assumes/relies on a data set's files following required file naming conventions detailed in: File Name Guidelines for NSIDC Data Sets https://nsidc.atlassian.net/wiki/spaces/TECHS/pages/51034667/File+Name+Guidelines+for+NSIDC+Data+Sets#Which-Components-to-Include-in-File-Names
+
+**namely, that file names contain the following:**
+```
+A unique data set identifier = AuthID.
+The date-time, or any part thereof as applicable, typically of the first data observation in the file.
+A unique version identifier for each data set published.
+```
 
 ---
 
