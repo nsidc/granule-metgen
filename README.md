@@ -606,15 +606,11 @@ use the collection's spatial extent for each granule.
 
 #### Setting Collection Temporal Extent as Granule Temporal Extent
 An operator may set an .ini flag to indicate
-that a collection's temporal extent should be used to populate every granule
-via granule-level UMMG json to be the same TemporalExtent (SingleDateTime or
-BeginningDateTime and EndingDateTime) as what's defined for the collection.
-In other words, every granule in a collection would display the same start
-and end times in EDSC. In most collections, this is likely ill-advised use case.
-The operator will be prompted for a `collection_temporal_override`
-value when running `metgenc init`. The default value is `False` and should likely
-always be accepted; setting it to `True` is what would signal MetGenC to set each
-granule to the collection's TemporalExtent.
+that a collection's temporal extent should be used to populate every granule's
+temporal extent. This appears in each granule's UMMG json's TemporalExtent field,
+matching what's defined for the collection, including whether it's (SingleDateTime,
+or BeginningDateTime and EndingDateTime). Every granule in the collection will 
+display the same start and end times in EDSC when collection_temporal_override = true. 
 
 | .ini element                 | .ini section |
 | ----------------------------- | --------------|
