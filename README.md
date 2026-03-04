@@ -15,7 +15,7 @@
         * [INI RULES](#ini-rules)
       - [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
       - [Granule and Browse regex](#granule-and-browse-regex)
-        * [INI File Example 1: Use of granule_regex for multi-file granules with no browse](#ini-file-example-1-use-of-granule_regex-for-multi-file-granules-with-no-browse)
+        * [INI File Example 1: Use of granule_regex for multi-file granules with no browse](#ini-file-example-1-use-of--for-multi-file-granules-with-no-browse)
         * [INI File Example 2: Single-file granule with good file names and no browse-omit browse_regex and granule_regex](#ini-file-example-2-single-file-granule-with-good-file-names-and-no-browse-omit-browse_regex-and-granule_regex)
         * [INI File Example 3: Single-file granule with good file names and browse images-omit granule_regex](#ini-file-example-3-single-file-granule-with-good-file-names-and-browse-images-omit-granule_regex)
         * [INI File Example 4: Use of granule_regex and browse_regex for single-file granules with interrupted file names](#ini-file-example-4-use-of-granule_regex-and-browse_regex-for-single-file-granules-with-interrupted-file-names)
@@ -398,22 +398,25 @@ value is a constant that will be applied to all granule-level metadata.
 | reference_file_regex | Collection | 3 |
 
 Note column:
-1. The file name pattern identifying the browse file(s) accompanying single or multi-file granules. Granules
+1. The browse_regex is used to identify browse file(s) accompanying single or multi-file granules. Granules
    with multiple associated browse files work fine with MetGenC! The default is `_brws`, change it to reflect
    the browse file names of the data delivered. This element is prompted for when running `metgenc init`.
-2. The granule_regex is required for multi-file granules. It's what determines which files will be included
-   within the same granule based on it defining the common file name elements to be reflected in the ProducerGranuleId
-   in the UMM-G file (= the granule name shown in EDSC).
-   - This must result in a globally unique: product/name (in CNM), and Identifier (as the IdentifierType: ProducerGranuleId in UMM-G)
-     generated for each granule.
-   - As a general rule, include in the (?P<granuleid>) section of the granule_regex as much of the contiguous common elements of file names possible .
-   - This init element value must be added manually as it's **not** included in the `metgenc init` prompts.
-4. The file name pattern identifying a single file for metgenc to reference as the primary
-   file in a multi-file granule. This is required for processing multi-file granules. This element's value
-   is prompted for when running `metgenc init`.
-   * In the case of multi-file granules containing a CF-compliant netCDF science file and other supporting files
-     like .tif, or .txt files, etc., specifying the netCDF file allows MetGenC to parse it as it would any other CF-compliant
-     netCDF file, making it so operators won't need to supply premet/spatial files!!
+2. The granule_regex is used to specify the granule name (= the Identifier in UMM-G files, and product/name in CNM).
+   - Use of granule_regex is required for multi-file granules, and may be required for single-file granules when
+     granule names need to be made to follow a specific convention that they otherwise wouldn't.
+   - It's used to specify file name elements tobe used to form granule names, pulling from common file name
+     elements that differentiate the files belonging to one multi-file granule vs. another.
+   - The aim is to generate globally unique: product/name (in CNM), and Identifier (as the IdentifierType: ProducerGranuleId)
+     in UMM-G files).
+   - As a general rule, include in the (?P<granuleid>) section of the granule_regex as much of the contiguous common
+     elements of file names possible .
+   - This init element is **not** included in the `metgenc init` prompts, and must be added to an .ini when needed.
+4. The reference_file_regex is used to identify a single file for metgenc to reference as the primary
+   file in a multi-file granule. This is **required** for multi-file granules.
+   - In the case of multi-file granules containing a CF-compliant netCDF science file as well as other supporting files
+     like .tif, or .txt files, etc., the reference_file_regex should identify the netCDF file. This directs MetGenC to
+     parse the netCDF file for spatial and temporal information so premet/spatial files are unnecessary (assuming the netCDF
+     is CF- and NSIDC-compliant).
 
 ##### INI File Example 1: Use of granule_regex for multi-file granules with no browse
 
