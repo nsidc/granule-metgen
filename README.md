@@ -14,8 +14,8 @@
     + [init](#init)
         * [INI RULES](#ini-rules)
       - [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
-      - [Granule and Browse regex](#granule-and-browse-regex)
-        * [INI File Example 1: Use of granule_regex for multi-file granules with no browse](#ini-file-example-1-use-of--for-multi-file-granules-with-no-browse)
+      - [Granule, Browse, and Reference file regex](#granule-browse-and-reference-file-regex)
+        * [INI File Example 1: Use of granule_regex for multi-file granules with no browse](#ini-file-example-1-use-of-granule_regex-for-multi-file-granules-with-no-browse)
         * [INI File Example 2: Single-file granule with good file names and no browse-omit browse_regex and granule_regex](#ini-file-example-2-single-file-granule-with-good-file-names-and-no-browse-omit-browse_regex-and-granule_regex)
         * [INI File Example 3: Single-file granule with good file names and browse images-omit granule_regex](#ini-file-example-3-single-file-granule-with-good-file-names-and-browse-images-omit-granule_regex)
         * [INI File Example 4: Use of granule_regex and browse_regex for single-file granules with interrupted file names](#ini-file-example-4-use-of-granule_regex-and-browse_regex-for-single-file-granules-with-interrupted-file-names)
@@ -389,7 +389,7 @@ time_coverage_duration = P0DT23H59M59S
 3. Rarely applicable for science files that aren't gridded netCDF (.txt, .csv, .jpg, .tif, etc.); this
 value is a constant that will be applied to all granule-level metadata.
 
-#### Granule and Browse regex
+#### Granule, Browse, and Reference file regex
 
 | .ini element | .ini section | Note |
 | ------------- | ------------- | ---- |
