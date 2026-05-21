@@ -220,7 +220,7 @@ Notes column key:
    .ini file, MetGenC will use this attribute instead of coordinate variable values to generate
    spatial representations of granules in collections with a GEODETIC (= gpolygon) granule spatial representation.
    If the `geospatial_bounds_crs` attribute is also present in netCDF files, coordinates
-   will be transformed to EPSG:4326 if needed. OC .ini attributes for this are `time_start_regex` and `time_coverage_duration`.
+   will be transformed to EPSG:4326 if needed. OC .ini attribute for this is `prefer_geospatial_bounds = true`.
 
  9 = The `geospatial_bounds_crs` netCDF file global attribute specifies the coordinate reference system
    for the coordinates in the `geospatial_bounds` global attribute. It can be an EPSG identifier (e.g., "EPSG:4326")
