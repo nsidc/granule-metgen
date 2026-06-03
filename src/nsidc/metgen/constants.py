@@ -15,8 +15,8 @@ class PolygonAlgorithm(str, Enum):
 # Default configuration values
 DEFAULT_CUMULUS_ENVIRONMENT = "uat"
 DEFAULT_KINESIS_PARTITION_KEY = "metgenc-duck"
-DEFAULT_STAGING_KINESIS_STREAM = "nsidc-cumulus-${environment}-external_notification"
-DEFAULT_STAGING_BUCKET_NAME = "nsidc-cumulus-${environment}-ingest-staging"
+DEFAULT_STAGING_KINESIS_STREAM = "nsidc-ops-${environment}-external_notification"
+DEFAULT_STAGING_BUCKET_NAME = "nsidc-ops-${environment}-ingest-staging"
 DEFAULT_WRITE_CNM_FILE = False
 DEFAULT_OVERWRITE_UMMG = False
 DEFAULT_CHECKSUM_TYPE = "SHA256"
@@ -39,7 +39,8 @@ DEFAULT_PREFER_GEOSPATIAL_BOUNDS = False
 ROOT_LOGGER = "metgenc"
 
 # Currently we support one CMR production cloud provider (NSIDC_CPRD) and one
-# UAT cloud provider (NSIDC_CPRD).
+# UAT cloud provider (NSIDC_CPRD). NOTE: These are NOT the same as the "provider"
+# described in the .ini file.
 CMR_PROD_PROVIDER = "NSIDC_CPRD"
 CMR_UAT_PROVIDER = "NSIDC_CUAT"
 
