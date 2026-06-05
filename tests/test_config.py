@@ -166,12 +166,12 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
         (
             "Destination",
             "kinesis_stream_name",
-            f"nsidc-cumulus-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-external_notification",
+            f"nsidc-ops-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-external_notification",
         ),
         (
             "Destination",
             "staging_bucket_name",
-            f"nsidc-cumulus-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-ingest-staging",
+            f"nsidc-ops-{constants.DEFAULT_CUMULUS_ENVIRONMENT}-ingest-staging",
         ),
         ("Destination", "write_cnm_file", constants.DEFAULT_WRITE_CNM_FILE),
         ("Settings", "checksum_type", constants.DEFAULT_CHECKSUM_TYPE),

@@ -343,8 +343,11 @@ Example running **init**
     $ metgenc init -c ./init/<name of config file to create or modify>.ini
 
 ##### INI RULES:
-* The .ini file's `checksum_type = SHA256` should never be edited
-* The `kinesis_stream_name` and `staging_bucket_name` should never be edited
+* The .ini file's `checksum_type = SHA256` should never be edited.
+* In general, the default values should be used for `kinesis_stream_name` and
+  `staging_bucket_name`. If the default values have changed since creating your
+  `ini` file, you'll need to manually update your `ini` file with the new
+  values.
 * `auth_id` and `version` must accurately reflect the collection's authID and versionID
 * `log_dir` specifies the directory where metgenc log files will be written. Log files are named `metgenc-{config-name}-{timestamp}.log` where config-name is the base name of the .ini file and timestamp is in YYYYMMDD-HHMM format. The default log directory is `/share/logs/metgenc`, but this can be edited to write metgenc logs to a different existing, writable directory location.
 * `provider` is [newly!!] a _**required**_ attribute that must define the Cumulus Ingest Provider name to successfully ingest data into CUAT. Currently, that'd be `provider = Direct_to_Cumulus_S3` as this is the Cumulus Ingest Provider most (probably all) MetGenC data sets are relying on for ingest. If more Ingest Providers are created, the value for the .ini file's provider field just needs to reflect the exact name of the Cumulus Ingest Provider set for the collection in Cumulus.
@@ -612,8 +615,8 @@ An operator may set an .ini flag to indicate
 that a collection's temporal extent should be used to populate every granule's
 temporal extent. This appears in each granule's UMMG json's TemporalExtent field,
 matching what's defined for the collection, including whether it's (SingleDateTime,
-or BeginningDateTime and EndingDateTime). Every granule in the collection will 
-display the same start and end times in EDSC when collection_temporal_override = true. 
+or BeginningDateTime and EndingDateTime). Every granule in the collection will
+display the same start and end times in EDSC when collection_temporal_override = true.
 
 | .ini element                 | .ini section |
 | ----------------------------- | --------------|
@@ -625,7 +628,7 @@ MetGenC includes optimized polygon generation capabilities for creating spatial 
 When a granule has an associated `.spatial` file containing geodetic point data (≥3 points), MetGenC will automatically generate an optimized polygon to enclose the data points instead of using the basic point-to-point polygon method. This results in more accurate spatial coverage with fewer vertices.
 
 **This feature, while optional, is always enabled by default in MetGenC**.
-- To disable it entirely, edit the .ini file, add a \[Spatial\] section if necessary, and add the line `spatial_polygon_enabled = false`, however this shouldn't be necessary as MetGenC would only invoke the spatial polygon algorithm when input file circumstances call for it. 
+- To disable it entirely, edit the .ini file, add a \[Spatial\] section if necessary, and add the line `spatial_polygon_enabled = false`, however this shouldn't be necessary as MetGenC would only invoke the spatial polygon algorithm when input file circumstances call for it.
 - When `spatial_polygon_enabled = true` (either by default or when set as such in the .ini file) the other parameters listed below can be added to
   and edited in the .ini file. For the most part, the values shouldn't need to be altered! However, if ingest fails due to GPolygonSpatial errors,
   the first attribute to add to or edit in the .ini file should be `spatial_polygon_cartesian_tolerance` by decreasing its coordinate precision
@@ -767,8 +770,8 @@ Using configuration:
   + provider: Direct_to_Cumulus_S3
   + local_output_dir: /share/apps/metgenc/SNEX23_CSU_GPR/output
   + ummg_dir: ummg
-  + kinesis_stream_name: nsidc-cumulus-uat-external_notification
-  + staging_bucket_name: nsidc-cumulus-uat-ingest-staging
+  + kinesis_stream_name: nsidc-ops-uat-external_notification
+  + staging_bucket_name: nsidc-ops-uat-ingest-staging
   + write_cnm_file: True
   + overwrite_ummg: True
   + checksum_type: SHA256
@@ -864,11 +867,11 @@ Unable to process data: EARTHDATA_USERNAME and EARTHDATA_PASSWORD are not set in
 ```
 run `source /etc/profile.d/metgenc-init.sh` to set the uname and pw in the current environment.
 
-**EG 6.** If running metgenc process with an ini file configured to generate single-file granules for the data set, but you receive the error: 
+**EG 6.** If running metgenc process with an ini file configured to generate single-file granules for the data set, but you receive the error:
 ```
 Unable to process data: Granule has multiple science files but reference_file_regex is not set.
 ```
-Check the file naming convention. MetGenC assumes/relies on a data set's files following required file naming conventions detailed in: File Name Guidelines for NSIDC Data Sets https://nsidc.atlassian.net/wiki/spaces/TECHS/pages/51034667/File+Name+Guidelines+for+NSIDC+Data+Sets#Which-Components-to-Include-in-File-Names 
+Check the file naming convention. MetGenC assumes/relies on a data set's files following required file naming conventions detailed in: File Name Guidelines for NSIDC Data Sets https://nsidc.atlassian.net/wiki/spaces/TECHS/pages/51034667/File+Name+Guidelines+for+NSIDC+Data+Sets#Which-Components-to-Include-in-File-Names
 **...namely, that file names contain the following:**
 ```
 A unique data set identifier = AuthID.
@@ -876,12 +879,12 @@ The date-time, or any part thereof as applicable, typically of the first data ob
 A unique version identifier for each data set published.
 ```
 
-**EG 7.** If metgenc process fails with no reported error, check the /share/logs/metgenc log associated with the run. And, if it contains 
+**EG 7.** If metgenc process fails with no reported error, check the /share/logs/metgenc log associated with the run. And, if it contains
 ```
 025-12-16 16:22:53,081|DEBUG|metgenc|        Reason    : not enough values to unpack (expected 2, got 1)
 ```
 Something is amiss with an input file, typically a premet file. Some of the premet file problems that have triggered this error are:
-improper formatting of premet such as ":" rather than "=" 
+improper formatting of premet such as ":" rather than "="
 ```
 Begin_date: 2023-04-20
 Begin_time: 13:18:59

@@ -286,8 +286,8 @@ class Granule:
     submission_time: Maybe[str] = Maybe.empty
     uuid: Maybe[str] = Maybe.empty
     cnm_message: Maybe[str] = Maybe.empty
-    data_reader: Callable[[str, str, str, config.Config], dict] = (
-        lambda auth_id, cfg: dict()
+    data_reader: Callable[[str, str, str, config.Config], dict] = lambda auth_id, cfg: (
+        dict()
     )
 
     def size(self):

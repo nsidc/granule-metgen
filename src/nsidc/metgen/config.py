@@ -392,16 +392,20 @@ def validate(configuration):
         # ],
         [
             "kinesis_stream_name",
-            lambda name: aws.kinesis_stream_exists(name)
-            if not configuration.dry_run
-            else lambda _: True,
+            lambda name: (
+                aws.kinesis_stream_exists(name)
+                if not configuration.dry_run
+                else lambda _: True
+            ),
             "The kinesis stream does not exist.",
         ],
         [
             "staging_bucket_name",
-            lambda name: aws.staging_bucket_exists(name)
-            if not configuration.dry_run
-            else lambda _: True,
+            lambda name: (
+                aws.staging_bucket_exists(name)
+                if not configuration.dry_run
+                else lambda _: True
+            ),
             "The staging bucket does not exist.",
         ],
         [
@@ -426,16 +430,18 @@ def validate(configuration):
         ],
         [
             "spatial_polygon_cartesian_tolerance",
-            lambda tolerance: 0.00001 <= tolerance <= 0.01
-            if tolerance is not None
-            else True,
+            lambda tolerance: (
+                0.00001 <= tolerance <= 0.01 if tolerance is not None else True
+            ),
             "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees.",
         ],
         [
             "log_dir",
-            lambda log_dir: os.path.exists(log_dir) and os.access(log_dir, os.W_OK)
-            if log_dir
-            else True,
+            lambda log_dir: (
+                os.path.exists(log_dir) and os.access(log_dir, os.W_OK)
+                if log_dir
+                else True
+            ),
             "The log directory does not exist or is not writable.",
         ],
     ]

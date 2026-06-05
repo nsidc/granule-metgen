@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* PSS-700: Update the default values for kinesis stream name and staging bucket name.
+
 ## v1.13.0 (2025-11-24)
 
 * Add a new configuration parameter 'spatial_polygon_algorithm' to select simple or
