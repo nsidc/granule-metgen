@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.14.0rc0 (2026-06-05)
 
 * PSS-700: Update the default values for kinesis stream name and staging bucket name.
 
