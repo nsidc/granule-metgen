@@ -61,16 +61,19 @@ class CollectionMetadataReader:
         """
         version_str = str(version)
 
-        # Attempt Earthdata login
-        if not earthaccess.login(
-            strategy="environment", system=self._get_earthaccess_system()
-        ):
+        # Attempt Earthdata login. Note that if a token exists in the environment,
+        # it's assumed to be valid. No error will be returned for a bad token until
+        # earthaccess.search_datasets step below.
+        try:
+            earthaccess.login(
+                strategy="environment", system=self._get_earthaccess_system()
+            )
+        except Exception as e:
+            # Catch missing or invalid username and/or password.
             raise Exception(
-                f"Earthdata login failed, cannot retrieve UMM-C metadata for "
+                f"{type(e).__name__}. {str(e)} Cannot retrieve UMM-C metadata for "
                 f"{short_name}.{version_str}"
             )
-
-        self.logger.info("Earthdata login succeeded.")
 
         # Search for collection in CMR
         cmr_response = earthaccess.search_datasets(
@@ -78,6 +81,10 @@ class CollectionMetadataReader:
             version=version_str,
             has_granules=None,  # Find collections with or without granules
             provider=self.provider,
+        )
+
+        self.logger.info(
+            "Earthdata login succeeded; attempted collection metadata search."
         )
 
         # Validate and parse response
