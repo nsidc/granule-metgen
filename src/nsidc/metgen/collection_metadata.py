@@ -61,9 +61,10 @@ class CollectionMetadataReader:
         """
         version_str = str(version)
 
-        # Attempt Earthdata login. Note that if a token exists in the environment,
-        # it's assumed to be valid. No error will be returned for a bad token until
-        # earthaccess.search_datasets step below.
+        # Attempt Earthdata login. Either a token *or* a valid username/password pair
+        # must be present in the environment. Note that if a token exists in the
+        # environment, it's assumed to be valid. No exception will be raised for a
+        # bad token until it's used in the earthaccess.search_datasets step below.
         try:
             earthaccess.login(
                 strategy="environment", system=self._get_earthaccess_system()
