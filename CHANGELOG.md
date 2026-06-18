@@ -1,3 +1,8 @@
+## UNRELEASED
+
+* Issue-291: Update `earthacess` version to enable use of Earthdata token for
+  authentication.
+
 ## v1.14.0 (2026-06-18)
 
 * Minor version release for PSS-700.

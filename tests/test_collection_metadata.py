@@ -343,12 +343,29 @@ class TestCollectionMetadataReader:
         self, mock_login, collection_metadata_reader_uat
     ):
         """Test handling of Earthdata login failure."""
-        mock_login.return_value = False
+        mock_login.side_effect = earthaccess.exceptions.LoginAttemptFailure(
+            "Login failed"
+        )
 
         with pytest.raises(Exception) as exc_info:
             collection_metadata_reader_uat.get_collection_metadata("TEST", "1")
 
-        assert "Earthdata login failed" in str(exc_info.value)
+        # Should display exception name in error output
+        assert "LoginAttemptFailure" in str(exc_info.value)
+
+    @patch("earthaccess.login")
+    @patch("earthaccess.search_datasets")
+    def test_get_collection_metadata_search_failure(
+        self, mock_search, mock_login, collection_metadata_reader_uat
+    ):
+        """Test handling of Earthdata search failure."""
+        mock_login.return_value = True
+        mock_search.side_effect = RuntimeError("Collection search failed")
+
+        with pytest.raises(Exception) as exc_info:
+            collection_metadata_reader_uat.get_collection_metadata("TEST", "1")
+
+        assert "search failed" in str(exc_info.value)
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
