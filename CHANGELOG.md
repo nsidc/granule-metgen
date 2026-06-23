@@ -1,9 +1,9 @@
 ## v1.15.0rc0 (2026-06-22)
 
-* Issue-291: Update `earthacess` version to enable use of Earthdata token for
+* Issue 291: Update `earthacess` version to enable use of Earthdata token for
   authentication.
-* Modify the OLVIS1A script to accept an environment option on the command line.
-* Remove OBE `CMR_URL` and hardcoding of provider name from OLVIS1A script.
+* Issue 315: Modify the OLVIS1A script to accept an environment option on the command line.
+  Remove OBE `CMR_URL` and hardcoding of provider name from OLVIS1A script.
 
 ## v1.14.0 (2026-06-18)
 
