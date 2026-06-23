@@ -10,17 +10,17 @@ from pathlib import Path
 import earthaccess
 import numpy as np
 
+from nsidc.metgen import constants
+
 
 class OLVIS1AProcessor:
     """Process OLVIS1A granules to generate premet and spatial files."""
 
     # Constants
-    CMR_URL = "https://cmr.earthdata.nasa.gov"
     COLLECTION = "OLVIS1A"
     VERSION = "1"
-    PROVIDER = "NSIDC_ECS"
 
-    def __init__(self, output_dir="olvis1a_output"):
+    def __init__(self, output_dir="olvis1a_output", env="prod"):
         """
         Initialize the processor.
 
@@ -32,16 +32,22 @@ class OLVIS1AProcessor:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
 
+        """Get the appropriate CMR provider and earthaccess system based on environment."""
+        self.provider = (
+            constants.CMR_PROD_PROVIDER if env == "prod" else constants.CMR_UAT_PROVIDER
+        )
+        earthaccess_system = earthaccess.PROD if env == "prod" else earthaccess.UAT
+
         print(
-            f"OLVIS1A Processor: {self.COLLECTION} v{self.VERSION} from {self.PROVIDER}"
+            f"OLVIS1A Processor: {self.COLLECTION} v{self.VERSION} from {self.provider}"
         )
 
         # Authenticate with earthaccess
         try:
             # Try environment authentication first, then netrc
-            auth = earthaccess.login(strategy="environment")
+            auth = earthaccess.login(strategy="environment", system=earthaccess_system)
             if not auth:
-                auth = earthaccess.login(strategy="netrc")
+                auth = earthaccess.login(strategy="netrc", system=earthaccess_system)
 
             if auth:
                 print("Earthdata login succeeded.")
@@ -74,7 +80,7 @@ class OLVIS1AProcessor:
             results = earthaccess.search_data(
                 short_name=self.COLLECTION,
                 version=self.VERSION,
-                provider=self.PROVIDER,
+                provider=self.provider,
                 count=count,
                 sort_key="-start_date",  # Most recent first
             )
@@ -462,10 +468,17 @@ def main():
         help="Output directory (default: olvis1a_output)",
     )
 
+    parser.add_argument(
+        "-e",
+        "--env",
+        default="prod",
+        help="Cumulus environment",
+    )
+
     args = parser.parse_args()
 
     # Create processor and run
-    processor = OLVIS1AProcessor(output_dir=args.output)
+    processor = OLVIS1AProcessor(output_dir=args.output, env=args.env)
     processor.process_granules(n_granules=args.number)
     print(f"\nProcessing complete. Output saved to: {processor.output_dir}")
 
