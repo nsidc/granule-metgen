@@ -18,7 +18,7 @@
         * [INI File Example 1: Use of granule_regex for multi-file granules with no browse](#ini-file-example-1-use-of-granule_regex-for-multi-file-granules-with-no-browse)
         * [INI File Example 2: Single-file granule with good file names and no browse-omit browse_regex and granule_regex](#ini-file-example-2-single-file-granule-with-good-file-names-and-no-browse-omit-browse_regex-and-granule_regex)
         * [INI File Example 3: Single-file granule with good file names and browse images-omit granule_regex](#ini-file-example-3-single-file-granule-with-good-file-names-and-browse-images-omit-granule_regex)
-        * [INI File Example 4: Use of granule_regex and browse_regex for single-file granules with interrupted file names](#ini-file-example-4-use-of-granule_regex-and-browse_regex-for-single-file-granules-with-interrupted-file-names)
+        * [INI File Example 4: Use of granule_regex and browse_regex for single-file granules](#ini-file-example-4-use-of-granule_regex-and-browse_regex-for-single-file-granules)
         * [INI File Example 5: Use of granule_regex and browse_regex for multi-file granules with variables in file names](#ini-file-example-5-use-of-granule_regex-and-browse_regex-for-multi-file-granules-with-variables-in-file-names)
       - [Using Premet and Spatial Files](#using-premet-and-spatial-files)
       - [Setting Collection Spatial Extent as Granule Spatial Extent](#setting-collection-spatial-extent-as-granule-spatial-extent)
@@ -506,48 +506,39 @@ NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F18.png
 ```
 Only the browse_regex needs to be set to capture that which distinguishes the browse from the science files, in this case that's the presence of _F\d{2}, where _F\d{2} captures the number _F16, _F17, and _F18.
 
-##### INI File Example 4: Use of `granule_regex` and `browse_regex` for single-file granules with interrupted file names
+##### INI File Example 4: Use of `granule_regex` and `browse_regex` for single-file granules
+Typically to to direct metgenc to ignore the browse granules and generate a granule name appropriately
+
 Given the .ini file's \[Source\] and \[Collection\] contents:
 ```
 [Source]
-data_dir = ./data/0081DUCk
+data_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX21_BR_GPR_metgen/data
+premet_dir = /disks/sidads_staging/SNOWEX_metgen/SNEX21_BR_GPR_metgen/premet
+collection_geometry_override = True
 
 [Collection]
-auth_id = NSIDC-0081DUCk
-version = 2
+auth_id = SNEX21_BR_GPR
+version = 1
 provider = Direct_to_Cumulus_S3
 browse_regex = _brws
-granule_regex = (NSIDC0081_SEAICE_PS_)(?P<granuleid>[NS]{1}\d{2}km_\d{8})(_v2.0_)(?:F\d{2}_)?(DUCk)
+granule_regex = (SNEX21_BR_GPR_)(?P<granuleid>IDBRB(S|T|M)_\d{8}_)(?:(_|map_|\d{1}_map_|\d{1}_))(v01)
 ```
-And two granules + their associated browse files:
-```
-NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_DUCk.nc
-NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F16_DUCk_brws.png
-NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F17_DUCk_brws.png
-NSIDC0081_SEAICE_PS_N25km_20211101_v2.0_F18_DUCk_brws.png
-NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc
-NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F16_DUCk_brws.png
-NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F17_DUCk_brws.png
-NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_F18_DUCk_brws.png
-```
+And a granule + its associated browse files:
 
-The browse_regex:
-This simply identifies the part of the browse file name that distinguishes it as the browse from the science file, in this example: `browse_regex = _brws`.
+```
+data/SNEX21_BR_GPR_IDBRBM_20210126_1_v01.csv
+data/SNEX21_BR_GPR_IDBRBM_20210126_1_v01_brws.png
+data/SNEX21_BR_GPR_IDBRBM_20210126_1_map_v01_brws.png
+```
+where amongst all the granules in the collection, IDBRBM, IDBRBS, or IDBRBT are options.
+
+The browse_regex simply identifies what in the file name distinguishes the browse image(s) from the science file, in this example: it's `_brws`.
 
 The granule_regex sections:
-In the case where a file name element interrupts what would be a string common to both the science and browse file names, a granule_regex is required to identify the granule name.
-- `(NSIDC0081_SEAICE_PS_)`, `(_v2.0_)`, and `(DUCk)` identify the 1st, 3rd, and 4th (the last) _Capture Groups_. These are constants required to be present in each granules name: authID, version ID, and DUCk (the latter was only relevant for early CUAT testing). These are combined with the following...
 
-- The _Named Capture Group granuleid_ `(?P<granuleid>[NS]{1}\d{2}km_\d{8})` matches the region, resolution, and date elements unique-yet-consistent within each file name (e.g., `N25km_20211101` and `S25km_20211102`), which are combined with the elements in the bullet above to form unique granule names.
+- `(SNEX21_BR_GPR_)`, `(?P<granuleid>IDBRB(S|T|M)_\d{8}_)` and `(v01)` together define the granule name: `SNEX21_BR_GPR_IDBRBM_20210126_1_v01.csv`.
 
-- `(?:F\d{2}_)?` matches the F16_, F17_, and F18_ strings in the browse file names as a _Non-capture Group_; these elements will be matched but **won't** be included in granule names.
-
-- In summary: NSIDC0081_SEAICE_PS_, \_v2.0_, and DUCk are combined with the granuleid capture group element, `(?P<granuleid>[NS]{1}\d{2}km_\d{8})`, to form the producerGranuleId reflected for each granule, e.g., `NSIDC0081_SEAICE_PS_N25km_20211105_v2.0_DUCk.nc` and `NSIDC0081_SEAICE_PS_S25km_20211102_v2.0_DUCk.nc`. These are the names that will be shown for the granules in EDSC. They globally, uniquely distinguish granules in a specific collection from any other granules in any other collections in CUAT or CPROD. These names are found in the CNM as the `product`/`name` value, and the UMMG metadata file as the `Identifier value`.
-  - If the granule_regex was omitted from the .ini file in this case, the cnm output would only define data and metadata files for ingest, the browse images would not be included!
-  - Since metgenc validate doesn't check attribute values, no validation errors are thrown when this happens.
-  - This hopefully is largely an example portraying a made-up edge case due to the way I'd added the _DUCk identifier to these files for early MetGenC testing!! But be aware of this if you find yourself dealing with complicated file names where the element meant to comprise the granule id are interrupted by other elements.
-
- The granuleid _Named Capture Group_ can **only define common** file name elements. When considering renaming files for a data set, keep in mind: the elements that vary within each file name comprising a multi-file granule must not fall within the granuleid _Named Capture Group_. Variable elements must be situated such that a _Non-Capturing Group_ can be used to account for them to create an appropriate granule ID, but a  _Non-Capturing Group_ can't be nestled within the granuleid _Named Capture Group_.
+- `(?:(_|map_|\d{1}_map_|\d{1}_))` is the _Non-capture Group_ used to match and prevent files with 1_map and 1_ names being part of the granule name but remain valid as browse images.
 
 ##### INI File Example 5: Use of `granule_regex` and `browse_regex` for multi-file granules with variables in file names
 ini file \[Source\] and \[Collection\] contents:
