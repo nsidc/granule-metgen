@@ -2,6 +2,7 @@
 
 * Issue-291: Update `earthacess` version to enable use of Earthdata token for
   authentication.
+* PSS-699: Add config option to force files to be treated as individual science files.
 
 ## v1.14.0 (2026-06-18)
 

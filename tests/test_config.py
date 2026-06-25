@@ -44,6 +44,7 @@ def expected_keys():
             "browse_regex",
             "granule_regex",
             "reference_file_regex",
+            "force_single_file_granules",
             "spatial_polygon_enabled",
             "spatial_polygon_algorithm",
             "spatial_polygon_target_coverage",
