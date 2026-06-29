@@ -1,4 +1,4 @@
-## v1.15.0rc0 (2026-06-22)
+## v1.15.0rc1 (2026-06-22)
 
 * Issue 291: Update `earthacess` version to enable use of Earthdata token for
   authentication.
