@@ -1,4 +1,4 @@
-## v1.15.0rc1 (2026-06-29)
+## v1.15.0rc2 (2026-06-29)
 
 * Issue 315: Modify the OLVIS1A script to accept an environment option on the command line.
   Remove OBE `CMR_URL` and hardcoding of provider name from OLVIS1A script.
