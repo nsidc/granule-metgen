@@ -180,6 +180,11 @@ def test_get_configuration_value_interpolates_the_environment(cfg_parser):
         ("Collection", "time_start_regex", None),
         ("Collection", "granule_regex", None),
         ("Collection", "browse_regex", constants.DEFAULT_BROWSE_REGEX),
+        (
+            "Collection",
+            "force_single_file_granules",
+            constants.DEFAULT_FORCE_SINGLE_FILE_GRANULES,
+        ),
         ("Collection", "time_coverage_duration", None),
         ("Collection", "pixel_size", None),
         ("Collection", "time_coverage_duration", None),

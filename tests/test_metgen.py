@@ -370,6 +370,13 @@ def test_granule_tuple_from_regex(
     assert granule == expected
 
 
+def test_forced_single_file_granule_tuple(
+    granuleid, data_files, browse_files, premet_files, spatial_files, expected
+):
+    granule = metgen.granule_tuple()
+    assert granule == expected
+
+
 @pytest.mark.parametrize(
     "granuleid,spatial_files,expected",
     [
