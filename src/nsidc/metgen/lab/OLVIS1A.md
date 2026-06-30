@@ -18,8 +18,11 @@ metgenc-lab-olvis1a -n 10
 # Specify output directory
 metgenc-lab-olvis1a -o my_output_dir
 
+# Specify the UAT environment
+metgenc-lab-olvis1a -e uat
+
 # Combine options
-metgenc-lab-olvis1a -n 10 -o my_output
+metgenc-lab-olvis1a -n 10 -o my_output -e uat
 ```
 
 ## Authentication
@@ -32,10 +35,8 @@ The processor uses Earthdata Login username and password authentication:
 ## Configuration
 
 The following values are hardcoded constants:
-- Environment: `prod` (https://cmr.earthdata.nasa.gov)
 - Collection: `OLVIS1A`
 - Version: `1`
-- Provider: `NSIDC_ECS`
 
 ## Output Structure
 

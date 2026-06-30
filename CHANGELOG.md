@@ -1,6 +1,11 @@
+## v1.15.0rc2 (2026-06-29)
+
+* Issue 315: Modify the OLVIS1A script to accept an environment option on the command line.
+  Remove OBE `CMR_URL` and hardcoding of provider name from OLVIS1A script.
+
 ## v1.15.0rc0 (2026-06-22)
 
-* Issue-291: Update `earthacess` version to enable use of Earthdata token for
+* Issue 291: Update `earthacess` version to enable use of Earthdata token for
   authentication.
 * PSS-699: Add config option to force files to be treated as individual science files.
 
