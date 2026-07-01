@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.15.0 (2026-07-01)
 
 * Minor version release for Issue-291 and Issue-315.
 
