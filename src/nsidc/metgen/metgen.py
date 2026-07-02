@@ -182,7 +182,10 @@ def init_config(configuration_file):
     cfg_parser.set(
         constants.COLLECTION_SECTION_NAME,
         "force_single_file_granules",
-        Prompt.ask("Force one data file per granule?", default=False),
+        Prompt.ask(
+            "Force one data file per granule? (True/False)",
+            default=str(constants.DEFAULT_FORCE_SINGLE_FILE_GRANULES),
+        ),
     )
     print()
 
