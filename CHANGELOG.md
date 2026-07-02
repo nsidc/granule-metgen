@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* PSS-699: Add configuration option to force files to be treated as individual science files.
+
 ## v1.15.0 (2026-07-01)
 
 * Minor version release for Issue-291 and Issue-315.
@@ -11,7 +15,6 @@
 
 * Issue 291: Update `earthacess` version to enable use of Earthdata token for
   authentication.
-* PSS-699: Add config option to force files to be treated as individual science files.
 
 ## v1.14.0 (2026-06-18)
 
