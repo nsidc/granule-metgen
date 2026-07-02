@@ -524,10 +524,24 @@ def ancillary_files(dir: Path, suffixes: list) -> list:
 
 
 def granule_keys(configuration: config.Config, file_list: list[Path]) -> set[str]:
-    if configuration.granule_regex:
+    if configuration.force_single_file_granules:
+        return granule_keys_from_filename(
+            configuration.browse_regex, file_list, file_as_is
+        )
+    elif configuration.granule_regex:
         return granule_keys_from_regex(configuration.granule_regex, file_list)
     else:
-        return granule_keys_from_filename(configuration.browse_regex, file_list)
+        return granule_keys_from_filename(
+            configuration.browse_regex, file_list, file_no_extension
+        )
+
+
+def file_no_extension(file):
+    return os.path.splitext(file.name)[0]
+
+
+def file_as_is(file):
+    return file.name
 
 
 def granule_keys_from_regex(granule_regex: str, file_list: list) -> set:
@@ -540,15 +554,14 @@ def granule_keys_from_regex(granule_regex: str, file_list: list) -> set:
     }
 
 
-def granule_keys_from_filename(browse_regex, file_list):
+def granule_keys_from_filename(browse_regex, file_list, file_parser=file_no_extension):
     """
     Identify granules based on unique data file basenames (minus file name
     extension) in lieu of a "granuleid" regex match group.
     """
+    browse_pattern = re.compile(browse_regex)
     return set(
-        os.path.splitext(file.name)[0]
-        for file in file_list
-        if not re.search(browse_regex, file.name)
+        file_parser(file) for file in file_list if not browse_pattern.search(file.name)
     )
 
 
@@ -586,14 +599,11 @@ def granule_tuple(
     # is ok.
     match_func = re.fullmatch if force_single_file_granules else re.search
     data_file_paths = {
-        # granule_key re.search here is the problem
-        # if set to single file granule, use re.fullmatch
-        # apply match_mode as selected above
-        str(file)
-        for file in file_list
-        if match_func(granule_key, file.name)
+        str(file) for file in file_list if match_func(granule_key, file.name)
     } - browse_file_paths
 
+    print(f"first data file {file_list[0].name}")
+    print(f"found data file paths {data_file_paths} in {file_list} using {granule_key}")
     return (
         derived_granule_name(granule_regex, data_file_paths),
         reference_data_file(reference_file_regex, data_file_paths),

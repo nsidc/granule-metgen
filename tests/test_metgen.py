@@ -132,6 +132,25 @@ def test_keys_from_filename(file_list):
     assert expected == found
 
 
+def test_force_single_filename_keys(test_config):
+    file_list = [
+        Path(f)
+        for f in [
+            "aaa_bbb.nc",
+            "aaa_bbb_browse.png",
+            "aaa_bbb_ccc.nc",
+            "aaa_bbb_ccc_browse_ddd.png",
+            "aaa_bbb_eee.nc",
+        ]
+    ]
+    expected = {"aaa_bbb.nc", "aaa_bbb_ccc.nc", "aaa_bbb_eee.nc"}
+    test_config.force_single_file_granules = True
+    test_config.granule_regex = "aaa_bbb"
+    test_config.browse_regex = "browse"
+    found = metgen.granule_keys(test_config, file_list)
+    assert expected == found
+
+
 def test_granule_name_from_single_file(regex):
     data_files = ["aaa_gid1_bbb.nc"]
     assert metgen.derived_granule_name(regex, data_files) == "aaa_gid1_bbb.nc"
@@ -370,10 +389,50 @@ def test_granule_tuple_from_regex(
     assert granule == expected
 
 
+@pytest.mark.parametrize(
+    "granuleid,data_files,force_single,expected",
+    [
+        (
+            "aaa_bbb.nc",
+            ["aaa_bbb.nc", "aaa_bbb_ccc.nc"],
+            True,
+            (
+                "aaa_bbb.nc",
+                "aaa_bbb.nc",
+                {"aaa_bbb.nc"},
+                set(),
+                "",
+                "",
+            ),
+        ),
+        (
+            "aaa_bbb_ccc.nc",
+            ["aaa_bbb.nc", "aaa_bbb_ccc.nc"],
+            True,
+            (
+                "aaa_bbb_ccc.nc",
+                "aaa_bbb_ccc.nc",
+                {"aaa_bbb_ccc.nc"},
+                set(),
+                "",
+                "",
+            ),
+        ),
+    ],
+)
 def test_forced_single_file_granule_tuple(
-    granuleid, data_files, browse_files, premet_files, spatial_files, expected
+    granuleid, data_files, force_single, expected
 ):
-    granule = metgen.granule_tuple()
+    granule = metgen.granule_tuple(
+        granuleid,
+        f"({granuleid})",
+        "browse",
+        ".nc",
+        [Path(p) for p in data_files],
+        [],
+        [],
+        force_single,
+    )
     assert granule == expected
 
 
