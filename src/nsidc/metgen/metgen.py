@@ -602,8 +602,6 @@ def granule_tuple(
         str(file) for file in file_list if match_func(granule_key, file.name)
     } - browse_file_paths
 
-    print(f"first data file {file_list[0].name}")
-    print(f"found data file paths {data_file_paths} in {file_list} using {granule_key}")
     return (
         derived_granule_name(granule_regex, data_file_paths),
         reference_data_file(reference_file_regex, data_file_paths),
