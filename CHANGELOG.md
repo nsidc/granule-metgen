@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.16.0rc0 (2026-07-06)
 
 * PSS-699: Add configuration option to force files to be treated as individual science files.
 
