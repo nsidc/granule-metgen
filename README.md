@@ -157,7 +157,6 @@ suggesting data producers include the Attributes used by MetGenC in their netCDF
 - **RequiredC** conditionally required
 - **R+** highly or strongly recommended
 - **R** recommended
-- **S** suggested
 
 | Attribute used by MetGenC (location in netCDF file)   | CF Conventions | NSIDC Guidelines | Notes   |
 | ----------------------------- | -------------- | ---------------- | ------- |
@@ -177,9 +176,9 @@ suggesting data producers include the Attributes used by MetGenC in their netCDF
 
 Notes column key:
 
- OC = Optional configuration attributes (or elements of them) that may be represented
-   in an .ini file in order to allow "nearly" compliant netCDF files to be run with MetGenC
-   without premet/spatial files. See [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
+ OC = Optional configuration attributes that can be included
+   in an .ini file to facilitate "nearly" compliant netCDF files to be run with MetGenC
+   without premet/spatial files. Below, under Running MetGenC: Its Commands In-depth in the Init section, see: [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
 
  P = Premet file attributes that may be specified in a premet file; when used, a
   `premet_dir`path must be defined in the .ini file.
@@ -352,14 +351,10 @@ Example running **init**
 * `log_dir` specifies the directory where metgenc log files will be written. Log files are named `metgenc-{config-name}-{timestamp}.log` where config-name is the base name of the .ini file and timestamp is in YYYYMMDD-HHMM format. The default log directory is `/share/logs/metgenc`, but this can be edited to write metgenc logs to a different existing, writable directory location.
 * `provider` is [newly!!] a _**required**_ attribute that must define the Cumulus Ingest Provider name to successfully ingest data into CUAT. Currently, that'd be `provider = Direct_to_Cumulus_S3` as this is the Cumulus Ingest Provider most (probably all) MetGenC data sets are relying on for ingest. If more Ingest Providers are created, the value for the .ini file's provider field just needs to reflect the exact name of the Cumulus Ingest Provider set for the collection in Cumulus.
 
-#### Required and Optional Configuration Elements
-Some attribute values may be read from the .ini file if the values
-can't be gleaned from—or don't exist in—the science file(s), but whose
-values are known for the data set. Use of these elements can be typical
-for data sets comprising non-CF/non-NSIDC-compliant netCDF science files,
-as well as non-netCDF data sets comprising .tif, .csv, .h5, etc. The element
-values must be manually added to the .ini file, as none are prompted for
-in the `metgenc init` functionality.
+#### Optional Configuration Elements
+When necessary values can't be gleaned from (or don't exist in) science file(s) for data
+sets comprising non-CF/non-NSIDC-compliant netCDF science files, they can be set to be read from the .ini file. These elements
+need to be added to the .ini file by the operator; they're not prompted for when running the `metgenc init` functionality.
 
 See this project's GitHub file, `fixtures/test.ini` for examples.
 
@@ -369,17 +364,13 @@ See this project's GitHub file, `fixtures/test.ini` for examples.
 | time_coverage_duration | Collection    | time_coverage_end   | EndingDateTime | 2    |
 | pixel_size             | Collection    | GeoTransform        | n/a | 3    |
 
-R = Required for all non-netCDF file types (e.g., csv, .tif, .h5, etc) and netCDF files missing
-    the global attribute specified
-
 1. This regex attribute leverages a netCDF's file name containing a date to populate UMMG files'
    TemporalExtent field attribute, BeginningDateTime. Must match using the named group `(?P<time_coverage_start>)`.
    * This attribute is meant to be used with "nearly" compliant netCDF files, but not other file types
-   (csv, tif, etc.) since these should rely on premet files containing temporal details for each file.
+   (csv, tif, etc.) since these would rely on premet files containing temporal details for each file.
 
 2. The time_coverage_duration attribute value specifies the duration to be applied to the `time_coverage_start` value
-in order to generate EndingDateTime values in UMMG files; this value **is a constant**. It's only capable of appling the same
-value to all time_start_regex value gleaned from files. The time_coverage_duration value must be a valid
+in order to generate EndingDateTime values in UMMG files; this value **will result in same value being populated in all UMM-G files for the data set**. The time_coverage_duration value must be a valid
 [ISO duration value](https://en.wikipedia.org/wiki/ISO_8601#Durations).
    * This attribute is meant to be used only with "nearly" compliant _netCDF_ files--not any other file types
    since all other file types will rely on premet files to generate temporal details in output ummg metadata files.
@@ -389,8 +380,8 @@ time_start_regex = IRTIT3_(?P<time_coverage_start>\d{8})_
 time_coverage_duration = P0DT23H59M59S
 ```
 
-3. Rarely applicable for science files that aren't gridded netCDF (.txt, .csv, .jpg, .tif, etc.); this
-value is a constant that will be applied to all granule-level metadata.
+3. Not applicable for science files that aren't gridded netCDF; this
+value is a constant that will be passed every file's UMM-G generated.
 
 #### Granule, Browse, and Reference file regex
 
