@@ -422,7 +422,8 @@ Note column:
      parse the netCDF file for spatial and temporal information so premet/spatial files are unnecessary (assuming the netCDF
      is CF- and NSIDC-compliant).
 4. The `force_single_file_granules` flag should be set to `True` in cases where existing
-   data file names would otherwise be interpreted as multi-data-file granules.
+   data file names would otherwise be interpreted as multi-file granules, which causes MetGenC to throw the error
+   `"Granule has multiple science files but reference_file_regex is not set"`.
 
 ##### INI File Example 1: Use of granule_regex for multi-file granules with no browse
 
