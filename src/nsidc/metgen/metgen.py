@@ -179,6 +179,14 @@ def init_config(configuration_file):
         "reference_file_regex",
         Prompt.ask("Reference science file regex"),
     )
+    cfg_parser.set(
+        constants.COLLECTION_SECTION_NAME,
+        "force_single_file_granules",
+        Prompt.ask(
+            "Force one data file per granule? (True/False)",
+            default=str(constants.DEFAULT_FORCE_SINGLE_FILE_GRANULES),
+        ),
+    )
     print()
 
     print()
@@ -495,6 +503,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
             file_list,
             premet_file_list,
             spatial_file_list,
+            configuration.force_single_file_granules,
         )
         for granule_key in granule_keys(configuration, file_list)
     ]
@@ -518,10 +527,24 @@ def ancillary_files(dir: Path, suffixes: list) -> list:
 
 
 def granule_keys(configuration: config.Config, file_list: list[Path]) -> set[str]:
-    if configuration.granule_regex:
+    if configuration.force_single_file_granules:
+        return granule_keys_from_filename(
+            configuration.browse_regex, file_list, file_as_is
+        )
+    elif configuration.granule_regex:
         return granule_keys_from_regex(configuration.granule_regex, file_list)
     else:
-        return granule_keys_from_filename(configuration.browse_regex, file_list)
+        return granule_keys_from_filename(
+            configuration.browse_regex, file_list, file_no_extension
+        )
+
+
+def file_no_extension(file):
+    return os.path.splitext(file.name)[0]
+
+
+def file_as_is(file):
+    return file.name
 
 
 def granule_keys_from_regex(granule_regex: str, file_list: list) -> set:
@@ -534,15 +557,14 @@ def granule_keys_from_regex(granule_regex: str, file_list: list) -> set:
     }
 
 
-def granule_keys_from_filename(browse_regex, file_list):
+def granule_keys_from_filename(browse_regex, file_list, file_parser=file_no_extension):
     """
     Identify granules based on unique data file basenames (minus file name
     extension) in lieu of a "granuleid" regex match group.
     """
+    browse_pattern = re.compile(browse_regex)
     return set(
-        os.path.splitext(file.name)[0]
-        for file in file_list
-        if not re.search(browse_regex, file.name)
+        file_parser(file) for file in file_list if not browse_pattern.search(file.name)
     )
 
 
@@ -554,6 +576,7 @@ def granule_tuple(
     file_list: list,
     premet_list: list,
     spatial_list: list,
+    force_single_file_granules: bool = False,
 ) -> tuple:
     """
     Important! granule_regex argument must include a captured match group.
@@ -574,8 +597,12 @@ def granule_tuple(
         if re.search(granule_key, file.name) and re.search(browse_regex, file.name)
     }
 
+    # Match the file name exactly if the flag is set to force all data files to
+    # be treated as a separate granule. Otherwise, a substring match of the filename
+    # is ok.
+    match_func = re.fullmatch if force_single_file_granules else re.search
     data_file_paths = {
-        str(file) for file in file_list if re.search(granule_key, file.name)
+        str(file) for file in file_list if match_func(granule_key, file.name)
     } - browse_file_paths
 
     return (

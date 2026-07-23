@@ -1,3 +1,7 @@
+## v1.16.0rc0 (2026-07-06)
+
+* PSS-699: Add configuration option to force files to be treated as individual science files.
+
 ## v1.15.0 (2026-07-01)
 
 * Minor version release for Issue-291 and Issue-315.
