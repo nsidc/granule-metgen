@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.16.0 (2026-07-28)
 
 * Minor version release for PSS-699 (Github issue #320).
 
