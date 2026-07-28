@@ -46,6 +46,7 @@ class Config:
     browse_regex: Optional[str] = None
     granule_regex: Optional[str] = None
     reference_file_regex: Optional[str] = None
+    force_single_file_granules: Optional[bool] = False
     spatial_polygon_enabled: Optional[bool] = False
     spatial_polygon_algorithm: Optional[str] = None
     spatial_polygon_target_coverage: Optional[float] = None
@@ -150,6 +151,7 @@ def configuration(
         "number": constants.DEFAULT_NUMBER,
         "dry_run": constants.DEFAULT_DRY_RUN,
         "browse_regex": constants.DEFAULT_BROWSE_REGEX,
+        "force_single_file_granules": constants.DEFAULT_FORCE_SINGLE_FILE_GRANULES,
         "collection_geometry_override": constants.DEFAULT_COLLECTION_GEOMETRY_OVERRIDE,
         "collection_temporal_override": constants.DEFAULT_COLLECTION_TEMPORAL_OVERRIDE,
         "spatial_polygon_enabled": constants.DEFAULT_SPATIAL_POLYGON_ENABLED,
@@ -294,6 +296,14 @@ def configuration(
                 "Collection",
                 "reference_file_regex",
                 str,
+                config_parser,
+                overrides,
+            ),
+            _get_configuration_value(
+                environment,
+                "Collection",
+                "force_single_file_granules",
+                bool,
                 config_parser,
                 overrides,
             ),
