@@ -13,7 +13,7 @@
     + [help](#help)
     + [init](#init)
         * [INI RULES](#ini-rules)
-      - [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
+      - [Optional Configuration Elements](#optional-configuration-elements)
       - [Granule, Browse, and Reference file regex](#granule-browse-and-reference-file-regex)
         * [INI File Example 1: Use of granule_regex for multi-file granules with no browse](#ini-file-example-1-use-of-granule_regex-for-multi-file-granules-with-no-browse)
         * [INI File Example 2: Single-file granule with good file names and no browse-omit browse_regex and granule_regex](#ini-file-example-2-single-file-granule-with-good-file-names-and-no-browse-omit-browse_regex-and-granule_regex)
@@ -150,7 +150,7 @@ Available profiles are `cumulus-uat` and `cumulus-prod`.
 * The checksum_type must be SHA256
 
 ## NetCDF Attributes MetGenC Relies upon to Generate UMM-G json Files
-CF Conventions and NSIDC Guidelines (=NSIDC Guidelines for netCDF Attributes) are the driving forces behind emphatically
+CF Conventions and NSIDC Guidelines ([NSIDC Guidelines for netCDF Attributes ](https://nsidc.org/sites/default/files/documents/other/nsidc-guidelines-netcdf-attributes.pdf)) are the driving forces behind emphatically
 suggesting data producers include the Attributes used by MetGenC in their netCDF files.
 
 - **Required** required
@@ -178,7 +178,7 @@ Notes column key:
 
  OC = Optional configuration attributes that can be included
    in an .ini file to facilitate "nearly" compliant netCDF files to be run with MetGenC
-   without premet/spatial files. Below, under Running MetGenC: Its Commands In-depth in the Init section, see: [Required and Optional Configuration Elements](#required-and-optional-configuration-elements)
+   without premet/spatial files. Below, under Running MetGenC: Its Commands In-depth in the Init section, see: [Optional Configuration Elements](#optional-configuration-elements)
 
  P = Premet file attributes that may be specified in a premet file; when used, a
   `premet_dir`path must be defined in the .ini file.
@@ -187,7 +187,7 @@ Notes column key:
   for input premet files. If not included in the netCDF global attributes, OC .ini
   attributes can be specified: `time_start_regex` in lieu of time_coverage_start and
   `time_coverage_duration` in lieu of time_coverage_end, for their use and caveats see
-  [Required and Optional Configuration Elements](#required-and-optional-configuration-elements).
+  [Optional Configuration Elements](#optional-configuration-elements).
 
  2 = A grid mapping variable is required if the horizontal coordinate variables aren't
    longitude and latitude and the intent of the data provider is to geolocate
@@ -235,7 +235,7 @@ MetGenC-required global and variable attributes.
 ncdump -h <file name.nc> | grep -e time_coverage_start -e time_coverage_end -e GeoTransform -e crs_wkt -e spatial_ref -e grid_mapping_name -e geospatial_bounds -e geospatial_bounds_crs -e geospatial_lat_ -e geospatial_lon_ -e 'standard_name = "projection_y_coordinate"' -e 'standard_name = "projection_x_coordinate"'
 ```
 For any not reported when you run this, that attribute may be able to be accommodated by
-an associated .ini OC attribute being added to the .ini file. See [Required and Optional Configuration Elements](#required-and-optional-configuration-elements) for full details/descriptions of these.
+an associated .ini OC attribute being added to the .ini file. See [Optional Configuration Elements](#optional-configuration-elements) for full details/descriptions of these.
 
 ## Geometry Logic
 
