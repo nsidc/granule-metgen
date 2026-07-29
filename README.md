@@ -180,8 +180,8 @@ Notes column key:
    in an .ini file to facilitate "nearly" compliant netCDF files to be run with MetGenC
    without premet/spatial files. Below, under Running MetGenC: Its Commands In-depth in the Init section, see: [Optional Configuration Elements](#optional-configuration-elements)
 
- P = Premet file attributes that may be specified in a premet file; when used, a
-  `premet_dir`path must be defined in the .ini file.
+ P = Premet file attributes that can be specified in a premet file; when used,
+  `premet_dir` must be included in the .ini file.
 
  1 = Used by MetGenC to populate the time begin and end UMM-G values, eliminating the need
   for input premet files. If not included in the netCDF global attributes, OC .ini
