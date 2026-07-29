@@ -185,8 +185,8 @@ Notes column key:
 
  1 = Used by MetGenC to populate the time begin and end UMM-G values, eliminating the need
   for input premet files. If not included in the netCDF global attributes, OC .ini
-  attributes can be specified: `time_start_regex` in lieu of time_coverage_start and
-  `time_coverage_duration` in lieu of time_coverage_end, for their use and caveats see
+  attributes can be specified: `time_start_regex` in lieu of `time_coverage_start` and
+  `time_coverage_duration` in lieu of `time_coverage_end`, for their use and caveats see
   [Optional Configuration Elements](#optional-configuration-elements).
 
  2 = A grid mapping variable is required if the horizontal coordinate variables aren't
