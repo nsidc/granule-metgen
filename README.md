@@ -200,7 +200,7 @@ Notes column key:
 
  4 = The `GeoTransform` value provides the pixel size for a file’s data, and is used
    to calculate padding added to x and y values to create a GPolygon enclosing all
-   of the data; the OC attribute `pixel_size` = <value> can be added to the .ini
+   of the data; the OC attribute `pixel_size = <value>` can be added to the .ini
    file to make up for files lacking `GeoTransform`.
 
  5 = The values of the coordinate variable identified by the `standard_name` attribute
