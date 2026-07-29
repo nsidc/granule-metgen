@@ -212,7 +212,7 @@ Notes column key:
 
  7 = When a collection's GranuleSpatialRepresentation is defined as Cartesian,
    MetGenC will generate a bounding rectangle spatial representation using the
-   NetCDF file's geospatial_lat_max-min, geospatial_lon_max-min global attributes.
+   NetCDF file's `geospatial_lat_max/min`, `geospatial_lon_max/min` global attributes.
 
  8 = The `geospatial_bounds` netCDF file global attribute contains spatial boundary information as a
    WKT POLYGON string. When present and `prefer_geospatial_bounds = true` is set in the
