@@ -198,9 +198,9 @@ Notes column key:
    `CRS` and `Transformer` modules in `pyproj` to conveniently deal
    with the reprojection of (y,x) values to EPSG 4326 (lon, lat) values.
 
- 4 = The `GeoTransform` value provides the pixel size per data value, which is then used
-   to calculate the padding added to x and y values to create a GPolygon enclosing all
-   of the data; OC .ini attribute is `pixel_size` = <value>.
+ 4 = The `GeoTransform` value provides the pixel size for a file’s data, which is then used
+   to calculate padding added to x and y values to create a GPolygon enclosing all
+   of the data; the OC attribute, `pixel_size` = <value> can be added to the .ini file.
 
  5 = The values of the coordinate variable identified by the `standard_name` attribute
    with a value of `projection_x_coordinate` are reprojected and thinned to create a
