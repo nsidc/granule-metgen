@@ -150,8 +150,8 @@ Available profiles are `cumulus-uat` and `cumulus-prod`.
 * The checksum_type must be SHA256
 
 ## NetCDF Attributes MetGenC Relies upon to Generate UMM-G json Files
-CF Conventions and NSIDC Guidelines ([NSIDC Guidelines for netCDF Attributes ](https://nsidc.org/sites/default/files/documents/other/nsidc-guidelines-netcdf-attributes.pdf)) are the driving forces behind emphatically
-suggesting data producers include the Attributes used by MetGenC in their netCDF files.
+CF Conventions and NSIDC Guidelines ([NSIDC Guidelines for netCDF Attributes ](https://nsidc.org/sites/default/files/documents/other/nsidc-guidelines-netcdf-attributes.pdf))
+are the driving forces behind recommending that data producers include the attributes below in their netCDF files.
 
 - **Required** required
 - **RequiredC** conditionally required
