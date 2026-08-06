@@ -617,8 +617,8 @@ def granule_tuple(
     # be treated as a separate granule. Otherwise, matching a substring of the
     # filename is ok.
     match_func = re.fullmatch if force_single_file_granules else re.search
-    data_file_paths = (
-        matched_data_files(granule_key, file_list, browse_file_paths, match_func),
+    data_file_paths = matched_data_files(
+        granule_key, file_list, browse_file_paths, match_func
     )
 
     return (

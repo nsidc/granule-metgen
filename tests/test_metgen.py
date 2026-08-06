@@ -122,17 +122,21 @@ def test_uses_regex_parser(mock, test_config, file_list):
 
 
 @patch("nsidc.metgen.metgen.matched_data_files")
-def test_uses_fullmatch_for_forced_single_file_granules(mock):
-    file_list = [Path("the_granule"), Path("the_other_granule")]
-    metgen.granule_tuple("the_granule", "the_granule", "", "", file_list, [], [], True)
+def test_uses_fullmatch_for_forced_single_file_granules(mock, file_list):
+    mock.return_value = {"aaa_gid1_bbb.nc"}
+    metgen.granule_tuple(
+        "aaa_gid1_bbb.nc", "aaa_gid_bbb.nc", "", "", file_list, [], [], True
+    )
     assert mock.called
     assert mock.call_args.args[3] == re.fullmatch
 
 
 @patch("nsidc.metgen.metgen.matched_data_files")
-def test_uses_search_for_multi_file_granules(mock):
-    file_list = [Path("the_granule"), Path("the_other_granule")]
-    metgen.granule_tuple("the_granule", "the_granule", "", "", file_list, [], [], False)
+def test_uses_search_for_multi_file_granules(mock, file_list):
+    mock.return_value = {"aaa_gid1_bbb.nc"}
+    metgen.granule_tuple(
+        "aaa_gid1_bbb.nc", "aaa_gid_bbb.nc", "", "", file_list, [], [], False
+    )
     assert mock.called
     assert mock.call_args.args[3] == re.search
 
