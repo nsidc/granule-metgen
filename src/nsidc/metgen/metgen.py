@@ -614,12 +614,12 @@ def granule_tuple(
     }
 
     # Match the file name exactly if the flag is set to force all data files to
-    # be treated as a separate granule. Otherwise, a substring match of the filename
-    # is ok.
+    # be treated as a separate granule. Otherwise, matching a substring of the
+    # filename is ok.
     match_func = re.fullmatch if force_single_file_granules else re.search
-    data_file_paths = {
-        str(file) for file in file_list if match_func(granule_key, file.name)
-    } - browse_file_paths
+    data_file_paths = (
+        matched_data_files(granule_key, file_list, browse_file_paths, match_func),
+    )
 
     return (
         derived_granule_name(granule_regex, data_file_paths),
@@ -629,6 +629,14 @@ def granule_tuple(
         matched_ancillary_file(granule_key, premet_list),
         matched_ancillary_file(granule_key, spatial_list),
     )
+
+
+def matched_data_files(
+    key: str, file_list: list, ignore_file_list: list, match_func: Callable
+) -> list:
+    return {
+        str(file) for file in file_list if match_func(key, file.name)
+    } - ignore_file_list
 
 
 def reference_data_file(regex: str, data_files: set[Path]):

@@ -1,7 +1,7 @@
 ## Unreleased
 
 * Issue 322: Apply the granule limit value before doing the bulk of granule
-  initialization.
+  object manipulation.
 
 ## v1.16.0 (2026-07-28)
 

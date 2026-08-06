@@ -103,6 +103,40 @@ def test_error_if_no_reference_file_matches():
         metgen.reference_data_file("important_file", {"/first/file", "/second/file"})
 
 
+@patch("nsidc.metgen.metgen.granule_keys_from_filename")
+def test_uses_filename_parser(mock, test_config, file_list):
+    test_config.force_single_file_granules = False
+    test_config.granule_regex = None
+
+    metgen.granule_keys(test_config, file_list)
+    assert mock.called
+
+
+@patch("nsidc.metgen.metgen.granule_keys_from_regex")
+def test_uses_regex_parser(mock, test_config, file_list):
+    test_config.granule_regex = "(?P<granuleid>file)"
+    test_config.force_single_file_granules = False
+
+    metgen.granule_keys(test_config, file_list)
+    assert mock.called
+
+
+@patch("nsidc.metgen.metgen.matched_data_files")
+def test_uses_fullmatch_for_forced_single_file_granules(mock):
+    file_list = [Path("the_granule"), Path("the_other_granule")]
+    metgen.granule_tuple("the_granule", "the_granule", "", "", file_list, [], [], True)
+    assert mock.called
+    assert mock.call_args.args[3] == re.fullmatch
+
+
+@patch("nsidc.metgen.metgen.matched_data_files")
+def test_uses_search_for_multi_file_granules(mock):
+    file_list = [Path("the_granule"), Path("the_other_granule")]
+    metgen.granule_tuple("the_granule", "the_granule", "", "", file_list, [], [], False)
+    assert mock.called
+    assert mock.call_args.args[3] == re.search
+
+
 def test_no_cartesian_points():
     with pytest.raises(Exception):
         metgen.populate_spatial(constants.CARTESIAN, ["a point"])
