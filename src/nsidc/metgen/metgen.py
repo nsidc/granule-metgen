@@ -16,6 +16,7 @@ import re
 import sys
 import uuid
 from collections.abc import Callable
+from itertools import starmap
 from pathlib import Path
 from string import Template
 
@@ -377,24 +378,30 @@ def process(configuration: config.Config) -> None:
     # operations, finalizes a Ledger, and logs the details of the Ledger.
     pipeline = rcompose(start_ledger, *recorded_operations, end_ledger, log_ledger)
 
-    # Find all of the input granule files, limit the size of the list based
-    # on the configuration, and execute the pipeline on each of the granules.
-    candidate_granules = [
-        Granule(
-            name,
-            data_filenames=data_files,
-            browse_filenames=browse_files,
-            premet_filename=premet_file,
-            spatial_filename=spatial_file,
-            reference_data_filename=reference_data_file,
-            data_reader=registry.lookup(Path(reference_data_file).suffix),
-        )
-        for name, reference_data_file, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
-            configuration
+    # Identify all possible data, browse, premet and spatial files.
+    file_list = [p for p in Path(configuration.data_dir).glob("*")]
+    all_granule_keys = granule_keys(configuration, file_list)
+    premet_file_list = ancillary_files(
+        configuration.premet_dir, [constants.PREMET_SUFFIX]
+    )
+    spatial_file_list = ancillary_files(
+        configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
+    )
+
+    # Select the requested number of granules from the reference list of granule keys
+    # and execute the pipeline on each of the granules generated from those keys.
+    candidate_granule_keys = take(configuration.number, all_granule_keys)
+
+    results = [
+        pipeline(g)
+        for g in starmap(
+            grouped_granule_files,
+            [
+                (configuration, file_list, premet_file_list, spatial_file_list, cg)
+                for cg in candidate_granule_keys
+            ],
         )
     ]
-    granules = take(configuration.number, candidate_granules)
-    results = [pipeline(g) for g in granules]
 
     summarize_results(results)
 
@@ -482,19 +489,19 @@ def null_operation(_: config.Config, granule: Granule) -> Granule:
     return granule
 
 
-def grouped_granule_files(configuration: config.Config) -> list[tuple]:
+def grouped_granule_files(
+    configuration: config.Config,
+    file_list: list[Path],
+    premet_file_list: list[Path],
+    spatial_file_list: list[Path],
+    granule_key: str,
+) -> Granule:
     """
-    Identify file(s) related to each granule.
+    Identify file(s) related to each granule and package them up in a new
+    Granule object.
     """
-    file_list = [p for p in Path(configuration.data_dir).glob("*")]
-    premet_file_list = ancillary_files(
-        configuration.premet_dir, [constants.PREMET_SUFFIX]
-    )
-    spatial_file_list = ancillary_files(
-        configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
-    )
 
-    return [
+    name, reference_data_file, data_files, browse_files, premet_file, spatial_file = (
         granule_tuple(
             granule_key,
             configuration.granule_regex or f"({granule_key})",
@@ -505,8 +512,17 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
             spatial_file_list,
             configuration.force_single_file_granules,
         )
-        for granule_key in granule_keys(configuration, file_list)
-    ]
+    )
+
+    return Granule(
+        name,
+        data_filenames=data_files,
+        browse_filenames=browse_files,
+        premet_filename=premet_file,
+        spatial_filename=spatial_file,
+        reference_data_filename=reference_data_file,
+        data_reader=registry.lookup(Path(reference_data_file).suffix),
+    )
 
 
 def ancillary_files(dir: Path, suffixes: list) -> list:
@@ -598,12 +614,12 @@ def granule_tuple(
     }
 
     # Match the file name exactly if the flag is set to force all data files to
-    # be treated as a separate granule. Otherwise, a substring match of the filename
-    # is ok.
+    # be treated as a separate granule. Otherwise, matching a substring of the
+    # filename is ok.
     match_func = re.fullmatch if force_single_file_granules else re.search
-    data_file_paths = {
-        str(file) for file in file_list if match_func(granule_key, file.name)
-    } - browse_file_paths
+    data_file_paths = matched_data_files(
+        granule_key, file_list, browse_file_paths, match_func
+    )
 
     return (
         derived_granule_name(granule_regex, data_file_paths),
@@ -613,6 +629,14 @@ def granule_tuple(
         matched_ancillary_file(granule_key, premet_list),
         matched_ancillary_file(granule_key, spatial_list),
     )
+
+
+def matched_data_files(
+    key: str, file_list: list, ignore_file_list: set, match_func: Callable
+) -> set:
+    return {
+        str(file) for file in file_list if match_func(key, file.name)
+    } - ignore_file_list
 
 
 def reference_data_file(regex: str, data_files: set[Path]):
