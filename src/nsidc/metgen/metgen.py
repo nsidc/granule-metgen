@@ -403,8 +403,6 @@ def process(configuration: config.Config) -> None:
         )
     ]
 
-    # alert user processing is done, writing log now?
-    print("finished with all granules, summarizing now")
     summarize_results(results)
 
 
