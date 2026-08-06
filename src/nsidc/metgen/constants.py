@@ -20,7 +20,6 @@ DEFAULT_STAGING_BUCKET_NAME = "nsidc-ops-${environment}-ingest-staging"
 DEFAULT_WRITE_CNM_FILE = False
 DEFAULT_OVERWRITE_UMMG = False
 DEFAULT_CHECKSUM_TYPE = "SHA256"
-# TODO: note this limit somewhere!
 DEFAULT_NUMBER = 1000000
 DEFAULT_DRY_RUN = False
 DEFAULT_BROWSE_REGEX = "_brws"

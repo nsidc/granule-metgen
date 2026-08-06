@@ -378,13 +378,8 @@ def process(configuration: config.Config) -> None:
     # operations, finalizes a Ledger, and logs the details of the Ledger.
     pipeline = rcompose(start_ledger, *recorded_operations, end_ledger, log_ledger)
 
-    # Find all of the input granule files, limit the size of the list based
-    # on the configuration, and execute the pipeline on each of the granules.
+    # Identify all possible data, browse, premet and spatial files.
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
-    # implement n limit here
-    # for n times, get group of files matching the first file encountered
-    # essentially create grouped granule files in matching process
-    # result will be a list of tuples
     all_granule_keys = granule_keys(configuration, file_list)
     premet_file_list = ancillary_files(
         configuration.premet_dir, [constants.PREMET_SUFFIX]
@@ -392,11 +387,11 @@ def process(configuration: config.Config) -> None:
     spatial_file_list = ancillary_files(
         configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
     )
+
+    # Select the requested number of granules from the reference list of granule keys
+    # and execute the pipeline on each of the granules generated from those keys.
     candidate_granule_keys = take(configuration.number, all_granule_keys)
 
-    # words[:] = [word.upper() for word in words]
-    # or map each candidate_granule_key to a new Granule
-    # need iterable instead of candidate_granule_keys
     results = [
         pipeline(g)
         for g in starmap(
@@ -409,6 +404,7 @@ def process(configuration: config.Config) -> None:
     ]
 
     # alert user processing is done, writing log now?
+    print("finished with all granules, summarizing now")
     summarize_results(results)
 
 
@@ -503,11 +499,10 @@ def grouped_granule_files(
     granule_key: str,
 ) -> Granule:
     """
-    Identify file(s) related to each granule.
+    Identify file(s) related to each granule and package them up in a new
+    Granule object.
     """
 
-    print(f"looking for granule files for {granule_key}")
-    # get granule_tuple information for granule key
     name, reference_data_file, data_files, browse_files, premet_file, spatial_file = (
         granule_tuple(
             granule_key,
@@ -521,7 +516,6 @@ def grouped_granule_files(
         )
     )
 
-    # return new granule object
     return Granule(
         name,
         data_filenames=data_files,
@@ -763,7 +757,6 @@ def prepare_granule(_: config.Config, granule: Granule) -> Granule:
     """
     Prepare the Granule for creating metadata and submitting it.
     """
-    # move grouped_granule_files here, change to deal with individual granule id?
     return dataclasses.replace(
         granule,
         submission_time=dt.datetime.now(dt.timezone.utc).isoformat(),
