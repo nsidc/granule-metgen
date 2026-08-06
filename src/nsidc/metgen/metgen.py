@@ -632,8 +632,8 @@ def granule_tuple(
 
 
 def matched_data_files(
-    key: str, file_list: list, ignore_file_list: list, match_func: Callable
-) -> list:
+    key: str, file_list: list, ignore_file_list: set, match_func: Callable
+) -> set:
     return {
         str(file) for file in file_list if match_func(key, file.name)
     } - ignore_file_list
