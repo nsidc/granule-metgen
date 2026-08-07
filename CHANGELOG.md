@@ -1,9 +1,6 @@
 ## UNRELEASED
 
-* Issue 299: Enable security scanning. Add Dependabot version updates for Python
-  and GitHub Actions dependencies, add OSV-Scanner scans on pull requests and on a
-  weekly schedule (reported under Security > Code scanning), and enable Dependabot
-  security updates and secret scanning on the repository.
+* Issue 299: Enable security scanning via Dependabot updates and OSV-Scanner.
 
 ## v1.16.0 (2026-07-28)
 
