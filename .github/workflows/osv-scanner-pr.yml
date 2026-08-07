@@ -1,4 +1,4 @@
-name: OSV-Scanner PR scan
+name: Security scan (PR)
 
 # Scans poetry.lock for known vulnerabilities and reports only those introduced
 # by the pull request, so pre-existing findings don't block unrelated work.

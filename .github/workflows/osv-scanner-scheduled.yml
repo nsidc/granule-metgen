@@ -1,4 +1,4 @@
-name: OSV-Scanner scheduled scan
+name: Security scan
 
 # Full scan of poetry.lock. Results are uploaded as SARIF and appear under
 # Security -> Code scanning.
