@@ -1,7 +1,8 @@
 name: Security scan
 
-# Full scan of poetry.lock. Results are uploaded as SARIF and appear under the
-# repository's Security tab, in the Code scanning section.
+# Full scan of poetry.lock. Results are published to the repository's Security
+# tab, in the Code scanning section. They travel as SARIF, a standard JSON
+# format for analysis results that GitHub knows how to render.
 #
 # Unlike the PR scan, this has no baseline to compare against, so it fails when
 # any known vulnerability exists. That is what turns the README badge red, and
@@ -15,7 +16,7 @@ on:
 permissions:
   actions: read
   contents: read
-  security-events: write # required to upload the SARIF results
+  security-events: write # required to publish results to the Security tab
 
 jobs:
   scan-scheduled:
