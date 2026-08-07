@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import mock_open, patch
 
 import pytest
-from funcy import identity, partial
+from funcy import identity, partial, take
 
 from nsidc.metgen import config, constants, metgen
 
@@ -101,6 +101,74 @@ def test_error_if_multiple_reference_file_matches():
 def test_error_if_no_reference_file_matches():
     with pytest.raises(Exception):
         metgen.reference_data_file("important_file", {"/first/file", "/second/file"})
+
+
+@pytest.fixture
+def granule_dir_config(test_config, tmp_path):
+    """
+    A configuration pointing at a directory of ten single-file granules, which
+    is more than the configured `number` of granules to process.
+    """
+    for i in range(1, 11):
+        (tmp_path / f"gran_{i:02}.nc").touch()
+
+    test_config.data_dir = str(tmp_path)
+    test_config.browse_regex = "_brws"
+    test_config.granule_regex = None
+    test_config.reference_file_regex = None
+    test_config.force_single_file_granules = False
+    return test_config
+
+
+def test_grouped_granule_files_is_lazy(granule_dir_config):
+    """
+    Grouping the files for a granule must not happen until the granule is
+    actually consumed, so that `take` only does the work for the granules it
+    keeps.
+    """
+    with patch(
+        "nsidc.metgen.metgen.granule_tuple", wraps=metgen.granule_tuple
+    ) as mock_granule_tuple:
+        grouped = metgen.grouped_granule_files(granule_dir_config)
+        assert mock_granule_tuple.call_count == 0
+
+        assert len(take(2, grouped)) == 2
+        assert mock_granule_tuple.call_count == 2
+
+
+def test_candidate_granules_is_lazy(granule_dir_config):
+    """
+    Only `number` granules should be built, no matter how many granules exist
+    in the data directory.
+    """
+    with (
+        patch(
+            "nsidc.metgen.metgen.granule_tuple", wraps=metgen.granule_tuple
+        ) as mock_granule_tuple,
+        patch("nsidc.metgen.metgen.registry.lookup") as mock_lookup,
+    ):
+        granules = metgen.candidate_granules(granule_dir_config)
+        assert mock_granule_tuple.call_count == 0
+        assert mock_lookup.call_count == 0
+
+        taken = take(granule_dir_config.number, granules)
+
+        assert len(taken) == granule_dir_config.number
+        assert mock_granule_tuple.call_count == granule_dir_config.number
+        assert mock_lookup.call_count == granule_dir_config.number
+
+
+def test_candidate_granules_yields_every_granule_when_not_limited(granule_dir_config):
+    """
+    Laziness must not truncate the results when the caller wants them all.
+    """
+    with patch(
+        "nsidc.metgen.metgen.granule_tuple", wraps=metgen.granule_tuple
+    ) as mock_granule_tuple:
+        granules = list(metgen.candidate_granules(granule_dir_config))
+
+        assert len(granules) == 10
+        assert mock_granule_tuple.call_count == 10
 
 
 def test_no_cartesian_points():
