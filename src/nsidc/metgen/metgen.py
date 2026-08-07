@@ -15,7 +15,7 @@ import os.path
 import re
 import sys
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from string import Template
 
@@ -377,9 +377,11 @@ def process(configuration: config.Config) -> None:
     # operations, finalizes a Ledger, and logs the details of the Ledger.
     pipeline = rcompose(start_ledger, *recorded_operations, end_ledger, log_ledger)
 
-    # Find all of the input granule files, limit the size of the list based
-    # on the configuration, and execute the pipeline on each of the granules.
-    candidate_granules = [
+    # Lazily generate the input granules and limit how many are produced based
+    # on the configuration, then execute the pipeline on each of the granules.
+    # Because the generator is only advanced by `take`, the per-granule file
+    # grouping is performed for at most `configuration.number` granules.
+    candidate_granules = (
         Granule(
             name,
             data_filenames=data_files,
@@ -392,7 +394,7 @@ def process(configuration: config.Config) -> None:
         for name, reference_data_file, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
             configuration
         )
-    ]
+    )
     granules = take(configuration.number, candidate_granules)
     results = [pipeline(g) for g in granules]
 
@@ -482,9 +484,12 @@ def null_operation(_: config.Config, granule: Granule) -> Granule:
     return granule
 
 
-def grouped_granule_files(configuration: config.Config) -> list[tuple]:
+def grouped_granule_files(configuration: config.Config) -> Iterator[tuple]:
     """
-    Identify file(s) related to each granule.
+    Identify file(s) related to each granule. The files common to all granules
+    are gathered up front, but the per-granule grouping is generated lazily so
+    that callers limiting the number of granules only pay for the ones they
+    consume.
     """
     file_list = [p for p in Path(configuration.data_dir).glob("*")]
     premet_file_list = ancillary_files(
@@ -494,7 +499,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
         configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
     )
 
-    return [
+    return (
         granule_tuple(
             granule_key,
             configuration.granule_regex or f"({granule_key})",
@@ -506,7 +511,7 @@ def grouped_granule_files(configuration: config.Config) -> list[tuple]:
             configuration.force_single_file_granules,
         )
         for granule_key in granule_keys(configuration, file_list)
-    ]
+    )
 
 
 def ancillary_files(dir: Path, suffixes: list) -> list:

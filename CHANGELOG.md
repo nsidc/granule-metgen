@@ -1,3 +1,9 @@
+## Unreleased
+
+* Issue 322: Generate candidate granules lazily so that the granule limit
+  (`-n`) is applied before the per-granule file grouping is done, rather than
+  after.
+
 ## v1.16.0 (2026-07-28)
 
 * Minor version release for PSS-699 (Github issue #320).
