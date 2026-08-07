@@ -377,25 +377,10 @@ def process(configuration: config.Config) -> None:
     # operations, finalizes a Ledger, and logs the details of the Ledger.
     pipeline = rcompose(start_ledger, *recorded_operations, end_ledger, log_ledger)
 
-    # Lazily generate the input granules and limit how many are produced based
-    # on the configuration, then execute the pipeline on each of the granules.
-    # Because the generator is only advanced by `take`, the per-granule file
-    # grouping is performed for at most `configuration.number` granules.
-    candidate_granules = (
-        Granule(
-            name,
-            data_filenames=data_files,
-            browse_filenames=browse_files,
-            premet_filename=premet_file,
-            spatial_filename=spatial_file,
-            reference_data_filename=reference_data_file,
-            data_reader=registry.lookup(Path(reference_data_file).suffix),
-        )
-        for name, reference_data_file, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
-            configuration
-        )
-    )
-    granules = take(configuration.number, candidate_granules)
+    # Limit the number of granules based on the configuration, and execute the
+    # pipeline on each of them. Because `candidate_granules` is lazy and is only
+    # advanced by `take`, granules beyond the requested number are never built.
+    granules = take(configuration.number, candidate_granules(configuration))
     results = [pipeline(g) for g in granules]
 
     summarize_results(results)
@@ -482,6 +467,27 @@ def end_ledger(ledger: Ledger) -> Ledger:
 
 def null_operation(_: config.Config, granule: Granule) -> Granule:
     return granule
+
+
+def candidate_granules(configuration: config.Config) -> Iterator[Granule]:
+    """
+    Lazily generate a Granule for each group of related granule files, so that
+    callers limiting the number of granules only pay for the ones they consume.
+    """
+    return (
+        Granule(
+            name,
+            data_filenames=data_files,
+            browse_filenames=browse_files,
+            premet_filename=premet_file,
+            spatial_filename=spatial_file,
+            reference_data_filename=reference_data_file,
+            data_reader=registry.lookup(Path(reference_data_file).suffix),
+        )
+        for name, reference_data_file, data_files, browse_files, premet_file, spatial_file in grouped_granule_files(
+            configuration
+        )
+    )
 
 
 def grouped_granule_files(configuration: config.Config) -> Iterator[tuple]:
