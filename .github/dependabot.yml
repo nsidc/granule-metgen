@@ -8,6 +8,9 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    # Caps how many version-update PRs stay open at once. Security-update PRs
+    # ignore this cap and are unlimited. 5 is GitHub's default; use 0 to pause
+    # version updates for this ecosystem.
     open-pull-requests-limit: 5
     groups:
       # Batch routine minor/patch bumps into a single weekly PR. Major bumps are
