@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Issue 299: Enable security scanning via Dependabot updates and OSV-Scanner.
+
 ## v1.16.0 (2026-07-28)
 
 * Minor version release for PSS-699 (Github issue #320).
