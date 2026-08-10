@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.17.0rc0 (2026-08-10)
 
 * Issue 299: Enable security scanning via Dependabot updates and OSV-Scanner.
 
