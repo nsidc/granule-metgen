@@ -16,7 +16,6 @@ import re
 import sys
 import uuid
 from collections.abc import Callable
-from itertools import starmap
 from pathlib import Path
 from string import Template
 
@@ -355,11 +354,14 @@ def process(configuration: config.Config) -> None:
     if errors:
         raise config.ValidationError(errors)
 
+    # Identify all possible data and browse files.
+    file_list = [p for p in Path(configuration.data_dir).glob("*")]
+
     # Ordered list of operations to perform on each granule
     # Use optimized operations that skip individual CMR calls
     operations = [
         lambda cfg, g: associate_collection(g, collection),
-        prepare_granule,
+        lambda cfg, g: prepare_granule(cfg, g, file_list),
         find_existing_ummg,
         create_ummg,
         stage_files if not configuration.dry_run else null_operation,
@@ -378,30 +380,13 @@ def process(configuration: config.Config) -> None:
     # operations, finalizes a Ledger, and logs the details of the Ledger.
     pipeline = rcompose(start_ledger, *recorded_operations, end_ledger, log_ledger)
 
-    # Identify all possible data, browse, premet and spatial files.
-    file_list = [p for p in Path(configuration.data_dir).glob("*")]
-    all_granule_keys = granule_keys(configuration, file_list)
-    premet_file_list = ancillary_files(
-        configuration.premet_dir, [constants.PREMET_SUFFIX]
-    )
-    spatial_file_list = ancillary_files(
-        configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
-    )
-
     # Select the requested number of granules from the reference list of granule keys
     # and execute the pipeline on each of the granules generated from those keys.
-    candidate_granule_keys = take(configuration.number, all_granule_keys)
+    granules = take(
+        configuration.number, candidate_granules(granule_keys(configuration, file_list))
+    )
 
-    results = [
-        pipeline(g)
-        for g in starmap(
-            grouped_granule_files,
-            [
-                (configuration, file_list, premet_file_list, spatial_file_list, cg)
-                for cg in candidate_granule_keys
-            ],
-        )
-    ]
+    results = [pipeline(g) for g in granules]
 
     summarize_results(results)
 
@@ -540,6 +525,10 @@ def ancillary_files(dir: Path, suffixes: list) -> list:
         raise Exception(f"No files with suffix {suffixes} in directory {dir}.")
 
     return files
+
+
+def candidate_granules(granule_keys: set[str]) -> set[Granule]:
+    return (Granule(granule_key) for granule_key in granule_keys)
 
 
 def granule_keys(configuration: config.Config, file_list: list[Path]) -> set[str]:
@@ -699,17 +688,6 @@ def associate_collection(granule: Granule, collection: CollectionMetadata) -> Gr
     return dataclasses.replace(granule, collection=collection)
 
 
-def validate_collection(configuration: config.Config, granule: Granule) -> Granule:
-    """
-    Confirm collection metadata meet requirements for our granule metadata generation.
-    """
-    errors = validate_collection_spatial(
-        configuration, granule.collection
-    ) + validate_collection_temporal(configuration, granule.collection)
-    if errors:
-        raise config.ValidationError(errors)
-
-
 def validate_collection_temporal(configuration, collection):
     """
     Verify collection temporal extent information is usable if a collection
@@ -759,12 +737,44 @@ def validate_collection_spatial(configuration, collection):
     return errors
 
 
-def prepare_granule(_: config.Config, granule: Granule) -> Granule:
+def prepare_granule(
+    configuration: config.Config, granule: Granule, file_list
+) -> Granule:
     """
     Prepare the Granule for creating metadata and submitting it.
     """
+
+    # Identify all possible premet and spatial files.
+    premet_file_list = ancillary_files(
+        configuration.premet_dir, [constants.PREMET_SUFFIX]
+    )
+    spatial_file_list = ancillary_files(
+        configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
+    )
+
+    name, reference_data_file, data_files, browse_files, premet_file, spatial_file = (
+        granule_tuple(
+            granule.producer_granule_id,
+            configuration.granule_regex or f"({granule.producer_granule_id})",
+            configuration.browse_regex,
+            configuration.reference_file_regex,
+            file_list,
+            premet_file_list,
+            spatial_file_list,
+            configuration.force_single_file_granules,
+        )
+    )
+
+    # Fill in all the missing granule bits
     return dataclasses.replace(
         granule,
+        producer_granule_id=name,
+        data_filenames=data_files,
+        browse_filenames=browse_files,
+        premet_filename=premet_file,
+        spatial_filename=spatial_file,
+        reference_data_filename=reference_data_file,
+        data_reader=registry.lookup(Path(reference_data_file).suffix),
         submission_time=dt.datetime.now(dt.timezone.utc).isoformat(),
         uuid=str(uuid.uuid4()),
     )
