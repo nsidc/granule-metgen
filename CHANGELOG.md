@@ -4,6 +4,9 @@
   and apply the granule limit value to lightweight granule objects earlier in
   the workflow.
 
+## v1.17.0rc0 (2026-08-10)
+
+* Issue 299: Enable security scanning via Dependabot updates and OSV-Scanner.
 
 ## v1.16.0 (2026-07-28)
 
