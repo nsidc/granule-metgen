@@ -16,6 +16,7 @@ import re
 import sys
 import uuid
 from collections.abc import Callable
+from functools import cache
 from pathlib import Path
 from string import Template
 
@@ -474,43 +475,8 @@ def null_operation(_: config.Config, granule: Granule) -> Granule:
     return granule
 
 
-def grouped_granule_files(
-    configuration: config.Config,
-    file_list: list[Path],
-    premet_file_list: list[Path],
-    spatial_file_list: list[Path],
-    granule_key: str,
-) -> Granule:
-    """
-    Identify file(s) related to each granule and package them up in a new
-    Granule object.
-    """
-
-    name, reference_data_file, data_files, browse_files, premet_file, spatial_file = (
-        granule_tuple(
-            granule_key,
-            configuration.granule_regex or f"({granule_key})",
-            configuration.browse_regex,
-            configuration.reference_file_regex,
-            file_list,
-            premet_file_list,
-            spatial_file_list,
-            configuration.force_single_file_granules,
-        )
-    )
-
-    return Granule(
-        name,
-        data_filenames=data_files,
-        browse_filenames=browse_files,
-        premet_filename=premet_file,
-        spatial_filename=spatial_file,
-        reference_data_filename=reference_data_file,
-        data_reader=registry.lookup(Path(reference_data_file).suffix),
-    )
-
-
-def ancillary_files(dir: Path, suffixes: list) -> list:
+@cache
+def ancillary_files(dir: Path, suffixes: tuple) -> list:
     files = None
 
     if not dir:
@@ -738,7 +704,7 @@ def validate_collection_spatial(configuration, collection):
 
 
 def prepare_granule(
-    configuration: config.Config, granule: Granule, file_list
+    configuration: config.Config, granule: Granule, file_list: list
 ) -> Granule:
     """
     Prepare the Granule for creating metadata and submitting it.
@@ -746,10 +712,10 @@ def prepare_granule(
 
     # Identify all possible premet and spatial files.
     premet_file_list = ancillary_files(
-        configuration.premet_dir, [constants.PREMET_SUFFIX]
+        configuration.premet_dir, (constants.PREMET_SUFFIX)
     )
     spatial_file_list = ancillary_files(
-        configuration.spatial_dir, [constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX]
+        configuration.spatial_dir, (constants.SPATIAL_SUFFIX, constants.SPO_SUFFIX)
     )
 
     name, reference_data_file, data_files, browse_files, premet_file, spatial_file = (
