@@ -15,7 +15,7 @@ import os.path
 import re
 import sys
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from functools import cache
 from pathlib import Path
 from string import Template
@@ -493,11 +493,19 @@ def ancillary_files(dir: Path, suffixes: tuple) -> list:
     return files
 
 
-def candidate_granules(granule_keys: set[str]) -> set[Granule]:
+def candidate_granules(granule_keys: set[str]) -> Iterator[Granule]:
+    """
+    Generate a set of very skinny Granules. Each contains only the currently
+    known granule identifier.
+    """
     return (Granule(granule_key) for granule_key in granule_keys)
 
 
 def granule_keys(configuration: config.Config, file_list: list[Path]) -> set[str]:
+    """
+    Identify all of the possible keys (aka ids, aka names, aka producer_granule_ids)
+    for individual granules in this collection.
+    """
     if configuration.force_single_file_granules:
         return granule_keys_from_filename(
             configuration.browse_regex, file_list, file_as_is
@@ -528,7 +536,9 @@ def granule_keys_from_regex(granule_regex: str, file_list: list) -> set:
     }
 
 
-def granule_keys_from_filename(browse_regex, file_list, file_parser=file_no_extension):
+def granule_keys_from_filename(
+    browse_regex: str, file_list: list, file_parser=file_no_extension
+):
     """
     Identify granules based on unique data file basenames (minus file name
     extension) in lieu of a "granuleid" regex match group.
@@ -707,7 +717,9 @@ def prepare_granule(
     configuration: config.Config, granule: Granule, file_list: list
 ) -> Granule:
     """
-    Prepare the Granule for creating metadata and submitting it.
+    Fill in the missing Granule information, including reference data file, the
+    complete list of data file(s) and browse file(s), and premet file and spatial
+    file if they exist.
     """
 
     # Identify all possible premet and spatial files.
@@ -731,7 +743,8 @@ def prepare_granule(
         )
     )
 
-    # Fill in all the missing granule bits
+    # Replace the existing producer_granule_id with one that (possibly) reflects
+    # the existence of multiple data files, and fill in the missing granule bits.
     return dataclasses.replace(
         granule,
         producer_granule_id=name,

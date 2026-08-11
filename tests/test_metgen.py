@@ -103,6 +103,29 @@ def test_error_if_no_reference_file_matches():
         metgen.reference_data_file("important_file", {"/first/file", "/second/file"})
 
 
+def test_prepare_populates_granule(test_config):
+    granule = metgen.Granule("initial_id")
+    with patch(
+        "nsidc.metgen.metgen.granule_tuple",
+        return_value=(
+            "final_granule_id",
+            "ref_data_file",
+            ["ref_data_file", "other_data_file"],
+            [],
+            [],
+            [],
+        ),
+    ):
+        granule = metgen.prepare_granule(
+            test_config,
+            granule,
+            ["ref_data_file", "other_data_file", "another_data_file"],
+        )
+        assert granule.producer_granule_id == "final_granule_id"
+        assert granule.reference_data_filename == "ref_data_file"
+        assert granule.data_filenames == ["ref_data_file", "other_data_file"]
+
+
 @patch("nsidc.metgen.metgen.granule_keys_from_filename")
 def test_uses_filename_parser(mock, test_config, file_list):
     test_config.force_single_file_granules = False
