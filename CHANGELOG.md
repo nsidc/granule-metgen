@@ -1,7 +1,9 @@
 ## Unreleased
 
-* Issue 322: Apply the granule limit value before doing the bulk of granule
-  object manipulation.
+* Issue 322: Move the bulk of granule object population to the pipeline `prepare` step
+  and apply the granule limit value to lightweight granule objects earlier in
+  the workflow.
+
 
 ## v1.16.0 (2026-07-28)
 
