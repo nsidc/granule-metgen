@@ -38,6 +38,9 @@ DEFAULT_PREFER_GEOSPATIAL_BOUNDS = False
 
 # Logging
 ROOT_LOGGER = "metgenc"
+DEBUG_MINUS = 5
+INFO_MINUS = 15
+INFO_PLUS = 25
 
 # Currently we support one CMR production cloud provider (NSIDC_CPRD) and one
 # UAT cloud provider (NSIDC_CPRD). NOTE: These are NOT the same as the "provider"
