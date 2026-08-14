@@ -3,6 +3,8 @@
 * Issue 322: Move the bulk of granule object population to the pipeline `prepare` step
   and apply the granule limit value to lightweight granule objects earlier in
   the workflow.
+* Issue 323: Add command line flag to manage output verbosity. No equivalent
+  added to `ini` file.
 
 ## v1.17.0rc0 (2026-08-10)
 

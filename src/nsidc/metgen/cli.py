@@ -10,8 +10,6 @@ import click
 
 from nsidc.metgen import config, constants, metgen
 
-LOGGER = logging.getLogger(constants.ROOT_LOGGER)
-
 
 # TODO: (maybe) click will show the version of the *installed* metgenc
 # package, presumably via importlib.metadata.version('nsidc.metgenc')).
@@ -133,7 +131,15 @@ def validate(config_filename, content_type):
     default=None,
     help="Overwrite existing UMM-G files.",
 )
-def process(config_filename, dry_run, env, number, write_cnm, overwrite):
+@click.option(
+    "-q",
+    "--quiet",
+    required=False,
+    count=True,
+    default=0,
+    help="Silence output.",
+)
+def process(config_filename, dry_run, env, number, write_cnm, overwrite, quiet):
     """Processes science data files based on configuration file contents."""
     click.echo(metgen.banner())
     overrides = {
@@ -146,7 +152,7 @@ def process(config_filename, dry_run, env, number, write_cnm, overwrite):
         configuration = config.configuration(
             config.config_parser_factory(config_filename), overrides, env
         )
-        metgen.init_logging(configuration)
+        metgen.init_logging(configuration, quiet)
         configuration.show()
         config.validate(configuration)
         config.validate_spatial_source(configuration)

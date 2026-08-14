@@ -8,6 +8,7 @@ __all__ = [
     "config",
     "constants",
     "metgen",
+    "metgen_logging",
 ]
 
-from . import aws, cli, config, constants, metgen
+from . import aws, cli, config, constants, metgen, metgen_logging

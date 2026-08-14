@@ -40,31 +40,51 @@ from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import __version__, aws, config, constants
 from nsidc.metgen.collection_metadata import get_collection_metadata
+from nsidc.metgen.metgen_logging import metgencLogger
 from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.readers import registry, utilities
 
 # -------------------------------------------------------------------
 CONSOLE_FORMAT = "%(message)s"
-LOGFILE_FORMAT = "%(asctime)s|%(levelname)s|%(name)s|%(message)s"
+LOGFILE_FORMAT = "%(asctime)s| %(message)s"
 
 # -------------------------------------------------------------------
 # Top-level functions which expose operations to the CLI
 # -------------------------------------------------------------------
 
 
-def init_logging(configuration=None):
+def select_log_level(logger, quiet=0):
+    """
+    Set log levels based on command-line input
+    Return tuple with base default, console, log
+    """
+    match quiet:
+        case 1:
+            return (logger.INFO, logger.DEBUG)
+        case 2:
+            return (logger.INFO_PLUS, logger.INFO_MINUS)
+        case 3:
+            return (logger.INFO_PLUS, logger.INFO)
+        case _:
+            return (logger.INFO_MINUS, logger.DEBUG_MINUS)
+
+
+def init_logging(configuration=None, quiet=0):
     """
     Initialize the logger for metgenc.
     """
-    logger = logging.getLogger(constants.ROOT_LOGGER)
-    logger.setLevel(logging.DEBUG)
+    logging.setLoggerClass(metgencLogger)
 
+    logger = logging.getLogger(constants.ROOT_LOGGER)
+    logger.setLevel(logger.DEBUG_MINUS)
+
+    console_level, logfile_level = select_log_level(logger, quiet)
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(console_level)
     console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
     logger.addHandler(console_handler)
 
-    # Generate log filename
+    # Set log directory
     log_dir = constants.DEFAULT_LOG_DIR
     if configuration and configuration.log_dir:
         log_dir = configuration.log_dir
@@ -79,7 +99,7 @@ def init_logging(configuration=None):
     log_path = os.path.join(log_dir, log_filename)
 
     logfile_handler = logging.FileHandler(log_path, "a")
-    logfile_handler.setLevel(logging.DEBUG)
+    logfile_handler.setLevel(logfile_level)
     logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
     logger.addHandler(logfile_handler)
 
@@ -340,13 +360,14 @@ def process(configuration: config.Config) -> None:
     logger = logging.getLogger(constants.ROOT_LOGGER)
 
     # Retrieve collection metadata once at the beginning
-    logger.info(
+    logger.info_plus(
         f"Retrieving collection metadata for {configuration.auth_id}.{configuration.version}"
     )
     collection = get_collection_metadata(
         configuration.environment, configuration.auth_id, str(configuration.version)
     )
-    logger.info(f"Successfully retrieved metadata for: {collection.entry_title}")
+    logger.info_plus(f"Successfully retrieved metadata for: {collection.entry_title}")
+    logger.info_plus("")
 
     # Validate collection once at the beginning
     errors = validate_collection_spatial(
@@ -939,18 +960,18 @@ def log_ledger(ledger: Ledger) -> Ledger:
     logger.info("")
     logger.info(f"Granule: {ledger.granule.producer_granule_id}")
     logger.info(f"  * UUID           : {ledger.granule.uuid}")
-    logger.info(f"  * Submission time: {ledger.granule.submission_time}")
-    logger.info(f"  * Start          : {ledger.startDatetime}")
-    logger.info(f"  * End            : {ledger.endDatetime}")
+    logger.info_minus(f"  * Submission time: {ledger.granule.submission_time}")
+    logger.info_minus(f"  * Start          : {ledger.startDatetime}")
+    logger.info_minus(f"  * End            : {ledger.endDatetime}")
     logger.info(f"  * Successful     : {ledger.successful}")
     logger.debug("  * Actions:")
     for a in ledger.actions:
         logger.debug(f"      + Name: {a.name}")
-        logger.debug(f"        Start     : {a.startDatetime}")
-        logger.debug(f"        End       : {a.endDatetime}")
+        logger.debug_minus(f"        Start     : {a.startDatetime}")
+        logger.debug_minus(f"        End       : {a.endDatetime}")
         logger.debug(f"        Successful: {a.successful}")
         if not a.successful:
-            logger.debug(f"        Reason    : {a.message}")
+            logger.debug_minus(f"        Reason    : {a.message}")
     return ledger
 
 
@@ -968,13 +989,13 @@ def summarize_results(ledgers: list[Ledger]) -> None:
         end = dt.datetime.now()
 
     logger = logging.getLogger(constants.ROOT_LOGGER)
-    logger.info("Processing Summary")
-    logger.info("==================")
-    logger.info(f"Granules  : {len(ledgers)}")
-    logger.info(f"Start     : {start}")
-    logger.info(f"End       : {end}")
-    logger.info(f"Successful: {successful_count}")
-    logger.info(f"Failed    : {failed_count}")
+    logger.info_plus("Processing Summary")
+    logger.info_plus("==================")
+    logger.info_plus(f"Granules  : {len(ledgers)}")
+    logger.info_plus(f"Start     : {start}")
+    logger.info_plus(f"End       : {end}")
+    logger.info_plus(f"Successful: {successful_count}")
+    logger.info_plus(f"Failed    : {failed_count}")
 
 
 # -------------------------------------------------------------------

@@ -284,7 +284,7 @@ def parse_spatial(spatial_values: list, configuration: config.Config = None):
         except Exception as e:
             import logging
 
-            logger = logging.getLogger(constants.ROOT_LOGGER)
+            logger = logging.getLogger(__name__)
             logger.error(f"Polygon generation failed: {e}")
 
     # Configuration does not exist, or polygon processing is not enabled.
