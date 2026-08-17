@@ -9,14 +9,14 @@ jobs:
     name: Build package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: 3.12
 
       - name: cache poetry install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local
           key: poetry-1.8.3-0
@@ -29,7 +29,7 @@ jobs:
 
       - name: cache deps
         id: cache-deps
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
@@ -41,7 +41,7 @@ jobs:
 
       - run: poetry build
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-dists
           path: dist/
@@ -58,13 +58,13 @@ jobs:
       name: PyPI
       url: https://pypi.org/p/nsidc-metgenc
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-dists
           path: dist/
 
       - name: Generate artifact attestation for sdist and wheel
-        uses: actions/attest-build-provenance@v1.4.3
+        uses: actions/attest-build-provenance@v4.2.2
         with:
           subject-path: "dist/*"
 
