@@ -1,3 +1,13 @@
+## UNRELEASED
+
+* Minor version release for Issue 322 changes.
+
+## v1.17.0rc1 (2026-08-13)
+
+* Issue 322: Move the bulk of granule object population to the pipeline `prepare` step
+  and apply the granule limit value to lightweight granule objects earlier in
+  the workflow.
+
 ## v1.17.0rc0 (2026-08-10)
 
 * Issue 299: Enable security scanning via Dependabot updates and OSV-Scanner.
