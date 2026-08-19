@@ -286,7 +286,7 @@ to use.
 | .spatial | 1 | cartesian | yes | | NSIDC data curators always associate a `GEODETIC` granule spatial representation with point data. |
 | .spatial | 1 | geodetic | no | Point as defined by spatial file. | |
 | .spatial | 2 | cartesian | no | BR as defined by spatial file. | |
-| .spatial | >= 2 | geodetic | no | GPoly(s) calculated to enclose all points. | If `spatial_polygon_enabled=true` (default) and ≥3 points, uses optimized polygon generation with target coverage and vertex limits. |
+| .spatial | >= 2 | geodetic | no | GPoly(s) calculated to enclose all points. | If `=true` (default) and ≥3 points, uses optimized polygon generation with target coverage and vertex limits. |
 | .spatial | > 2 | cartesian | yes | | There is no cartesian-associated geometry for GPolys. |
 | science file (NSIDC/CF-compliant netCDF) | NA | cartesian | no | BR | min/max lon/lat points for BR expected to be included in global attributes. |
 | science file (NSIDC/CF-compliant) | 1 or > 2 | geodetic | no | | Error if only two points. GPoly calculated from grid perimeter. |
@@ -613,16 +613,22 @@ display the same start and end times in EDSC when collection_temporal_override =
 | collection_temporal_override  | Source        |
 
 #### Spatial Polygon Generation
-MetGenC includes optimized polygon generation capabilities for creating spatial coverage polygons from point data, particularly useful for LIDAR flightline data.
+MetGenC includes optimized polygon generation capabilities for creating spatial coverage
+polygons from point data, particularly useful for LIDAR flightline data.
 
-When a granule has an associated `.spatial` file containing geodetic point data (≥3 points), MetGenC will automatically generate an optimized polygon to enclose the data points instead of using the basic point-to-point polygon method. This results in more accurate spatial coverage with fewer vertices.
+When a granule has an associated `.spatial` file containing geodetic point data (≥3 points),
+MetGenC will automatically generate an optimized polygon to enclose the data points instead 
+of using the basic point-to-point polygon method. This results in more accurate spatial coverage
+with fewer vertices.
 
-**This feature, while optional, is always enabled by default in MetGenC**.
-- To disable it entirely, edit the .ini file, add a \[Spatial\] section if necessary, and add the line `spatial_polygon_enabled = false`, however this shouldn't be necessary as MetGenC would only invoke the spatial polygon algorithm when input file circumstances call for it.
-- When `spatial_polygon_enabled = true` (either by default or when set as such in the .ini file) the other parameters listed below can be added to
-  and edited in the .ini file. For the most part, the values shouldn't need to be altered! However, if ingest fails due to GPolygonSpatial errors,
-  the first attribute to add to or edit in the .ini file should be `spatial_polygon_cartesian_tolerance` by decreasing its coordinate precision
-  (e.g., .0001 => .01) which will increase the distance between gpolygon vertices, expanding the spatial extent.
+**This feature is enabled by default in MetGenC**
+- MetGenC will only invoke the spatial polygon algorithm when input .spatial files' circumstances trigger it.
+- The other parameters listed below can be added to a [Spatial] section in an .ini file on an as-needed basis. For
+  example, should ingest fail due to a GPolygonSpatial error, the `spatial_polygon_cartesian_tolerance`
+  can be added to specify a decreased coordinate precision (e.g., .0001 => .01) to increase the distance
+  between gpolygon vertices to overcome the error condition.
+- Should it be necessary, adding `spatial_polygon_enabled = false` to a [Spatial] section within an .ini file will
+  disable this feature.
 
 **Configuration Parameters:**
 
