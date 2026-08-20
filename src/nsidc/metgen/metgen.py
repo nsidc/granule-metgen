@@ -13,7 +13,6 @@ import json
 import logging
 import os.path
 import re
-import sys
 import uuid
 from collections.abc import Callable, Iterator
 from functools import cache
@@ -40,68 +39,12 @@ from rich.prompt import Confirm, Prompt
 
 from nsidc.metgen import __version__, aws, config, constants
 from nsidc.metgen.collection_metadata import get_collection_metadata
-from nsidc.metgen.metgen_logging import metgencLogger
 from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.readers import registry, utilities
 
 # -------------------------------------------------------------------
-CONSOLE_FORMAT = "%(message)s"
-LOGFILE_FORMAT = "%(asctime)s| %(message)s"
-
-# -------------------------------------------------------------------
 # Top-level functions which expose operations to the CLI
 # -------------------------------------------------------------------
-
-
-def select_log_level(logger, quiet=0):
-    """
-    Set log levels based on command-line input
-    Return tuple with base default, console, log
-    """
-    match quiet:
-        case 1:
-            return (logger.INFO, logger.DEBUG)
-        case 2:
-            return (logger.INFO_PLUS, logger.INFO_MINUS)
-        case 3:
-            return (logger.INFO_PLUS, logger.INFO)
-        case _:
-            return (logger.INFO_MINUS, logger.DEBUG_MINUS)
-
-
-def init_logging(configuration=None, quiet=0):
-    """
-    Initialize the logger for metgenc.
-    """
-    logging.setLoggerClass(metgencLogger)
-
-    logger = logging.getLogger(constants.ROOT_LOGGER)
-    logger.setLevel(logger.DEBUG_MINUS)
-
-    console_level, logfile_level = select_log_level(logger, quiet)
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(console_level)
-    console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
-    logger.addHandler(console_handler)
-
-    # Set log directory
-    log_dir = constants.DEFAULT_LOG_DIR
-    if configuration and configuration.log_dir:
-        log_dir = configuration.log_dir
-
-    # Generate filename: metgenc-{name}-{datetime}.log
-    config_basename = "metgenc"
-    if configuration and configuration.name:
-        config_basename = configuration.name
-
-    timestamp = dt.datetime.now().strftime("%Y%m%d-%H%M")
-    log_filename = f"metgenc-{config_basename}-{timestamp}.log"
-    log_path = os.path.join(log_dir, log_filename)
-
-    logfile_handler = logging.FileHandler(log_path, "a")
-    logfile_handler.setLevel(logfile_level)
-    logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
-    logger.addHandler(logfile_handler)
 
 
 def banner():
@@ -360,14 +303,19 @@ def process(configuration: config.Config) -> None:
     logger = logging.getLogger(constants.ROOT_LOGGER)
 
     # Retrieve collection metadata once at the beginning
-    logger.info_plus(
+    # always show in log
+    # only show in console if no q
+    logger.info_minus(
         f"Retrieving collection metadata for {configuration.auth_id}.{configuration.version}"
     )
     collection = get_collection_metadata(
         configuration.environment, configuration.auth_id, str(configuration.version)
     )
-    logger.info_plus(f"Successfully retrieved metadata for: {collection.entry_title}")
-    logger.info_plus("")
+
+    # always show in log
+    # only show in console if no q
+    logger.info_minus(f"Successfully retrieved metadata for: {collection.entry_title}")
+    logger.info_minus("")
 
     # Validate collection once at the beginning
     errors = validate_collection_spatial(
@@ -956,22 +904,42 @@ def publish_cnm(configuration: config.Config, granule: Granule) -> Granule:
 
 def log_ledger(ledger: Ledger) -> Ledger:
     """Log a Ledger of the operations performed on a Granule."""
+
     logger = logging.getLogger(constants.ROOT_LOGGER)
+
+    # Only show information about failing granules if the quiet flag is set.
+    if logger.__class__.quiet and ledger.successful:
+        return ledger
+
+    if logger.__class__.quiet:
+        print("quiet set")
+
+    # If not successful, always show in log
+    # if not successful, show in console for -q but not qq
     logger.info("")
     logger.info(f"Granule: {ledger.granule.producer_granule_id}")
     logger.info(f"  * UUID           : {ledger.granule.uuid}")
+
+    # If not successful, show in log for -q but not qq
+    # If not successful, don't show in console for -q or -qq
     logger.info_minus(f"  * Submission time: {ledger.granule.submission_time}")
     logger.info_minus(f"  * Start          : {ledger.startDatetime}")
     logger.info_minus(f"  * End            : {ledger.endDatetime}")
+
+    # If not successful, always show in log
+    # if not successful, show in console for -q but not qq
     logger.info(f"  * Successful     : {ledger.successful}")
+
+    # If not successful, show all actions in log for -q, show no actions for -qq
+    # never show in console
     logger.debug("  * Actions:")
     for a in ledger.actions:
         logger.debug(f"      + Name: {a.name}")
-        logger.debug_minus(f"        Start     : {a.startDatetime}")
-        logger.debug_minus(f"        End       : {a.endDatetime}")
+        logger.debug(f"        Start     : {a.startDatetime}")
+        logger.debug(f"        End       : {a.endDatetime}")
         logger.debug(f"        Successful: {a.successful}")
         if not a.successful:
-            logger.debug_minus(f"        Reason    : {a.message}")
+            logger.debug(f"        Reason    : {a.message}")
     return ledger
 
 

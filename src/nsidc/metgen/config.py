@@ -60,6 +60,9 @@ class Config:
         # TODO: add section headings in the right spot
         #       (if we think we need them in the output)
         logger = logging.getLogger(constants.ROOT_LOGGER)
+
+        # always show in log
+        # show in console if no q
         logger.info_plus("")
         logger.info_plus("Using configuration:")
         for k, v in self.__dict__.items():

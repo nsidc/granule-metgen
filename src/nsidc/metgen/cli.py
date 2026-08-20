@@ -8,7 +8,7 @@ import logging
 
 import click
 
-from nsidc.metgen import config, constants, metgen
+from nsidc.metgen import config, constants, metgen, metgen_logging
 
 
 # TODO: (maybe) click will show the version of the *installed* metgenc
@@ -54,7 +54,7 @@ def info(config_filename):
     configuration = config.configuration(
         config.config_parser_factory(config_filename), {}
     )
-    metgen.init_logging(configuration)
+    metgen_logging.init_logging(configuration)
     configuration.show()
 
 
@@ -80,7 +80,7 @@ def validate(config_filename, content_type):
     configuration = config.configuration(
         config.config_parser_factory(config_filename), {}
     )
-    metgen.init_logging(configuration)
+    metgen_logging.init_logging(configuration)
     metgen.validate(configuration, content_type)
 
 
@@ -152,7 +152,7 @@ def process(config_filename, dry_run, env, number, write_cnm, overwrite, quiet):
         configuration = config.configuration(
             config.config_parser_factory(config_filename), overrides, env
         )
-        metgen.init_logging(configuration, quiet)
+        metgen_logging.init_logging(configuration, quiet)
         configuration.show()
         config.validate(configuration)
         config.validate_spatial_source(configuration)

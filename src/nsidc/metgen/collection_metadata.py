@@ -84,7 +84,9 @@ class CollectionMetadataReader:
             provider=self.provider,
         )
 
-        self.logger.info_plus(
+        # always show in log
+        # only show in console if no q
+        self.logger.info_minus(
             "Earthdata login succeeded; attempted collection metadata search."
         )
 
