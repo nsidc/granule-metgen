@@ -305,7 +305,7 @@ def process(configuration: config.Config) -> None:
     # Retrieve collection metadata once at the beginning
     # always show in log
     # only show in console if no q
-    logger.info_minus(
+    logger.info(
         f"Retrieving collection metadata for {configuration.auth_id}.{configuration.version}"
     )
     collection = get_collection_metadata(
@@ -314,8 +314,8 @@ def process(configuration: config.Config) -> None:
 
     # always show in log
     # only show in console if no q
-    logger.info_minus(f"Successfully retrieved metadata for: {collection.entry_title}")
-    logger.info_minus("")
+    logger.info(f"Successfully retrieved metadata for: {collection.entry_title}")
+    logger.info("")
 
     # Validate collection once at the beginning
     errors = validate_collection_spatial(
@@ -930,10 +930,21 @@ def log_ledger(ledger: Ledger) -> Ledger:
     # if not successful, show in console for -q but not qq
     logger.info(f"  * Successful     : {ledger.successful}")
 
-    # If not successful, show all actions in log for -q, show no actions for -qq
+    # If not successful, show all failing actions in log for -q, show no actions for -qq
     # never show in console
+    if not any(not a.successful for a in ledger.actions):
+        return ledger
+
     logger.debug("  * Actions:")
     for a in ledger.actions:
+        if logger.__class__.quiet and a.successful:
+            continue
+        if (
+            logger.__class__.quiet
+            and not a.successful
+            and "skipped" in a.message.lower()
+        ):
+            continue
         logger.debug(f"      + Name: {a.name}")
         logger.debug(f"        Start     : {a.startDatetime}")
         logger.debug(f"        End       : {a.endDatetime}")
@@ -957,6 +968,7 @@ def summarize_results(ledgers: list[Ledger]) -> None:
         end = dt.datetime.now()
 
     logger = logging.getLogger(constants.ROOT_LOGGER)
+    logger.info_plus("")
     logger.info_plus("Processing Summary")
     logger.info_plus("==================")
     logger.info_plus(f"Granules  : {len(ledgers)}")
@@ -964,6 +976,7 @@ def summarize_results(ledgers: list[Ledger]) -> None:
     logger.info_plus(f"End       : {end}")
     logger.info_plus(f"Successful: {successful_count}")
     logger.info_plus(f"Failed    : {failed_count}")
+    logger.info_plus("")
 
 
 # -------------------------------------------------------------------

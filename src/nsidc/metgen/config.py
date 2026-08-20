@@ -63,18 +63,18 @@ class Config:
 
         # always show in log
         # show in console if no q
-        logger.info_plus("")
-        logger.info_plus("Using configuration:")
+        logger.info("")
+        logger.info("Using configuration:")
         for k, v in self.__dict__.items():
-            logger.info_plus(f"  + {k}: {v}")
+            logger.info(f"  + {k}: {v}")
 
         if self.dry_run:
-            logger.info_plus("")
-            logger.info_plus(
+            logger.info("")
+            logger.info(
                 "Note: The dry-run option was included, so no files will be \
 staged and no CNM messages published."
             )
-            logger.info_plus("")
+            logger.info("")
 
     def ummg_path(self):
         return Path(self.local_output_dir, self.ummg_dir)

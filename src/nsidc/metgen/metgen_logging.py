@@ -60,7 +60,7 @@ def select_log_level(logger, quiet=0):
         case 1:
             return (logger.INFO, logger.DEBUG)
         case 2:
-            return (logger.INFO_PLUS, logger.INFO_MINUS)
+            return (logger.INFO_PLUS, logger.INFO)
         case _:
             return (logger.INFO_MINUS, logger.DEBUG_MINUS)
 
