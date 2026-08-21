@@ -929,7 +929,7 @@ def log_ledger(ledger: Ledger) -> Ledger:
 
     # If not successful, show all failing actions in log for -q, show no actions for -qq
     # never show in console
-    if not any(not a.successful for a in ledger.actions):
+    if logger.__class__.quiet and not any(not a.successful for a in ledger.actions):
         return ledger
 
     logger.debug("  * Actions:")
@@ -1071,7 +1071,6 @@ def populate_point_or_polygon(spatial_values):
     Return a string representation of a point or polygon, based on the length
     of the spatial_values list.
     """
-    print(f"spatial values size {len(spatial_values)}")
     template = ummg_spatial_gpolygon_template
 
     if len(spatial_values) == 1:
