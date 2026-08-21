@@ -77,9 +77,9 @@ class metgencLogger(logging.getLoggerClass()):
     def __init__(self, name, level=logging.NOTSET):
         super().__init__(name, level)
 
-        logging.addLevelName(logging.DEBUG - 5, "DEBUG_MINUS")
-        logging.addLevelName(logging.INFO - 5, "INFO_MINUS")
-        logging.addLevelName(logging.INFO + 5, "INFO_PLUS")
+        logging.addLevelName(self.DEBUG_MINUS, "DEBUG_MINUS")
+        logging.addLevelName(self.INFO_MINUS, "INFO_MINUS")
+        logging.addLevelName(self.INFO_PLUS, "INFO_PLUS")
 
     def debug_minus(self, msg, *args, **kwargs):
         if self.isEnabledFor(self.DEBUG_MINUS):

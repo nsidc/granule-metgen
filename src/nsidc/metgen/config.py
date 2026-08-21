@@ -65,7 +65,7 @@ class Config:
         # show in console if no q
         logger.info("")
         logger.info("Using configuration:")
-        for k, v in self.__dict__.items():
+        for k, v in ({"log_quiet_level": logger.quiet} | self.__dict__).items():
             logger.info(f"  + {k}: {v}")
 
         if self.dry_run:
