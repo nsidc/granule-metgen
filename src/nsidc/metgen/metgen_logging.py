@@ -51,26 +51,38 @@ def init_logging(configuration=None, quiet=0):
     logger.addHandler(logfile_handler)
 
 
-def select_log_level(logger, quiet=0):
+def select_log_level(logger: logging.Logger, quiet=0) -> tuple[int, int]:
     """
-    Set log levels based on command-line input
-    Return tuple with (console level, log level)
+    Determine log levels, taking into account --quiet flag(s) issued on the command-line.
+    Returned tuple contains (console logging level, logfile logging level)
     """
+
     match quiet:
+        # -q
         case 1:
             return (logger.INFO, logger.DEBUG)
+
+        # -qq
         case 2:
             return (logger.INFO_PLUS, logger.INFO)
+
+        # default setting
         case _:
             return (logger.INFO_MINUS, logger.DEBUG_MINUS)
 
 
 class metgencLogger(logging.getLoggerClass()):
-    DEBUG_MINUS = 5
+    """
+    Creates a logger with additional log levels. The additional log levels are used
+    to provider finer control of the details emitted to the console vs content saved
+    in the log file, taking into account several possible levels of verbosity.
+    """
+
+    DEBUG_MINUS = logging.DEBUG - 5
     DEBUG = logging.DEBUG
-    INFO_MINUS = 15
+    INFO_MINUS = logging.DEBUG + 5
     INFO = logging.INFO
-    INFO_PLUS = 25
+    INFO_PLUS = logging.INFO + 5
 
     quiet = 0
 

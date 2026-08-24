@@ -809,9 +809,9 @@ Options:
   -n, --number count  Process at most 'count' granules.
   -wc, --write-cnm    Write CNM messages to files.
   -o, --overwrite     Overwrite existing UMM-G files.
-  -q[q]               Reduce ("make quiet") the information sent to `stdout` and the log file.
-                      `-q` shows information for failed granules (but not successful ones),
-                      while `-qq` further reduces the detail for failed granules.
+  -q[q]               Reduce ("make quiet") the information sent to `stdout`
+                      and the log file. `-q` shows information for failed
+                      granules (but not successful ones), while `-qq` further reduces the detail for failed granules.
   --help              Show this message and exit.
 ```
 The **process** command can be run either with or without specifying the `-d` / `--dry-run` option.
@@ -821,9 +821,10 @@ directory (**operator is responsible for creating the output and ummg, cnm subdi
 * When run without the dry run option, metgenc will transfer CNM to AWS, kicking off end-to-end ingest of
 data and UMM-G files.
 
-The `-q` (or `-qq`) flag is a command-line option _only_--there is no equivalent entry
-defined for `.ini` files. The `-q` setting will be included in the configuration output as
-an integer value corresponding to the number of `q` flags input by the user (0, 1, or 2).
+The `-q` (or `-qq`) flag is a command-line option _only_—there is no equivalent
+entry defined for `.ini` files. The `-q` setting will be included in the
+configuration output as an integer value corresponding to the number of `q`
+flags input by the user (0, 1, or 2).
 
 #### Examples running process
 The following is an example of using the dry run option (-d) to generate UMM-G and write CNM as files (-wc) for three granules (-n 3):

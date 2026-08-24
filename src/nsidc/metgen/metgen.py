@@ -303,8 +303,6 @@ def process(configuration: config.Config) -> None:
     logger = logging.getLogger(constants.ROOT_LOGGER)
 
     # Retrieve collection metadata once at the beginning
-    # always show in log
-    # only show in console if no q
     logger.info(
         f"Retrieving collection metadata for {configuration.auth_id}.{configuration.version}"
     )
@@ -312,8 +310,6 @@ def process(configuration: config.Config) -> None:
         configuration.environment, configuration.auth_id, str(configuration.version)
     )
 
-    # always show in log
-    # only show in console if no q
     logger.info(f"Successfully retrieved metadata for: {collection.entry_title}")
     logger.info("")
 
@@ -911,24 +907,16 @@ def log_ledger(ledger: Ledger) -> Ledger:
     if logger.__class__.quiet and ledger.successful:
         return ledger
 
-    # If not successful, always show in log
-    # if not successful, show in console for -q but not qq
     logger.info("")
     logger.info(f"Granule: {ledger.granule.producer_granule_id}")
     logger.info(f"  * UUID           : {ledger.granule.uuid}")
 
-    # If not successful, show in log for -q but not qq
-    # If not successful, don't show in console for -q or -qq
     logger.info_minus(f"  * Submission time: {ledger.granule.submission_time}")
     logger.info_minus(f"  * Start          : {ledger.startDatetime}")
     logger.info_minus(f"  * End            : {ledger.endDatetime}")
 
-    # If not successful, always show in log
-    # if not successful, show in console for -q but not qq
     logger.info(f"  * Successful     : {ledger.successful}")
 
-    # If not successful, show all failing actions in log for -q, show no actions for -qq
-    # never show in console
     if logger.__class__.quiet and not any(not a.successful for a in ledger.actions):
         return ledger
 
