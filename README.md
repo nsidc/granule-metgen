@@ -617,7 +617,7 @@ MetGenC includes optimized polygon generation capabilities for creating spatial 
 polygons from point data, particularly useful for LIDAR flightline data.
 
 When a granule has an associated `.spatial` file containing geodetic point data (≥3 points),
-MetGenC will automatically generate an optimized polygon to enclose the data points instead 
+MetGenC will automatically generate an optimized polygon to enclose the data points instead
 of using the basic point-to-point polygon method. This results in more accurate spatial coverage
 with fewer vertices.
 
@@ -809,6 +809,9 @@ Options:
   -n, --number count  Process at most 'count' granules.
   -wc, --write-cnm    Write CNM messages to files.
   -o, --overwrite     Overwrite existing UMM-G files.
+  -q[q]               Reduce ("make quiet") the information sent to `stdout` and the log file.
+                      `-q` shows information for failed granules (but not successful ones),
+                      while `-qq` further reduces the detail for failed granules.
   --help              Show this message and exit.
 ```
 The **process** command can be run either with or without specifying the `-d` / `--dry-run` option.
@@ -817,6 +820,10 @@ file contains `write_cnm_file = true` (instead of `= false`), CNM will be writte
 directory (**operator is responsible for creating the output and ummg, cnm subdirectories for each collection**). This promotes operators having the ability to validate and visually QC their content before ingesting a collection.
 * When run without the dry run option, metgenc will transfer CNM to AWS, kicking off end-to-end ingest of
 data and UMM-G files.
+
+The `-q` (or `-qq`) flag is a command-line option _only_--there is no equivalent entry
+defined for `.ini` files. The `-q` setting will be included in the configuration output as
+an integer value corresponding to the number of `q` flags input by the user (0, 1, or 2).
 
 #### Examples running process
 The following is an example of using the dry run option (-d) to generate UMM-G and write CNM as files (-wc) for three granules (-n 3):
