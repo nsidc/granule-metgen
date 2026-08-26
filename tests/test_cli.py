@@ -87,7 +87,7 @@ def test_process_with_granule_limit(mock_validate, mock_process, cli_runner):
 @patch("nsidc.metgen.metgen.process")
 @patch("nsidc.metgen.config.validate")
 @patch("nsidc.metgen.config.validate_spatial_source")
-@patch("nsidc.metgen.metgen.init_logging")
+@patch("nsidc.metgen.metgen_logging.init_logging")
 def test_process_with_no_write_cnm(
     mock_init_logging,
     mock_validate_spatial,
@@ -109,7 +109,7 @@ def test_process_with_no_write_cnm(
 @patch("nsidc.metgen.metgen.process")
 @patch("nsidc.metgen.config.validate")
 @patch("nsidc.metgen.config.validate_spatial_source")
-@patch("nsidc.metgen.metgen.init_logging")
+@patch("nsidc.metgen.metgen_logging.init_logging")
 def test_process_with_write_cnm(
     mock_init_logging,
     mock_validate_spatial,
@@ -131,7 +131,7 @@ def test_process_with_write_cnm(
 @patch("nsidc.metgen.metgen.process")
 @patch("nsidc.metgen.config.validate")
 @patch("nsidc.metgen.config.validate_spatial_source")
-@patch("nsidc.metgen.metgen.init_logging")
+@patch("nsidc.metgen.metgen_logging.init_logging")
 def test_process_with_no_overwrite(
     mock_init_logging,
     mock_validate_spatial,
@@ -153,7 +153,7 @@ def test_process_with_no_overwrite(
 @patch("nsidc.metgen.metgen.process")
 @patch("nsidc.metgen.config.validate")
 @patch("nsidc.metgen.config.validate_spatial_source")
-@patch("nsidc.metgen.metgen.init_logging")
+@patch("nsidc.metgen.metgen_logging.init_logging")
 def test_process_with_overwrite(
     mock_init_logging,
     mock_validate_spatial,
@@ -168,6 +168,92 @@ def test_process_with_overwrite(
     args = configuration_mock.call_args.args
     overrides = args[1]
     assert overrides["overwrite_ummg"]
+    assert result.exit_code == 0
+
+
+@patch("nsidc.metgen.config.configuration")
+@patch("nsidc.metgen.metgen.process")
+@patch("nsidc.metgen.config.validate")
+@patch("nsidc.metgen.config.validate_spatial_source")
+@patch("nsidc.metgen.metgen_logging.init_logging")
+def test_process_with_no_quiet_flag(
+    logging_mock,
+    mock_validate_spatial,
+    mock_validate,
+    process_mock,
+    configuration_mock,
+    cli_runner,
+):
+    result = cli_runner.invoke(cli, ["process", "--config", INI_FILE])
+
+    assert logging_mock.called
+    args = logging_mock.call_args.args
+    assert args[1] == 0
+    assert result.exit_code == 0
+
+
+@patch("nsidc.metgen.config.configuration")
+@patch("nsidc.metgen.metgen.process")
+@patch("nsidc.metgen.config.validate")
+@patch("nsidc.metgen.config.validate_spatial_source")
+@patch("nsidc.metgen.metgen_logging.init_logging")
+def test_process_with_quiet_flag(
+    logging_mock,
+    mock_validate_spatial,
+    mock_validate,
+    process_mock,
+    configuration_mock,
+    cli_runner,
+):
+    result = cli_runner.invoke(cli, ["process", "-q", "--config", INI_FILE])
+
+    assert logging_mock.called
+    args = logging_mock.call_args.args
+    assert args[1] == 1
+    assert result.exit_code == 0
+
+
+@patch("nsidc.metgen.config.configuration")
+@patch("nsidc.metgen.metgen.process")
+@patch("nsidc.metgen.config.validate")
+@patch("nsidc.metgen.config.validate_spatial_source")
+@patch("nsidc.metgen.metgen_logging.init_logging")
+def test_process_with_super_quiet_flag(
+    logging_mock,
+    mock_validate_spatial,
+    mock_validate,
+    process_mock,
+    configuration_mock,
+    cli_runner,
+):
+    result = cli_runner.invoke(cli, ["process", "-qq", "--config", INI_FILE])
+
+    assert logging_mock.called
+    args = logging_mock.call_args.args
+    assert args[1] == 2
+    assert result.exit_code == 0
+
+
+@patch("nsidc.metgen.config.configuration")
+@patch("nsidc.metgen.metgen.process")
+@patch("nsidc.metgen.config.validate")
+@patch("nsidc.metgen.config.validate_spatial_source")
+@patch("nsidc.metgen.metgen_logging.init_logging")
+def test_process_with_long_super_quiet_flag(
+    logging_mock,
+    mock_validate_spatial,
+    mock_validate,
+    process_mock,
+    configuration_mock,
+    cli_runner,
+):
+    result = cli_runner.invoke(
+        cli, ["process", "--quiet", "--quiet", "--config", INI_FILE]
+    )
+
+    assert logging_mock.called
+    args = logging_mock.call_args.args
+    assert args[1] == 2
     assert result.exit_code == 0
 
 

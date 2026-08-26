@@ -917,7 +917,7 @@ def log_ledger(ledger: Ledger) -> Ledger:
 
     logger.info(f"  * Successful     : {ledger.successful}")
 
-    if logger.__class__.quiet and not any(not a.successful for a in ledger.actions):
+    if logger.__class__.quiet and all(a.successful for a in ledger.actions):
         return ledger
 
     logger.debug("  * Actions:")

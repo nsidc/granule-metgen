@@ -25,7 +25,7 @@ def init_logging(configuration=None, quiet=0):
     logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.setLevel(logger.DEBUG)
 
-    console_level, logfile_level = select_log_level(logger, quiet)
+    console_level, logfile_level = select_log_level(quiet)
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(console_level)
     console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
@@ -51,24 +51,24 @@ def init_logging(configuration=None, quiet=0):
     logger.addHandler(logfile_handler)
 
 
-def select_log_level(logger: logging.Logger, quiet=0) -> tuple[int, int]:
+def select_log_level(quiet=0) -> tuple[int, int]:
     """
     Determine log levels, taking into account --quiet flag(s) issued on the command-line.
-    Returned tuple contains (console logging level, logfile logging level)
+    Returns a tuple containing (console logging level, logfile logging level)
     """
 
     match quiet:
         # -q
         case 1:
-            return (logger.INFO, logger.DEBUG)
+            return (metgencLogger.INFO, metgencLogger.DEBUG)
 
         # -qq
         case 2:
-            return (logger.INFO_PLUS, logger.INFO)
+            return (metgencLogger.INFO_PLUS, metgencLogger.INFO)
 
-        # default setting
+        # no q, or maybe many q :-)
         case _:
-            return (logger.INFO_MINUS, logger.DEBUG_MINUS)
+            return (metgencLogger.INFO_MINUS, metgencLogger.DEBUG_MINUS)
 
 
 class metgencLogger(logging.getLoggerClass()):
