@@ -61,8 +61,6 @@ class Config:
         #       (if we think we need them in the output)
         logger = logging.getLogger(constants.ROOT_LOGGER)
 
-        # always show in log
-        # show in console if no q
         logger.info("")
         logger.info("Using configuration:")
         for k, v in ({"log_quiet_level": logger.quiet} | self.__dict__).items():

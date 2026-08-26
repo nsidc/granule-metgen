@@ -58,6 +58,9 @@ def test_logging_level_varies_by_q():
 
     assert zero_console_level < one_console_level < two_console_level
     assert zero_log_level < one_log_level < two_log_level
+
+    # Currently the console and log file content is slightly different, hence
+    # the test for different log level settings.
     assert zero_console_level != zero_log_level
     assert one_console_level != one_log_level
     assert two_console_level != two_log_level
