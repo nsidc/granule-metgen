@@ -1,3 +1,12 @@
+## v1.18.0 (2026-09-22)
+
+* Minor version release for Issue 323 changes.
+
+## v1.18.0rc0 (2026-09-22)
+
+* Issue 323: Add command line flag to manage output verbosity. Note: no equivalent
+  option was added to `ini` file.
+
 ## v1.17.0 (2026-08-18)
 
 * Minor version release for Issue 322 changes.
