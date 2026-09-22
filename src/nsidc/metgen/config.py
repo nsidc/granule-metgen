@@ -59,19 +59,20 @@ class Config:
     def show(self):
         # TODO: add section headings in the right spot
         #       (if we think we need them in the output)
-        LOGGER = logging.getLogger(constants.ROOT_LOGGER)
-        LOGGER.info("")
-        LOGGER.info("Using configuration:")
-        for k, v in self.__dict__.items():
-            LOGGER.info(f"  + {k}: {v}")
+        logger = logging.getLogger(constants.ROOT_LOGGER)
+
+        logger.info("")
+        logger.info("Using configuration:")
+        for k, v in ({"log_quiet_level": logger.quiet} | self.__dict__).items():
+            logger.info(f"  + {k}: {v}")
 
         if self.dry_run:
-            LOGGER.info("")
-            LOGGER.info(
+            logger.info("")
+            logger.info(
                 "Note: The dry-run option was included, so no files will be \
 staged and no CNM messages published."
             )
-            LOGGER.info("")
+            logger.info("")
 
     def ummg_path(self):
         return Path(self.local_output_dir, self.ummg_dir)
