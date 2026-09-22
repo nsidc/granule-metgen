@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Minor version release for Issue 323 changes.
+
 ## v1.18.0rc0 (2026-09-22)
 
 * Issue 323: Add command line flag to manage output verbosity. Note: no equivalent
