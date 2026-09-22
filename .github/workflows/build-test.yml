@@ -6,14 +6,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: 3.12
 
       - name: cache poetry install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local
           key: poetry-1.8.3-0
@@ -26,7 +26,7 @@ jobs:
 
       - name: cache deps
         id: cache-deps
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
@@ -37,13 +37,13 @@ jobs:
       - run: poetry install --no-interaction
 
       - name: Check formatting
-        uses: astral-sh/ruff-action@v1
+        uses: astral-sh/ruff-action@v3
         with:
           args: "format --check"
           src: "./src"
 
       - name: Lint code
-        uses: astral-sh/ruff-action@v1
+        uses: astral-sh/ruff-action@v3
         with:
           src: "./src"
 
