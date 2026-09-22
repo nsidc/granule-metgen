@@ -1,4 +1,4 @@
-__version__ = "v1.16.0"
+__version__ = "v1.17.0"
 
 
 __all__ = [
@@ -8,6 +8,7 @@ __all__ = [
     "config",
     "constants",
     "metgen",
+    "metgen_logging",
 ]
 
-from . import aws, cli, config, constants, metgen
+from . import aws, cli, config, constants, metgen, metgen_logging
