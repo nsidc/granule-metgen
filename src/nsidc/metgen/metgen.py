@@ -13,7 +13,6 @@ import json
 import logging
 import os.path
 import re
-import sys
 import uuid
 from collections.abc import Callable, Iterator
 from functools import cache
@@ -44,44 +43,8 @@ from nsidc.metgen.models import CollectionMetadata
 from nsidc.metgen.readers import registry, utilities
 
 # -------------------------------------------------------------------
-CONSOLE_FORMAT = "%(message)s"
-LOGFILE_FORMAT = "%(asctime)s|%(levelname)s|%(name)s|%(message)s"
-
-# -------------------------------------------------------------------
 # Top-level functions which expose operations to the CLI
 # -------------------------------------------------------------------
-
-
-def init_logging(configuration=None):
-    """
-    Initialize the logger for metgenc.
-    """
-    logger = logging.getLogger(constants.ROOT_LOGGER)
-    logger.setLevel(logging.DEBUG)
-
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
-    logger.addHandler(console_handler)
-
-    # Generate log filename
-    log_dir = constants.DEFAULT_LOG_DIR
-    if configuration and configuration.log_dir:
-        log_dir = configuration.log_dir
-
-    # Generate filename: metgenc-{name}-{datetime}.log
-    config_basename = "metgenc"
-    if configuration and configuration.name:
-        config_basename = configuration.name
-
-    timestamp = dt.datetime.now().strftime("%Y%m%d-%H%M")
-    log_filename = f"metgenc-{config_basename}-{timestamp}.log"
-    log_path = os.path.join(log_dir, log_filename)
-
-    logfile_handler = logging.FileHandler(log_path, "a")
-    logfile_handler.setLevel(logging.DEBUG)
-    logfile_handler.setFormatter(logging.Formatter(LOGFILE_FORMAT))
-    logger.addHandler(logfile_handler)
 
 
 def banner():
@@ -346,7 +309,9 @@ def process(configuration: config.Config) -> None:
     collection = get_collection_metadata(
         configuration.environment, configuration.auth_id, str(configuration.version)
     )
+
     logger.info(f"Successfully retrieved metadata for: {collection.entry_title}")
+    logger.info("")
 
     # Validate collection once at the beginning
     errors = validate_collection_spatial(
@@ -935,16 +900,36 @@ def publish_cnm(configuration: config.Config, granule: Granule) -> Granule:
 
 def log_ledger(ledger: Ledger) -> Ledger:
     """Log a Ledger of the operations performed on a Granule."""
+
     logger = logging.getLogger(constants.ROOT_LOGGER)
+
+    # Only show information about failing granules if the quiet flag is set.
+    if logger.__class__.quiet and ledger.successful:
+        return ledger
+
     logger.info("")
     logger.info(f"Granule: {ledger.granule.producer_granule_id}")
     logger.info(f"  * UUID           : {ledger.granule.uuid}")
-    logger.info(f"  * Submission time: {ledger.granule.submission_time}")
-    logger.info(f"  * Start          : {ledger.startDatetime}")
-    logger.info(f"  * End            : {ledger.endDatetime}")
+
+    logger.info_minus(f"  * Submission time: {ledger.granule.submission_time}")
+    logger.info_minus(f"  * Start          : {ledger.startDatetime}")
+    logger.info_minus(f"  * End            : {ledger.endDatetime}")
+
     logger.info(f"  * Successful     : {ledger.successful}")
+
+    if logger.__class__.quiet and all(a.successful for a in ledger.actions):
+        return ledger
+
     logger.debug("  * Actions:")
     for a in ledger.actions:
+        if logger.__class__.quiet and a.successful:
+            continue
+        if (
+            logger.__class__.quiet
+            and not a.successful
+            and "skipped" in a.message.lower()
+        ):
+            continue
         logger.debug(f"      + Name: {a.name}")
         logger.debug(f"        Start     : {a.startDatetime}")
         logger.debug(f"        End       : {a.endDatetime}")
@@ -968,13 +953,15 @@ def summarize_results(ledgers: list[Ledger]) -> None:
         end = dt.datetime.now()
 
     logger = logging.getLogger(constants.ROOT_LOGGER)
-    logger.info("Processing Summary")
-    logger.info("==================")
-    logger.info(f"Granules  : {len(ledgers)}")
-    logger.info(f"Start     : {start}")
-    logger.info(f"End       : {end}")
-    logger.info(f"Successful: {successful_count}")
-    logger.info(f"Failed    : {failed_count}")
+    logger.info_plus("")
+    logger.info_plus("Processing Summary")
+    logger.info_plus("==================")
+    logger.info_plus(f"Granules  : {len(ledgers)}")
+    logger.info_plus(f"Start     : {start}")
+    logger.info_plus(f"End       : {end}")
+    logger.info_plus(f"Successful: {successful_count}")
+    logger.info_plus(f"Failed    : {failed_count}")
+    logger.info_plus("")
 
 
 # -------------------------------------------------------------------
