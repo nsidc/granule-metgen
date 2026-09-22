@@ -1170,14 +1170,17 @@ def validate(configuration, content_type):
     Validate local CNM or UMM-G (JSON) files
     """
     output_file_path = file_type_path(configuration, content_type)
+    # file path is now an array of tuples
     schema_resource_location, dummy_json = schema_file_path(content_type)
 
     logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.info("")
     logger.info(f"Validating files in {output_file_path}...")
 
+    # for each resource location
     schema = json.loads(_open_text(*schema_resource_location))
     # loop through all files and validate each one
+    # also need to loop through more than one schema file (maybe)
     for json_file in output_file_path.glob("*.json"):
         apply_schema(schema, json_file, dummy_json)
 
@@ -1224,7 +1227,12 @@ def apply_schema(schema, json_file, dummy_json):
     with open(json_file) as jf:
         json_content = json.load(jf)
         try:
-            jsonschema.validate(instance=json_content | dummy_json, schema=schema)
+            # add format_checker= argument
+            jsonschema.validate(
+                instance=json_content | dummy_json,
+                schema=schema,
+                format_checker=jsonschema.FormatChecker(),
+            )
             logger.info(f"No validation errors: {json_file}")
         except ValidationError as err:
             logger.error(
