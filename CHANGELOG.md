@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.18.0 (2026-09-22)
 
 * Minor version release for Issue 323 changes.
 
