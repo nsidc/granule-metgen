@@ -32,7 +32,7 @@ from funcy import (
     some,
     take,
 )
-from jsonschema.exceptions import ValidationError
+from jsonschema import Draft7Validator
 from pyfiglet import Figlet
 from returns.maybe import Maybe
 from rich.prompt import Confirm, Prompt
@@ -865,6 +865,7 @@ def create_cnm(configuration: config.Config, granule: Granule) -> Granule:
             | {
                 "file_content": json.dumps(populated_file_templates),
                 "cnm_schema_version": constants.CNM_JSON_SCHEMA_VERSION,
+                "submission_time": granule.submission_time,
                 "trace": build_trace_message(),
             }
         ),
@@ -1157,17 +1158,16 @@ def validate(configuration, content_type):
     Validate local CNM or UMM-G (JSON) files
     """
     output_file_path = file_type_path(configuration, content_type)
-    # file path is now an array of tuples
     schema_resource_location, dummy_json = schema_file_path(content_type)
 
     logger = logging.getLogger(constants.ROOT_LOGGER)
     logger.info("")
     logger.info(f"Validating files in {output_file_path}...")
 
-    # for each resource location
+    # Assumption: there is only one schema file to be applied.
     schema = json.loads(_open_text(*schema_resource_location))
-    # loop through all files and validate each one
-    # also need to loop through more than one schema file (maybe)
+
+    # loop through all json files and validate each one
     for json_file in output_file_path.glob("*.json"):
         apply_schema(schema, json_file, dummy_json)
 
@@ -1199,7 +1199,9 @@ def schema_file_path(content_type):
         case "ummg":
             # We intentionally create UMM-G output with a couple of parts missing,
             # so we need to fill in the gaps with dummy values during validation.
-            dummy_json["ProviderDates"] = [{"Date": "2000", "Type": "Create"}]
+            dummy_json["ProviderDates"] = [
+                {"Date": "2000-01-01T00:00:00.000Z", "Type": "Create"}
+            ]
             dummy_json["GranuleUR"] = "FakeUR"
             return constants.UMMG_JSON_SCHEMA, dummy_json
         case _:
@@ -1208,23 +1210,19 @@ def schema_file_path(content_type):
 
 def apply_schema(schema, json_file, dummy_json):
     """
-    Apply JSON schema to generated JSON content.
+    Apply JSON schema to generated JSON content and log any errors.
     """
     logger = logging.getLogger(constants.ROOT_LOGGER)
+    validator = Draft7Validator(schema, format_checker=jsonschema.FormatChecker())
+
     with open(json_file) as jf:
         json_content = json.load(jf)
-        try:
-            # add format_checker= argument
-            jsonschema.validate(
-                instance=json_content | dummy_json,
-                schema=schema,
-                format_checker=jsonschema.FormatChecker(),
-            )
-            logger.info(f"No validation errors: {json_file}")
-        except ValidationError as err:
-            logger.error(
-                f"""Validation failed for "{err.validator}"\
-                in {json_file}: {err.validator_value}"""
-            )
+        if errs := list(validator.iter_errors(json_content | dummy_json)):
+            logger.error(f"{json_file}:")
+            for error in errs:
+                context = error.context if error.context else ""
+                logger.error(
+                    f"\t{error.message} {context} ({re.sub(r'\$\.', '', error.json_path)})"
+                )
 
     return True
