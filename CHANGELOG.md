@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.19.0rc0 (2026-09-23)
 
 * Issue 252: Check for legitimate values in JSON date-time fields by including
   a `FormatChecker` instance when running `jsonschema` validation.
