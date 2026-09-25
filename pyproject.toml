@@ -16,7 +16,7 @@ rich = "^13.7.1"
 boto3 = "^1.35.22"
 xarray = "^2024.09.0"
 pyproj = "^3.7.0"
-jsonschema = "^4.23.0"
+jsonschema = { version = "^4.23", extras = ["format-nongpl"] }
 check-jsonschema = ">=0.29.4,<0.31.0"
 returns = "^0.23.0"
 toolz = "^1.0.0"
