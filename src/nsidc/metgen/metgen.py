@@ -1168,9 +1168,21 @@ def validate(configuration, content_type):
     schema = json.loads(_open_text(*schema_resource_location))
 
     # loop through all json files and validate each one
-    for json_file in output_file_path.glob("*.json"):
-        apply_schema(schema, json_file, dummy_json)
 
+    files_with_errors = 0
+    total_errors = 0
+    total_files = 0
+
+    for json_file in output_file_path.glob("*.json"):
+        total_files += 1
+        if error_count := apply_schema(schema, json_file, dummy_json):
+            files_with_errors += 1
+            total_errors += error_count
+
+    logger.info(f"Finished checking {total_files} files.")
+    logger.info(
+        f"Found {files_with_errors} files with errors, {total_errors} errors total."
+    )
     logger.info("Validations complete.")
     return True
 
@@ -1215,14 +1227,17 @@ def apply_schema(schema, json_file, dummy_json):
     logger = logging.getLogger(constants.ROOT_LOGGER)
     validator = Draft7Validator(schema, format_checker=jsonschema.FormatChecker())
 
+    error_count = 0
+
     with open(json_file) as jf:
         json_content = json.load(jf)
         if errs := list(validator.iter_errors(json_content | dummy_json)):
             logger.error(f"{json_file}:")
             for error in errs:
+                error_count += 1
                 context = error.context if error.context else ""
                 logger.error(
                     f"\t{error.message} {context} ({re.sub(r'\$\.', '', error.json_path)})"
                 )
 
-    return True
+    return error_count
