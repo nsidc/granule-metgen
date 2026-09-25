@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.19.0rc1 (2026-09-25)
 
 * Issue 252: Add a summary to console output.
 
