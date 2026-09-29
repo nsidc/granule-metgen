@@ -1168,7 +1168,6 @@ def validate(configuration, content_type):
     schema = json.loads(_open_text(*schema_resource_location))
 
     # loop through all json files and validate each one
-
     files_with_errors = 0
     total_errors = 0
     total_files = 0
