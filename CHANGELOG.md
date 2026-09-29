@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.19.0rc2 (2026-09-29)
 
 * Include all non-GPL default format schema checkers supported by `jsonschema`.
 
