@@ -838,13 +838,13 @@ shown in the configurations that are output to the console when metgenc is kicke
 as `log_quiet_level: 0`. All granules as they're processed are listed via console and log
 output along with the Processing Summary when processing wraps up.
 
-* Adding the -q flag spurs metgenc to run at quietness level 1 (`log_quiet_level: 1` is shown in
+* Adding the `-q` flag spurs metgenc to run at quietness level 1 (`log_quiet_level: 1` is shown in
 the configurations output to the console). Only failed granules are listed as they're processed
 via console and log output along with the Processing Summary when processing wraps up (no reason
 to show successful granules). The log for this case will also show the configurations; the granule
 names and all the processing steps/errors encountered for failed granules; and the processing summary. 
 
-* Changing to the -qq flag makes metgenc run at quietness level 2. In this case, the configurations
+* Changing to the `-qq` flag makes metgenc run at quietness level 2. In this case, the configurations
 for the run aren't shown at the console, while
 ```                   __
    ____ ___  ___  / /_____ ____  ____  _____
