@@ -826,6 +826,36 @@ entry defined for `.ini` files. The `-q` setting will be included in the
 configuration output as an integer value corresponding to the number of `q`
 flags input by the user (0, 1, or 2).
 
+The quietness flags can be added to any run of 'metgenc process ...' but should greatly benefit
+users by further streamlining processing time of very large granule-count data sets by allowing
+the operator to limit how much output is printed to the console and printed to the log file for
+the run in /share/logs/metgenc.
+
+Without a q flag added to the process command, metgenc will run at quietness level 0. This is
+shown in the configurations that are output to the console when metgenc is kicked off
+as "log_quiet_level: 0". All granules as they're processed are listed via console and log
+output along with the Processing Summary when processing wraps up.
+
+Adding the -q flag spurs metgenc to run at quietness level 1 ("log_quiet_level: 1" is shown in
+the configurations output to the console). Only failed granules are listed as they're processed
+via console and log output along with the Processing Summary when processing wraps up (no reason
+to show successful granules). The log for this case will also show the configurations; the granule
+names and all the processing steps/errors encountered for failed granules; and the processing summary. 
+
+Changing to the -qq flag makes metgenc run at quietness level 2. In this case, the configurations
+for the run aren't shown at the console, while
+```                   __
+   ____ ___  ___  / /_____ ____  ____  _____
+  / __ `__ \/ _ \/ __/ __ `/ _ \/ __ \/ ___/
+ / / / / / /  __/ /_/ /_/ /  __/ / / / /__
+/_/ /_/ /_/\___/\__/\__, /\___/_/ /_/\___/
+
+                   /____/
+```
+is shown as always, but just the Processing Summary is shown at the end of the run. If there
+are granule failures, they're listed by granule name in the log along with the configurations
+set for the run (incl. log_quiet_level: 2!) and the processing summary.
+
 #### Examples running process
 The following is an example of using the dry run option (-d) to generate UMM-G and write CNM as files (-wc) for three granules (-n 3):
 
