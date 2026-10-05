@@ -679,16 +679,21 @@ def test_dummy_json_for_ummg():
 
 
 @patch("nsidc.metgen.metgen.open")
-@patch("nsidc.metgen.metgen.jsonschema.validate")
-def test_dummy_json_used(mock_validate, mock_open):
-    fake_json = {"key": [{"foo": "bar"}]}
-    fake_dummy_json = {"missing_key": "missing_foo"}
+def test_dummy_json_used(mock_open):
+    fake_json = {"first_key": [{"foo": "bar"}]}
+    fake_dummy_json = {"second_key": "second_foo"}
+    test_schema = {
+        "properties": {
+            "first_key": {"type": "array"},
+            "second_key": {"type": "string", "maxLength": 3},
+        },
+        "required": ["second_key"],
+    }
 
+    # second_foo should trigger length restriction
     with patch("nsidc.metgen.metgen.json.load", return_value=fake_json):
-        metgen.apply_schema("schema file", "json_file", fake_dummy_json)
-        mock_validate.assert_called_once_with(
-            instance=fake_json | fake_dummy_json, schema="schema file"
-        )
+        error_count = metgen.apply_schema(test_schema, "json_file", fake_dummy_json)
+        assert error_count
 
 
 def test_gsr_is_required(test_config, simple_collection_metadata):
