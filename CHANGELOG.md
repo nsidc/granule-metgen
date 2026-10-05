@@ -1,6 +1,10 @@
+## Unreleased
+
+* Minor version release for Issue 252 changes.
+
 ## v1.19.0rc2 (2026-09-29)
 
-* Include all non-GPL default format schema checkers supported by `jsonschema`.
+* Issue 252: Include all non-GPL default format schema checkers supported by `jsonschema`.
 
 ## v1.19.0rc1 (2026-09-25)
 
