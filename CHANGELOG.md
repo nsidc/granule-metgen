@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.19.0 (2026-10-06)
 
 * Minor version release for Issue 252 changes.
 
