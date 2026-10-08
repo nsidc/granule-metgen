@@ -405,7 +405,6 @@ def validate(configuration):
         [
             "kinesis_stream_name",
             lambda name: (
-                # name is the value from the config file
                 aws.kinesis_stream_exists(name)
                 if not configuration.dry_run
                 else lambda _: True

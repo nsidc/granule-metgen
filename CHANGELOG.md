@@ -1,6 +1,6 @@
 ## UNRELEASED
 
-* Issue 297: Add environment information to `ini` validation output.
+* Issue 297: Add environment information and field values to `ini` validation error output.
 
 ## v1.19.0 (2026-10-06)
 
