@@ -216,6 +216,36 @@ def test_validate_with_invalid_checks(m1, m2, m3, cfg_parser):
     assert len(exc_info.value.errors) == 5
 
 
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=False)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=True)
+def test_environment_displayed_in_kinesis_check(m1, m2, m3, cfg_parser):
+    cfg = config.configuration(cfg_parser, {}, "prod")
+
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+
+    assert re.search(
+        r"kinesis stream name \S+ does not exist in the prod environment",
+        exc_info.value.errors[0],
+    )
+
+
+@patch("nsidc.metgen.metgen.os.path.exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.kinesis_stream_exists", return_value=True)
+@patch("nsidc.metgen.metgen.aws.staging_bucket_exists", return_value=False)
+def test_environment_displayed_in_staging_bucket_check(m1, m2, m3, cfg_parser):
+    cfg = config.configuration(cfg_parser, {}, "prod")
+
+    with pytest.raises(config.ValidationError) as exc_info:
+        config.validate(cfg)
+
+    assert re.search(
+        r"staging bucket \S+ does not exist in the prod environment",
+        exc_info.value.errors[0],
+    )
+
+
 @pytest.mark.parametrize(
     "dir_type,dir_path",
     [
@@ -236,7 +266,7 @@ def test_validates_optional_dirs_with_values(
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
-    assert f"The {dir_type} does not exist." in exc_info.value.errors
+    assert f"The {dir_type} {dir_path} does not exist." in exc_info.value.errors
 
 
 @pytest.mark.parametrize(
@@ -322,9 +352,11 @@ def test_spatial_polygon_target_coverage_validation_too_low(m1, m2, m3, cfg_pars
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
-    assert (
-        "The spatial polygon target coverage must be between 0.80 and 1.0."
-        in exc_info.value.errors
+    assert any(
+        re.search(
+            "The spatial polygon target coverage must be between 0.80 and 1.0.", err
+        )
+        for err in exc_info.value.errors
     )
 
 
@@ -337,9 +369,11 @@ def test_spatial_polygon_target_coverage_validation_too_high(m1, m2, m3, cfg_par
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
-    assert (
-        "The spatial polygon target coverage must be between 0.80 and 1.0."
-        in exc_info.value.errors
+    assert any(
+        re.search(
+            "The spatial polygon target coverage must be between 0.80 and 1.0.", err
+        )
+        for err in exc_info.value.errors
     )
 
 
@@ -362,9 +396,9 @@ def test_spatial_polygon_max_vertices_validation_too_low(m1, m2, m3, cfg_parser)
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
-    assert (
-        "The spatial polygon max vertices must be between 10 and 1000."
-        in exc_info.value.errors
+    assert any(
+        re.search("The spatial polygon max vertices must be between 10 and 1000.", err)
+        for err in exc_info.value.errors
     )
 
 
@@ -377,9 +411,10 @@ def test_spatial_polygon_max_vertices_validation_too_high(m1, m2, m3, cfg_parser
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
-    assert (
-        "The spatial polygon max vertices must be between 10 and 1000."
-        in exc_info.value.errors
+
+    assert any(
+        re.search("The spatial polygon max vertices must be between 10 and 1000.", err)
+        for err in exc_info.value.errors
     )
 
 
@@ -417,9 +452,13 @@ def test_spatial_polygon_cartesian_tolerance_validation_too_low(m1, m2, m3, cfg_
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
-    assert (
-        "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees."
-        in exc_info.value.errors
+
+    assert any(
+        re.search(
+            "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees.",
+            err,
+        )
+        for err in exc_info.value.errors
     )
 
 
@@ -434,9 +473,13 @@ def test_spatial_polygon_cartesian_tolerance_validation_too_high(
     cfg = config.configuration(cfg_parser, {})
     with pytest.raises(config.ValidationError) as exc_info:
         config.validate(cfg)
-    assert (
-        "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees."
-        in exc_info.value.errors
+
+    assert any(
+        re.search(
+            "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees.",
+            err,
+        )
+        for err in exc_info.value.errors
     )
 
 
