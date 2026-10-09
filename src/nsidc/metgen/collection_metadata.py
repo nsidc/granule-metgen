@@ -20,7 +20,7 @@ class CollectionMetadataReader:
     Reader class for retrieving and parsing collection metadata.
     """
 
-    def __init__(self, environment: str = "uat"):
+    def __init__(self, environment: str = constants.DEFAULT_CUMULUS_ENVIRONMENT):
         """
         Initialize the collection reader.
 

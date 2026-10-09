@@ -57,7 +57,7 @@ def s3(aws_credentials):
 
 @pytest.fixture
 def s3_bucket(s3):
-    """Create an S3 buket and return the bucket name."""
+    """Create an S3 bucket and return the bucket name."""
     bucket_name = "duck-test-bucket"
     s3.create_bucket(
         Bucket=bucket_name,
