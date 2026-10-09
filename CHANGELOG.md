@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.20.0rc0 (2026-10-09)
 
 * Issue 297: Add environment information and field values to `ini` validation error output.
 
