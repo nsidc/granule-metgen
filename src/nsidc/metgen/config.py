@@ -8,6 +8,7 @@ import dataclasses
 import logging
 import os.path
 from pathlib import Path
+from string import Template
 from typing import Optional
 
 from nsidc.metgen import aws, constants
@@ -378,28 +379,28 @@ def validate(configuration):
         [
             "data_dir",
             lambda dir: os.path.exists(dir),
-            "The data_dir does not exist.",
+            Template("The data_dir $value does not exist."),
         ],
         [
             "premet_dir",
             lambda dir: os.path.exists(dir) if dir else True,
-            "The premet_dir does not exist.",
+            Template("The premet_dir $value does not exist."),
         ],
         [
             "spatial_dir",
             lambda dir: os.path.exists(dir) if dir else True,
-            "The spatial_dir does not exist.",
+            Template("The spatial_dir $value does not exist."),
         ],
         [
             "local_output_dir",
             lambda dir: os.path.exists(dir),
-            "The local_output_dir does not exist.",
+            Template("The local_output_dir $value does not exist."),
         ],
         # TODO: validate "local_output_dir/ummg_dir" as part of issue-71
         # [
         #     "ummg_dir",
         #     lambda dir: os.path.exists(dir),
-        #     "The ummg_dir does not exist."
+        #     Template("The ummg_dir $value does not exist."),
         # ],
         [
             "kinesis_stream_name",
@@ -408,7 +409,9 @@ def validate(configuration):
                 if not configuration.dry_run
                 else lambda _: True
             ),
-            "The kinesis stream does not exist.",
+            Template(
+                f"The kinesis stream name $value does not exist in the {configuration.environment} environment."
+            ),
         ],
         [
             "staging_bucket_name",
@@ -417,34 +420,46 @@ def validate(configuration):
                 if not configuration.dry_run
                 else lambda _: True
             ),
-            "The staging bucket does not exist.",
+            Template(
+                f"The staging bucket $value does not exist in the {configuration.environment} environment."
+            ),
         ],
         [
             "number",
             lambda number: 0 < number,
-            "The number of granules to process must be positive.",
+            Template(
+                "Invalid granule count: $value. The number of granules to process must be positive."
+            ),
         ],
         [
             "spatial_polygon_algorithm",
             lambda alg: alg in [e.value for e in constants.PolygonAlgorithm],
-            f"The spatial polygon algorithm must be one of: {', '.join([e.value for e in constants.PolygonAlgorithm])}.",
+            Template(
+                f"Invalid spatial polygon algorithm: $value. The spatial polygon algorithm must be one of: {', '.join([e.value for e in constants.PolygonAlgorithm])}."
+            ),
         ],
         [
             "spatial_polygon_target_coverage",
             lambda coverage: 0.80 <= coverage <= 1.0,
-            "The spatial polygon target coverage must be between 0.80 and 1.0.",
+            Template(
+                "Invalid spatial polygon target coverage: $value. The spatial polygon target coverage must be between 0.80 and 1.0."
+            ),
         ],
         [
             "spatial_polygon_max_vertices",
             lambda vertices: 10 <= vertices <= 1000,
-            "The spatial polygon max vertices must be between 10 and 1000.",
+            Template(
+                "Invalid spatial polygon max vertices value: $value. The spatial polygon max vertices must be between 10 and 1000."
+            ),
         ],
         [
             "spatial_polygon_cartesian_tolerance",
             lambda tolerance: (
                 0.00001 <= tolerance <= 0.01 if tolerance is not None else True
             ),
-            "The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees.",
+            Template(
+                "Invalid spatial polygon cartesian tolerance: $value. The spatial polygon cartesian tolerance must be between 0.00001 and 0.01 degrees."
+            ),
         ],
         [
             "log_dir",
@@ -453,11 +468,13 @@ def validate(configuration):
                 if log_dir
                 else True
             ),
-            "The log directory does not exist or is not writable.",
+            Template("The log directory $value does not exist or is not writable."),
         ],
     ]
     errors = [
-        msg for name, fn, msg in validations if not fn(getattr(configuration, name))
+        msg.safe_substitute({"value": getattr(configuration, name)})
+        for name, fn, msg in validations
+        if not fn(getattr(configuration, name))
     ]
     if len(errors) == 0:
         return True

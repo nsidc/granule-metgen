@@ -1,3 +1,7 @@
+## v1.20.0rc0 (2026-10-09)
+
+* Issue 297: Add environment information and field values to `ini` validation error output.
+
 ## v1.19.0 (2026-10-06)
 
 * Minor version release for Issue 252 changes.
