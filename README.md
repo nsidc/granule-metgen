@@ -916,7 +916,7 @@ The date-time, or any part thereof as applicable, typically of the first data ob
 A unique version identifier for each data set published.
 ```
 Use the `force_single_file_granules` flag in the `ini` file if the data file names do not
-meet the convention described above, and renaming the files is not ideal.
+meet the convention described above, and renaming the files is not an option.
 
 **EG 7.** If metgenc process fails with no reported error, check the /share/logs/metgenc log associated with the run. And, if it contains
 ```
