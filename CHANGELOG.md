@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Issue 339: Reconcile dependabot updates.
+
 ## v1.20.0 (2026-10-14)
 
 * Minor version release for Issue 297 changes.
