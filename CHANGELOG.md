@@ -1,6 +1,6 @@
 ## UNRELEASED
 
-* Issue 339: Reconcile dependabot updates.
+* Issue 339: Reconcile dependabot pull requests.
 
 ## v1.20.0 (2026-10-14)
 
