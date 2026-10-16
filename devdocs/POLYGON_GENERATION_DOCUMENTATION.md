@@ -51,12 +51,22 @@ Consolidates all polygon generation methods and optimization algorithms.
 **Core Class:**
 ```python
 class PolygonGenerator:
-    def create_flightline_polygon(self, lon, lat, method='adaptive_beam',
-                                 buffer_distance=None, sample_size=None,
-                                 alpha=None, concave_alpha=None,
-                                 connect_regions=True, connection_buffer_multiplier=3.0,
-                                 iterative_simplify=False, target_vertices=None,
-                                 min_iou=0.85, min_coverage=0.90):
+    def create_flightline_polygon(
+        self,
+        lon,
+        lat,
+        method="adaptive_beam",
+        buffer_distance=None,
+        sample_size=None,
+        alpha=None,
+        concave_alpha=None,
+        connect_regions=True,
+        connection_buffer_multiplier=3.0,
+        iterative_simplify=False,
+        target_vertices=None,
+        min_iou=0.85,
+        min_coverage=0.90,
+    ):
         """
         Create polygon using specified method with optional simplification.
         """
@@ -100,8 +110,9 @@ Core optimization algorithm for extreme vertex reduction.
 
 **Algorithm:**
 ```python
-def optimize_polygon_for_cmr(polygon, data_points=None, target_vertices=8,
-                           min_iou=0.70, min_coverage=0.90):
+def optimize_polygon_for_cmr(
+    polygon, data_points=None, target_vertices=8, min_iou=0.70, min_coverage=0.90
+):
     """
     Iteratively simplify polygon by halving vertices until quality degrades.
     Uses binary search for optimal tolerance at each iteration.
@@ -159,6 +170,7 @@ for point in sample_points:
 ```python
 # New approach (fast) - 10-100x speedup
 from shapely.vectorized import contains as vectorized_contains
+
 points_inside = vectorized_contains(polygon, x_coords, y_coords)
 inside_count = np.sum(points_inside)
 ```
@@ -234,11 +246,12 @@ from cmr_integration import CMRClient, PolygonComparator
 # Generate polygon
 generator = PolygonGenerator()
 polygon, metadata = generator.create_flightline_polygon(
-    lon, lat,
-    method='adaptive_beam',
+    lon,
+    lat,
+    method="adaptive_beam",
     iterative_simplify=True,
     target_vertices=8,
-    min_iou=0.70
+    min_iou=0.70,
 )
 
 # Compare with CMR
@@ -267,11 +280,11 @@ polygon_comparisons/
 
 ```python
 best_method = {
-    'method': 'adaptive_beam',
-    'iterative_simplify': True,
-    'min_iou': 0.70,           # Lower threshold matches CMR
-    'min_coverage': 0.90,       # Ensure data coverage
-    'target_vertices': 8        # CMR-like simplification
+    "method": "adaptive_beam",
+    "iterative_simplify": True,
+    "min_iou": 0.70,  # Lower threshold matches CMR
+    "min_coverage": 0.90,  # Ensure data coverage
+    "target_vertices": 8,  # CMR-like simplification
 }
 ```
 
@@ -279,29 +292,21 @@ best_method = {
 
 **Fast Testing** (< 1 second):
 ```python
-{
-    'method': 'convex',
-    'iterative_simplify': False
-}
+{"method": "convex", "iterative_simplify": False}
 ```
 
 **Balanced** (5-10 seconds):
 ```python
-{
-    'method': 'alpha',
-    'alpha': 2.0,
-    'iterative_simplify': True,
-    'target_vertices': 100
-}
+{"method": "alpha", "alpha": 2.0, "iterative_simplify": True, "target_vertices": 100}
 ```
 
 **High Quality** (current default, ~90 seconds for complex cases):
 ```python
 {
-    'method': 'adaptive_beam',
-    'iterative_simplify': True,
-    'target_vertices': 8,
-    'min_iou': 0.70
+    "method": "adaptive_beam",
+    "iterative_simplify": True,
+    "target_vertices": 8,
+    "min_iou": 0.70,
 }
 ```
 
