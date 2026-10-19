@@ -14,6 +14,7 @@ pyfiglet = "^1.0.2"
 netCDF4 = "^1.6.5"
 rich = "^13.7.1"
 boto3 = "^1.43.106"
+idna = "^3.15"
 xarray = ">=2024.9,<2027.0"
 pyproj = "^3.7.0"
 jsonschema = { version = "^4.23", extras = ["format-nongpl"] }
