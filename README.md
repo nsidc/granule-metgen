@@ -1158,13 +1158,6 @@ scans pull requests and reports vulnerabilities introduced by the PR.
 - `.github/workflows/osv-scanner-scheduled.yml`. does a full scan weekly and on
 pushes to `main`.
 
-### Packages used in `docs`
-
-Reminder! The file `docs/requirements.txt` holds some package specifications that are not
-managed by poetry. These will need to be updated manually if flagged by the `osv-scanner`
-actions.
-
-
 ## Credit
 
 This content was developed by the National Snow and Ice Data Center with funding from
