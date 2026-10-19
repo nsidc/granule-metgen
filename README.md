@@ -33,6 +33,7 @@
     + [validate](#validate)
       - [Example running validate](#example-running-validate)
     + [Pretty-print a json file in your shell](#pretty-print-a-json-file-in-your-shell)
+  * [Security Monitoring](#security-monitoring)
   * [For Developers](#for-developers)
     + [Contributing](#contributing)
       - [Requirements](#requirements)
@@ -44,6 +45,7 @@
       - [Ruff integration with your editor](#ruff-integration-with-your-editor)
       - [Spatial Polygon Diagnostic Tool](#spatial-polygon-diagnostic-tool)
       - [Releasing](#releasing)
+  * [Credit](#credit)
 
 <p align="center">
   <img alt="NSIDC logo" src="https://nsidc.org/themes/custom/nsidc/logo.svg" width="150" />
@@ -88,8 +90,8 @@ BE AWARE: IF YOU'BE BEEN TESTING/INGEST CUAT INGEST, WHEN YOU'RE READY TO INGEST
 You need to have the right credentials sourced before processing will succeed to that environment!!
 If the creds aren't pointing to the right environment, MetGenC will return:
 ```
-* The kinesis stream does not exist.
-* The staging bucket does not exist.
+* The kinesis stream name <stream name> does not exist in the prod environment.
+* The staging bucket <bucket name> does not exist in the prod environment.
 ```
 
 Commands within the above one-liner detailed:
@@ -842,7 +844,7 @@ output along with the Processing Summary when processing wraps up.
 the configurations output to the console). Only failed granules are listed as they're processed
 via console and log output along with the Processing Summary when processing wraps up (no reason
 to show successful granules). The log for this case will also show the configurations; the granule
-names and all the processing steps/errors encountered for failed granules; and the processing summary. 
+names and all the processing steps/errors encountered for failed granules; and the processing summary.
 
 * Changing to the `-qq` flag makes metgenc run at quietness level 2. In this case, the configurations
 for the run aren't shown at the console, while
@@ -877,10 +879,10 @@ channels, and post a quick "done" note when you're done ingest testing as a cour
   directory, you'll see errors like:
 ```
 The configuration is invalid:
-  * The data_dir does not exist.
-  * The premet_dir does not exist.
-  * The spatial_dir does not exist.
-  * The local_output_dir does not exist.
+  * The data_dir <directory name> does not exist.
+  * The premet_dir <directory name> does not exist.
+  * The spatial_dir <directory name> does not exist.
+  * The local_output_dir <directory name> does not exist.
 ```
 **EG 2.** If running `metgenc process` fails for other reasons, check for an error message in the metgenc log. This is written by default to/as (/share/logs/metgenc/`metgenc-{config-name}-{timestamp}.log`).
   * The metgenc.log will spell out the reason for the error for the operator, so the .ini file or paths pointed to in the .ini file can be spiffed up.
@@ -888,8 +890,8 @@ The configuration is invalid:
 **EG 3.** If running metgenc process without the -d / --dry-run option leads to the following warning:
 ```
   The configuration is invalid:
-    The kinesis stream does not exist.
-    The staging bucket does not exist.
+    The kinesis stream name <stream name> does not exist in the prod environment.
+    The staging bucket <bucket name> does not exist in the prod environment.
 ```
   It's almost certainly indicating that you've not sourced the credentials required (cumulus-uat, cumulus-prod) for the environment you're telling MetGenC to process in.
 
@@ -1123,6 +1125,38 @@ integrated with the editor of your choice. See the
   [MetGenC Actions page](https://github.com/nsidc/granule-metgen/actions),
   and verify that the
   [new MetGenC (pre-)release is available on PyPI](https://pypi.org/project/nsidc-metgenc/).
+
+
+## Security Monitoring
+
+Automatic security scanning and respository protection is configured to:
+- Display a `Security scan` badge on the README in Github for the `main`
+  branch, just below the table of contents. The badge will be red if there are
+  outstanding reports regarding vulnerabilities.
+  Note: PyPI can't display scan results — the badge renders there, but pass/fail only.
+- Produce a [scan report](https://github.com/nsidc/granule-metgen/security/code-scanning).
+  Navigate to this report by selecting the `Security` tab in the Github repository, then
+  select `Code scanning` in the left sidebar.
+- Automatically generate Dependabot pull requests, visible in the [pull requests tab](https://github.com/nsidc/granule-metgen/pulls).
+- Perform a security scan/osv-scan for introduced vulnerabilities in new pull requests.
+- Block commits containing recognized credentials (e.g. passwords),
+  via the push protection configuration in the Github repository settings.
+
+### Dependabot
+
+- `.github/dependabot.yml` caps the number of open "version bump" PRs (currently 5) for `pip` and
+`github-actions` updates. This number can be increased, decreased, or set to 0 to pause updates.
+- The number of security updates (PRs) are unlimited.
+- Routine minor/patch bumps are grouped into a single PR per week rather than one per package.
+- Dependabot security updates are enabled via settings on the github repository
+itself.
+
+### OSV-Scanner
+
+- `.github/workflows/osv-scanner-pr.yml`.
+scans pull requests and reports vulnerabilities introduced by the PR.
+- `.github/workflows/osv-scanner-scheduled.yml`. does a full scan weekly and on
+pushes to `main`.
 
 ## Credit
 
