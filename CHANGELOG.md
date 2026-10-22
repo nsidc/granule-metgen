@@ -1,4 +1,4 @@
-## UNRELEASED
+## v2.0.0rc1 (2026-10-21)
 
 * Issue 339, the final chapter: update `certifi` due to certificate compromise;
   explicitly set versions for `idna` and `certifi` in `docs/requirements.txt`.
