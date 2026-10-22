@@ -1,4 +1,4 @@
-## UNRELEASED
+## v2.0.0 (2026-10-22)
 
 * Major version release, reflecting many dependency updates.
 
