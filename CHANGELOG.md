@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Major version release, reflecting many dependency updates.
+
 ## v2.0.0rc1 (2026-10-21)
 
 * Issue 339, the final chapter: update `certifi` due to certificate compromise;
