@@ -1,3 +1,8 @@
+## UNRELEASED
+
+* Issue 339, the final chapter: update `certifi` due to certificate compromise;
+  explicitly set versions for `idna` and `certifi` in `docs/requirements.txt`.
+
 ## v2.0.0rc0 (2026-10-20)
 
 * Issue 339: Reconcile dependabot pull requests.
