@@ -1,4 +1,4 @@
-__version__ = "v2.0.0rc0"
+__version__ = "v2.0.0rc1"
 
 
 __all__ = [
