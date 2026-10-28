@@ -532,7 +532,7 @@ class TestCollectionMetadataReader:
         # Return a string instead of dict
         mock_search.return_value = [{"umm": "invalid string format"}]
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(TypeError) as exc_info:
             collection_metadata_reader_uat.get_collection_metadata("INVALID", "1")
 
         assert "Invalid UMM-C format" in str(exc_info.value)

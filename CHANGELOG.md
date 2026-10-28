@@ -1,3 +1,7 @@
+## UNRELEASED
+
+* Issue 304: Add information about error sources.
+
 ## v2.0.0 (2026-10-22)
 
 * Major version release, reflecting many dependency updates.
