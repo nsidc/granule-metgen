@@ -12,7 +12,11 @@ submodules, and the functions, classes, and methods in each.
 
    aws docstring
    cli docstring
+   collection_metadata docstring
    config docstring
    constants docstring
+   metgen_logging docstring
    metgen docstring
+   models docstring
    readers
+   spatial
