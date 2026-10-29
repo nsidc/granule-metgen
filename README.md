@@ -1061,25 +1061,47 @@ Rather than running `ruff` manually from the commandline, it can be
 integrated with the editor of your choice. See the
 [ruff editor integration](https://docs.astral.sh/ruff/editors/) guide.
 
+#### External Documentation
+
+The [Read the Docs](https://readthedocs.org/projects/granule-metgen/badge/?version=latest)
+content is configured via markup files in `/docs/source`. You can preview any changes locally
+using the steps below.
+
+```
+ cd docs
+ sphinx-build ./source ./build
+ cd build
+ python -m http.server
+```
+
+Point your browser at `localhost:8000` to view the results!
 
 #### Releasing
 
-* Update `CHANGELOG.md` according to its representation of the current version:
-  * If the current "version" in `CHANGELOG.md` is `UNRELEASED`, add an
+* Update `CHANGELOG.md` according to its representation of the current version
+  and the nature of the anticipated version bump.
+
+  * If the current "version" in `CHANGELOG.md` is `## UNRELEASED`, add an
     entry describing your new changes to the existing change summary list.
 
-  * If the current version in `CHANGELOG.md` is **not** a release candidate,
-    add a new line at the top of `CHANGELOG.md` with a "version" consisting of
-    the string literal `UNRELEASED` (no quotes surrounding the string).  It will
-    be replaced with the release candidate form of an actual version number
-    after the `major`, `minor`, or `patch` version is bumped (see below). Add a
-    list summarizing the changes (thus far) in this new version below the
-    `UNRELEASED` version entry.
+  * In all other cases, you'll add a new line at the top of `CHANGELOG.md`
+    with a "version" consisting of the string literal `## UNRELEASED` (no
+    quotes surrounding the string).
 
-  * If the current version in `CHANGELOG.md`  **is** a release candidate, add
-    an entry describing your new changes to the existing change summary list for
-    this release candidate version. The release candidate version will be
-    automatically updated when the `rc` version is bumped (see below).
+      * If the current version in `CHANGELOG.MD` is a release candidate, and you
+        need to create a new release candidate in the same version series (for
+        example, v1.2.0rc0 exists, and the next release will be v1.2.0rc1),
+        describe your changes for the new release candidate in a bulleted list
+        under the new `## UNRELEASED` heading.
+
+      * If the current version in `CHANGELOG.MD` is a release candidate, and you're
+        ready to create a formal release, the release description simply states
+        the type of release. See previous `CHANGELOG.md` entries for examples.
+
+      * If the current version in `CHANGELOG.MD` is a release, and you're
+        starting a new release candidate series, describe your changes for
+        the new release candidate in a bulleted list under the `## UNRELEASED`
+        heading.
 
 * Commit `CHANGELOG.md` so the working directory is clean.
 

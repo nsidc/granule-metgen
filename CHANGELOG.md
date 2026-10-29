@@ -1,3 +1,7 @@
+## v2.1.0rc0 (2026-10-29)
+
+* Issue 304: Add more detail for errors related to UMM-C search.
+
 ## v2.0.0 (2026-10-22)
 
 * Major version release, reflecting many dependency updates.
