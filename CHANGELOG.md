@@ -1,4 +1,4 @@
-## UNRELEASED
+## v2.1.0rc0 (2026-10-29)
 
 * Issue 304: Add more detail for errors related to UMM-C search.
 
