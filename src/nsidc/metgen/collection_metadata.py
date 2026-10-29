@@ -119,7 +119,7 @@ class CollectionMetadataReader:
         """
         if not response:
             raise ValueError(
-                f"Empty UMM-C response from CMR for {short_name}.{version}"
+                f"Empty UMM-C search response from CMR for {short_name}.{version}"
             )
 
         # check for valid response type
@@ -152,7 +152,7 @@ class CollectionMetadataReader:
         # Ensure UMM-C information exists
         if "umm" not in response[0]:
             raise ValueError(
-                f"No UMM-C content in CMR response for {short_name}.{version}"
+                f"No UMM-C content in CMR search response for {short_name}.{version}"
             )
 
         # Extract the UMM-C content

@@ -367,55 +367,45 @@ class TestCollectionMetadataReader:
 
         assert "search failed" in str(exc_info.value)
 
-    @patch("earthaccess.login")
-    @patch("earthaccess.search_datasets")
-    def test_get_collection_metadata_empty_response(
-        self, mock_search, mock_login, collection_metadata_reader_uat
+    @pytest.mark.parametrize(
+        "response,error_type,error_str",
+        [
+            (None, ValueError, "Empty UMM-C search response from CMR"),
+            ([], ValueError, "Empty UMM-C search response from CMR"),
+            ("Not a list", TypeError, "Expected list"),
+            (
+                ["umm one", "umm two"],
+                ValueError,
+                "Multiple UMM-C records returned from CMR",
+            ),
+            (["Not a dict"], TypeError, "Expected dict"),
+            (
+                [{"errors": "Boom!"}],
+                ValueError,
+                "CMR returned errors from UMM-C search",
+            ),
+            (
+                [{"not-umm": {"ShortName": "INVALID", "Version": "1"}}],
+                ValueError,
+                "No UMM-C content in CMR search response",
+            ),
+            (
+                [{"umm": "Not a dict"}],
+                TypeError,
+                "Invalid UMM-C format in CMR response",
+            ),
+        ],
+    )
+    def test_invalid_ummc_format(
+        self, collection_metadata_reader_uat, response, error_type, error_str
     ):
-        """Test handling of empty CMR response."""
-        mock_login.return_value = True
-        mock_search.return_value = []
+        """Test handling of various CMR response error scenarios."""
+        with pytest.raises(error_type) as exc_info:
+            collection_metadata_reader_uat._validate_cmr_response(
+                response, "INVALID", "1"
+            )
 
-        with pytest.raises(ValueError) as exc_info:
-            collection_metadata_reader_uat.get_collection_metadata("MISSING", "1")
-
-        assert "Empty UMM-C response" in str(exc_info.value)
-
-    @patch("earthaccess.login")
-    @patch("earthaccess.search_datasets")
-    def test_get_collection_metadata_multiple_responses(
-        self,
-        mock_search,
-        mock_login,
-        collection_metadata_reader_uat,
-        sample_ummc_response,
-    ):
-        """Test handling of multiple CMR responses."""
-        mock_login.return_value = True
-        # Create multiple responses
-        mock_search.return_value = sample_ummc_response * 2
-
-        with pytest.raises(ValueError) as exc_info:
-            collection_metadata_reader_uat.get_collection_metadata("DUPLICATE", "1")
-
-        assert "Multiple UMM-C records" in str(exc_info.value)
-
-    @patch("earthaccess.login")
-    @patch("earthaccess.search_datasets")
-    def test_get_collection_metadata_response_without_umm_key(
-        self, mock_search, mock_login, collection_metadata_reader_uat
-    ):
-        """Test that response without 'umm' key raises ValueError."""
-        mock_login.return_value = True
-        # Response without umm key should raise exception
-        mock_search.return_value = [
-            {"ShortName": "TEST", "Version": "1", "EntryTitle": "Test Collection"}
-        ]
-
-        with pytest.raises(ValueError) as exc_info:
-            collection_metadata_reader_uat.get_collection_metadata("TEST", "1")
-
-        assert "No UMM-C content in CMR response" in str(exc_info.value)
+        assert error_str in str(exc_info.value)
 
     @patch("earthaccess.login")
     @patch("earthaccess.search_datasets")
@@ -521,21 +511,6 @@ class TestCollectionMetadataReader:
         mock_search.assert_called_once()
         call_args = mock_search.call_args[1]
         assert call_args["version"] == "1"
-
-    @patch("earthaccess.login")
-    @patch("earthaccess.search_datasets")
-    def test_invalid_ummc_format(
-        self, mock_search, mock_login, collection_metadata_reader_uat
-    ):
-        """Test handling of invalid UMM-C format."""
-        mock_login.return_value = True
-        # Return a string instead of dict
-        mock_search.return_value = [{"umm": "invalid string format"}]
-
-        with pytest.raises(TypeError) as exc_info:
-            collection_metadata_reader_uat.get_collection_metadata("INVALID", "1")
-
-        assert "Invalid UMM-C format" in str(exc_info.value)
 
     def test_extract_nested_value_missing_keys(self, collection_metadata_reader_uat):
         """Test _extract_nested_value handles missing keys gracefully."""
