@@ -179,8 +179,9 @@ are the driving forces behind recommending that data producers include the attri
 
 Notes column key:
 
- OC = Optional configuration attributes that can be included
-   in an .ini file to facilitate "nearly" compliant netCDF files to be run with MetGenC
+ OC = Optional configuration attributes exist that can be included
+   in an .ini to overcome the dearth of this attribute in the file 
+   to make otherwise "non-compliant" netCDF files able to be run with MetGenC
    without premet/spatial files. Below, under Running MetGenC: Its Commands In-depth in the Init section, see: [Optional Configuration Elements](#optional-configuration-elements)
 
  P = Premet file attributes that can be specified in a premet file; when used,
