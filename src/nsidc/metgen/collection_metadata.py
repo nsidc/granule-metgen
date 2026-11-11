@@ -72,17 +72,23 @@ class CollectionMetadataReader:
         except Exception as e:
             # Catch missing or invalid username and/or password.
             raise Exception(
-                f"{type(e).__name__}. {str(e)} Cannot retrieve UMM-C metadata for "
+                f"{type(e).__name__}. {str(e)} Cannot login to retrieve UMM-C metadata for "
                 f"{short_name}.{version_str}"
             )
 
         # Search for collection in CMR
-        cmr_response = earthaccess.search_datasets(
-            short_name=short_name,
-            version=version_str,
-            has_granules=None,  # Find collections with or without granules
-            provider=self.provider,
-        )
+        try:
+            cmr_response = earthaccess.search_datasets(
+                short_name=short_name,
+                version=version_str,
+                has_granules=None,  # Find collections with or without granules
+                provider=self.provider,
+            )
+        except RuntimeError as e:
+            # CMR query failed
+            raise Exception(
+                f"{type(e).__name__}. {str(e)} CMR collection query failed for {short_name}.{version_str}"
+            )
 
         self.logger.info_minus(
             "Earthdata login succeeded; attempted collection metadata search."
@@ -108,11 +114,19 @@ class CollectionMetadataReader:
             Validated UMM-C dictionary
 
         Raises:
-            ValueError: If response is invalid
+            ValueError: Response content is invalid
+            TypeError: Response is of the wrong type
         """
         if not response:
             raise ValueError(
-                f"Empty UMM-C response from CMR for {short_name}.{version}"
+                f"Empty UMM-C search response from CMR for {short_name}.{version}"
+            )
+
+        # check for valid response type
+        if not isinstance(response, list):
+            raise TypeError(
+                f"CMR returned an invalid response format from UMM-C search for {short_name}.{version}. ",
+                f"Expected list, received {type(response)}",
             )
 
         if len(response) > 1:
@@ -121,18 +135,33 @@ class CollectionMetadataReader:
                 "none will be used."
             )
 
-        # Check that the response item is a dict before extracting
-        if not isinstance(response[0], dict) or "umm" not in response[0]:
+        # Check that the response item is a dict
+        if not isinstance(response[0], dict):
+            raise TypeError(
+                f"CMR returned an invalid response format from UMM-C search for {short_name}.{version}. ",
+                f"Expected dict, received {type(response[0])}",
+            )
+
+        # Bail out if response includes errors
+        # should this be something besides ValueError?
+        if "errors" in response[0]:
             raise ValueError(
-                f"No UMM-C content in CMR response for {short_name}.{version}"
+                f"CMR returned errors from UMM-C search for {short_name}.{version}: {response[0].get('errors')}"
+            )
+
+        # Ensure UMM-C information exists
+        if "umm" not in response[0]:
+            raise ValueError(
+                f"No UMM-C content in CMR search response for {short_name}.{version}"
             )
 
         # Extract the UMM-C content
         ummc = response[0].get("umm", response[0])
 
         if not isinstance(ummc, dict):
-            raise ValueError(
-                f"Invalid UMM-C format in CMR response for {short_name}.{version}"
+            raise TypeError(
+                f"Invalid UMM-C format in CMR response for {short_name}.{version}. ",
+                f"Expected dict, received {type(ummc)}",
             )
 
         return ummc
