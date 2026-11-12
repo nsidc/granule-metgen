@@ -174,8 +174,8 @@ are the driving forces behind recommending that data producers include the attri
 | geospatial_lat_max (global)   |                | R                | 7    |
 | geospatial_bounds (global)    |                | R                | 8, OC |
 | geospatial_bounds_crs (global) |               | R                | 9    |
-| standard_name, `projection_x_coordinate` (variable) |  | RequiredC  |    | 5       |
-| standard_name, `projection_y_coordinate` (variable) |  | RequiredC  |    | 6       |
+| standard_name, `projection_x_coordinate` (variable) |  | RequiredC  | 5       |
+| standard_name, `projection_y_coordinate` (variable) |  | RequiredC  | 6       |
 
 Notes column key:
 
