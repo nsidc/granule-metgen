@@ -362,7 +362,7 @@ need to be added to the .ini file by the operator; they're not prompted for when
 
 See this project's GitHub file, `fixtures/test.ini` for examples.
 
-| .ini element           | .ini section | Attribute absent from netCDF file the .ini attribute stands in for | Attribute populated in UMMG | Note |
+| .ini element           | .ini section | Attribute absent that the .ini attribute stands in for | UMM-G Attribute | Note |
 | -----------------------|-------------- | ------------------- | ---------------------------| ---- |
 | time_start_regex       | Collection    | time_coverage_start | BeginningDateTime | 1    |
 | time_coverage_duration | Collection    | time_coverage_end   | EndingDateTime | 2    |
