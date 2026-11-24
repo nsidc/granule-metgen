@@ -181,8 +181,9 @@ Notes column key:
 
  OC = Optional configuration attributes exist that can be included
    in an .ini to overcome the dearth of this attribute in the file 
-   to make otherwise "non-compliant" netCDF files able to be run with MetGenC
-   without premet/spatial files. Below, under Running MetGenC: Its Commands In-depth in the Init section, see: [Optional Configuration Elements](#optional-configuration-elements)
+   to allow MetGenC to process otherwise “non-compliant netCDF files
+   without premet/spatial files. Below, under Running MetGenC: 
+   Its Commands In-depth in the Init section, see: [Optional Configuration Elements](#optional-configuration-elements)
 
  P = Premet file attributes that can be specified in a premet file; when used,
   `premet_dir` must be included in the .ini file.
@@ -216,7 +217,7 @@ Notes column key:
    GPolygon, bounding rectangle, etc.
 
  7 = When a collection's GranuleSpatialRepresentation is defined as Cartesian,
-   MetGenC will generate a bounding rectangle spatial representation using the
+   MetGenC will generate a bounding rectangle using the
    NetCDF file's `geospatial_lat_max/min`, `geospatial_lon_max/min` global attributes.
 
  8 = The `geospatial_bounds` netCDF file global attribute contains spatial boundary information as a
