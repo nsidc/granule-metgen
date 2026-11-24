@@ -1,4 +1,4 @@
-# MetGenC README.md Table of contents
+I# MetGenC README.md Table of contents
 - [MetGenC](#metgenc)
   * [Level of Support](#level-of-support)
   * [Accessing the OPS MetGenC VM and Tips and Assumptions](#accessing-the-ops-metgenc-vm-and-tips-and-assumptions)
@@ -219,12 +219,11 @@ Notes column key:
    MetGenC will generate a bounding rectangle using the
    NetCDF file's `geospatial_lat_max/min`, `geospatial_lon_max/min` global attributes.
 
- 8 = The `geospatial_bounds` netCDF file global attribute contains spatial boundary information as a
-   WKT POLYGON string. When present and `prefer_geospatial_bounds = true` is set in the
-   .ini file, MetGenC will use this attribute instead of coordinate variable values to generate
-   spatial representations of granules in collections with a GEODETIC (= gpolygon) granule spatial representation.
-   If the `geospatial_bounds_crs` attribute is also present in netCDF files, coordinates
-   will be transformed to EPSG:4326 if needed. OC .ini attribute for this is `prefer_geospatial_bounds = true`.
+ 8 = When a netCDF file’s `geospatial_bounds` global attribute contains as a WKT string defining
+   a polygon, and the .ini file contains `prefer_geospatial_bounds = true`, MetGenC will generate
+   a GPolygon from the WKT string. If the `geospatial_bounds_crs` attribute is also present in netCDF files,
+   GPolygon coordinates will be transformed to EPSG:4326 if needed. 
+   The OC .ini attribute for this is `prefer_geospatial_bounds = true`.
 
  9 = The `geospatial_bounds_crs` netCDF file global attribute specifies the coordinate reference system
    for the coordinates in the `geospatial_bounds` global attribute. It can be an EPSG identifier (e.g., "EPSG:4326")
